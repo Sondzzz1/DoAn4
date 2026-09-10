@@ -2,10 +2,14 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RoomRental.Domain\RoomRental.Domain.csproj" />
+    <ProjectReference Include="..\RoomRental.Infrastructure\RoomRental.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.11" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.12" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
   </ItemGroup>
 
   <PropertyGroup>
