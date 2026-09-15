@@ -8,6 +8,7 @@ import PublicLayout from '../layouts/PublicLayout';
 // Public Pages
 import HomePage from '../pages/public/HomePage';
 import RoomListPage from '../pages/public/RoomListPage';
+import RoomDetailPage from '../pages/public/RoomDetailPage';
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
 
@@ -33,7 +34,7 @@ const AppRoutes: React.FC = () => {
       <Route element={<PublicLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/rooms" element={<RoomListPage />} />
-        <Route path="/rooms/:id" element={<PlaceholderPage title="Chi tiết phòng" />} />
+        <Route path="/rooms/:id" element={<RoomDetailPage />} />
         
         {/* Auth Routes - redirect if already logged in */}
         <Route 
