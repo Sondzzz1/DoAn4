@@ -1,0 +1,363 @@
+/* Room Image Gallery Styles */
+
+.room-gallery {
+  background: #ffffff;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+}
+
+.room-gallery-main {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: #e5e7eb;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.room-gallery-main img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease;
+}
+
+.room-gallery-main:hover img {
+  transform: scale(1.03);
+}
+
+.room-gallery-actions {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+.room-gallery-action {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(4px);
+  color: #374151;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transition: all 0.2s ease;
+}
+
+.room-gallery-action:hover {
+  transform: translateY(-2px);
+  background: #ffffff;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.room-gallery-action svg {
+  width: 20px;
+  height: 20px;
+}
+
+.room-gallery-action.favorite svg {
+  transition: all 0.2s ease;
+}
+
+.room-gallery-action.favorite.active svg {
+  fill: #dc2626;
+  color: #dc2626;
+}
+
+.room-gallery-action.favorite:not(.active):hover svg {
+  color: #dc2626;
+}
+
+.room-gallery-action.share:hover svg {
+  color: #0084ff;
+}
+
+/* Navigation Arrows */
+.room-gallery-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(4px);
+  color: #111827;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transition: all 0.2s ease;
+  opacity: 0;
+  z-index: 10;
+}
+
+.room-gallery-main:hover .room-gallery-nav {
+  opacity: 1;
+}
+
+.room-gallery-nav:hover {
+  background: #ffffff;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.room-gallery-nav svg {
+  width: 24px;
+  height: 24px;
+}
+
+.room-gallery-nav.prev {
+  left: 16px;
+}
+
+.room-gallery-nav.next {
+  right: 16px;
+}
+
+/* Image Counter */
+.room-gallery-counter {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 10;
+}
+
+/* Thumbnail Strip */
+.room-gallery-thumbnails {
+  padding: 12px;
+  border-top: 1px solid #e5e7eb;
+  background: #fafbfc;
+}
+
+.room-gallery-thumbnails-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.room-gallery-thumbnails-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.room-gallery-thumbnails-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.room-gallery-thumbnails-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.room-gallery-thumbnails-scroll::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.room-gallery-thumbnail {
+  position: relative;
+  flex-shrink: 0;
+  width: 80px;
+  height: 64px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.room-gallery-thumbnail:hover {
+  border-color: #94a3b8;
+}
+
+.room-gallery-thumbnail.active {
+  border-color: #0084ff;
+  box-shadow: 0 0 0 2px rgba(0, 132, 255, 0.15);
+}
+
+.room-gallery-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Lightbox Modal */
+.room-gallery-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.room-gallery-lightbox-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  border: none;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.room-gallery-lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.room-gallery-lightbox-close svg {
+  width: 24px;
+  height: 24px;
+}
+
+.room-gallery-lightbox-counter {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  padding: 8px 16px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 10;
+}
+
+.room-gallery-lightbox-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.room-gallery-lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  border: none;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.room-gallery-lightbox-nav:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-50%) scale(1.05);
+}
+
+.room-gallery-lightbox-nav svg {
+  width: 28px;
+  height: 28px;
+}
+
+.room-gallery-lightbox-nav.prev {
+  left: 16px;
+}
+
+.room-gallery-lightbox-nav.next {
+  right: 16px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .room-gallery-main {
+    aspect-ratio: 4 / 3;
+  }
+
+  .room-gallery-actions {
+    top: 12px;
+    right: 12px;
+    gap: 6px;
+  }
+
+  .room-gallery-action {
+    width: 38px;
+    height: 38px;
+  }
+
+  .room-gallery-action svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .room-gallery-nav {
+    width: 38px;
+    height: 38px;
+  }
+
+  .room-gallery-nav svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .room-gallery-nav.prev {
+    left: 12px;
+  }
+
+  .room-gallery-nav.next {
+    right: 12px;
+  }
+
+  .room-gallery-counter {
+    bottom: 12px;
+    right: 12px;
+    padding: 5px 12px;
+    font-size: 12px;
+  }
+
+  .room-gallery-thumbnails {
+    padding: 8px;
+  }
+
+  .room-gallery-thumbnail {
+    width: 70px;
+    height: 56px;
+  }
+}
+
+@media (max-width: 640px) {
+  .room-gallery-main {
+    aspect-ratio: 16 / 11;
+  }
+}

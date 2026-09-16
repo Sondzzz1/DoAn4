@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FiChevronLeft, FiChevronRight, FiHeart, FiShare2, FiX } from 'react-icons/fi';
+import './RoomImageGallery.css';
 
 interface RoomImageGalleryProps {
   images: string[];
@@ -42,8 +43,7 @@ const RoomImageGallery: React.FC<RoomImageGalleryProps> = ({
 
   return (
     <>
-      {/* Main Gallery Container */}
-      <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+      <div className="room-gallery">
         {/* Main Image */}
         <div className="relative aspect-[4/3] sm:aspect-video bg-gray-100 overflow-hidden group">
           <img

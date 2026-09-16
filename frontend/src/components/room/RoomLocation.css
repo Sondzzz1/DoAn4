@@ -1,0 +1,155 @@
+/* Room Location Styles */
+
+.room-location-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+}
+
+.room-location-header {
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.room-location-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.room-location-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #0084ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.room-location-icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.room-location-title {
+  margin: 0;
+  color: #111827;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.room-location-subtitle {
+  margin: 3px 0 0;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.room-location-address {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 16px 22px;
+  color: #374151;
+  font-size: 14px;
+  line-height: 1.6;
+  background: #f9fafb;
+}
+
+.room-location-address-icon {
+  width: 18px;
+  height: 18px;
+  color: #0084ff;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.room-location-map {
+  width: 100%;
+  height: 360px;
+  background: #f3f4f6;
+}
+
+.room-location-map iframe {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 0;
+}
+
+.room-location-google-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 14px 22px 20px;
+  padding: 11px 16px;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  color: #0084ff;
+  background: #f8fbff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.room-location-google-link:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  transform: translateY(-1px);
+}
+
+.room-location-google-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+.room-location-empty {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+}
+
+.room-location-empty svg {
+  width: 36px;
+  height: 36px;
+  margin-bottom: 10px;
+}
+
+.room-location-empty p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .room-location-header {
+    padding: 16px;
+  }
+
+  .room-location-title {
+    font-size: 17px;
+  }
+
+  .room-location-address {
+    padding: 14px 16px;
+    font-size: 13px;
+  }
+
+  .room-location-map {
+    height: 280px;
+  }
+
+  .room-location-google-link {
+    margin: 12px 16px 16px;
+    font-size: 13px;
+  }
+}

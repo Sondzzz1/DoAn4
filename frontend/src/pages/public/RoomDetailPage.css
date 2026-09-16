@@ -1,0 +1,650 @@
+/* =========================================================
+   ROOM DETAIL PAGE
+========================================================= */
+
+.room-detail-page {
+  min-height: 100vh;
+  background: #f6f7f9;
+  padding-bottom: 72px;
+  color: #111827;
+}
+
+/* =========================================================
+   COMMON CONTAINER
+========================================================= */
+
+.room-detail-container {
+  width: min(1200px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 28px 0 0;
+}
+
+/* =========================================================
+   BREADCRUMB
+========================================================= */
+
+.room-breadcrumb {
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.room-breadcrumb-inner {
+  width: min(1200px, calc(100% - 32px));
+  min-height: 50px;
+  margin: 0 auto;
+  
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  
+  gap: 7px;
+  
+  padding: 9px 0;
+  
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.room-breadcrumb a {
+  color: #6b7280;
+  text-decoration: none;
+  font-weight: 500;
+  
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.room-breadcrumb a:hover {
+  color: #0084ff;
+}
+
+.room-breadcrumb span {
+  color: #6b7280;
+}
+
+.room-breadcrumb-separator {
+  width: 14px;
+  height: 14px;
+  
+  color: #9ca3af;
+  
+  flex-shrink: 0;
+}
+
+.room-breadcrumb-current {
+  max-width: 360px;
+  
+  color: #1f2937 !important;
+  font-weight: 600 !important;
+  
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   MAIN GRID
+========================================================= */
+
+.room-detail-layout {
+  display: grid;
+  
+  grid-template-columns:
+    minmax(0, 2fr)
+    minmax(320px, 0.9fr);
+  
+  gap: 24px;
+  
+  align-items: start;
+}
+
+/* =========================================================
+   LEFT CONTENT
+========================================================= */
+
+.room-detail-main {
+  min-width: 0;
+  
+  display: flex;
+  flex-direction: column;
+  
+  gap: 20px;
+}
+
+/* =========================================================
+   RIGHT SIDEBAR
+========================================================= */
+
+.room-detail-sidebar {
+  min-width: 0;
+}
+
+.room-sidebar-sticky {
+  position: sticky;
+  top: 20px;
+  
+  display: flex;
+  flex-direction: column;
+}
+
+/* =========================================================
+   COMMON CARD
+========================================================= */
+
+.room-detail-card {
+  width: 100%;
+  
+  background: #ffffff;
+  
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  
+  overflow: hidden;
+  
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.03),
+    0 6px 20px rgba(15, 23, 42, 0.04);
+  
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.room-detail-card:hover {
+  box-shadow:
+    0 2px 4px rgba(15, 23, 42, 0.04),
+    0 10px 28px rgba(15, 23, 42, 0.06);
+}
+
+/* =========================================================
+   GALLERY
+========================================================= */
+
+.room-gallery-card {
+  position: relative;
+  
+  border-radius: 18px;
+  
+  overflow: hidden;
+  
+  background: #ffffff;
+}
+
+/*
+  Nếu component Gallery có ảnh chính,
+  đảm bảo ảnh không bị méo.
+*/
+.room-gallery-card img {
+  max-width: 100%;
+}
+
+/* =========================================================
+   CONTACT CARD
+========================================================= */
+
+.room-contact-card {
+  position: relative;
+}
+
+/* =========================================================
+   SIMILAR ROOMS
+========================================================= */
+
+.room-similar-section {
+  margin-top: 24px;
+}
+
+.room-similar-section .room-detail-card {
+  padding: 0;
+}
+
+/* =========================================================
+   SKELETON
+========================================================= */
+
+.room-skeleton-container {
+  min-height: 100vh;
+  
+  background: #f6f7f9;
+  
+  padding: 28px 0 60px;
+}
+
+.room-skeleton-wrapper {
+  width: min(1200px, calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.room-skeleton-breadcrumb {
+  width: 320px;
+  height: 16px;
+  
+  margin-bottom: 28px;
+  
+  background: #e5e7eb;
+  
+  border-radius: 5px;
+  
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.room-skeleton-layout {
+  display: grid;
+  
+  grid-template-columns:
+    minmax(0, 2fr)
+    minmax(320px, 0.9fr);
+  
+  gap: 24px;
+  
+  align-items: start;
+}
+
+.room-skeleton-main {
+  display: flex;
+  flex-direction: column;
+  
+  gap: 20px;
+}
+
+.room-skeleton-box {
+  width: 100%;
+  
+  background: #ffffff;
+  
+  border: 1px solid #e5e7eb;
+  
+  border-radius: 18px;
+  
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.room-skeleton-gallery {
+  height: 480px;
+}
+
+.room-skeleton-info {
+  height: 190px;
+}
+
+.room-skeleton-amenities {
+  height: 260px;
+}
+
+.room-skeleton-sidebar-box {
+  width: 100%;
+  height: 350px;
+  
+  background: #ffffff;
+  
+  border: 1px solid #e5e7eb;
+  
+  border-radius: 18px;
+  
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* =========================================================
+   ERROR STATE
+========================================================= */
+
+.room-error-container {
+  min-height: 70vh;
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  padding: 24px;
+  
+  background: #f6f7f9;
+}
+
+.room-error-card {
+  width: 100%;
+  max-width: 480px;
+  
+  padding: 36px 32px;
+  
+  text-align: center;
+  
+  background: #ffffff;
+  
+  border: 1px solid #e5e7eb;
+  
+  border-radius: 20px;
+  
+  box-shadow:
+    0 4px 10px rgba(15, 23, 42, 0.04),
+    0 15px 40px rgba(15, 23, 42, 0.06);
+}
+
+.room-error-icon {
+  width: 68px;
+  height: 68px;
+  
+  margin: 0 auto 18px;
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  border-radius: 50%;
+  
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.room-error-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.room-error-title {
+  margin: 0 0 8px;
+  
+  font-size: 21px;
+  line-height: 1.3;
+  font-weight: 700;
+  
+  color: #111827;
+}
+
+.room-error-message {
+  margin: 0 0 26px;
+  
+  font-size: 14px;
+  line-height: 1.6;
+  
+  color: #6b7280;
+}
+
+.room-error-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  gap: 12px;
+}
+
+.room-error-button {
+  min-height: 42px;
+  
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  
+  gap: 8px;
+  
+  padding: 10px 20px;
+  
+  border-radius: 11px;
+  
+  font-size: 14px;
+  font-weight: 700;
+  
+  cursor: pointer;
+  
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+
+.room-error-button:active {
+  transform: translateY(1px);
+}
+
+.room-error-button-retry {
+  color: #374151;
+  
+  background: #ffffff;
+  
+  border: 1px solid #d1d5db;
+}
+
+.room-error-button-retry:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.room-error-button-back {
+  color: #ffffff;
+  
+  background: #0084ff;
+  
+  border: 1px solid #0084ff;
+  
+  box-shadow:
+    0 4px 10px rgba(0, 132, 255, 0.2);
+}
+
+.room-error-button-back:hover {
+  background: #0073df;
+  
+  border-color: #0073df;
+  
+  box-shadow:
+    0 6px 14px rgba(0, 132, 255, 0.25);
+}
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 1100px) {
+  
+  .room-detail-layout,
+  .room-skeleton-layout {
+    grid-template-columns:
+      minmax(0, 1.7fr)
+      minmax(290px, 0.9fr);
+    
+    gap: 20px;
+  }
+  
+  .room-sidebar-sticky {
+    top: 16px;
+  }
+
+}
+
+/* =========================================================
+   TABLET / SMALL LAPTOP
+========================================================= */
+
+@media (max-width: 992px) {
+  
+  .room-detail-container {
+    padding-top: 20px;
+  }
+  
+  .room-detail-layout,
+  .room-skeleton-layout {
+    grid-template-columns: 1fr;
+    
+    gap: 20px;
+  }
+  
+  .room-detail-sidebar {
+    order: -1;
+  }
+  
+  .room-sidebar-sticky {
+    position: static;
+  }
+  
+  .room-contact-card {
+    width: 100%;
+  }
+
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 640px) {
+  
+  .room-detail-page {
+    padding-bottom: 48px;
+  }
+  
+  /* Container */
+  
+  .room-detail-container,
+  .room-skeleton-wrapper {
+    width: calc(100% - 20px);
+    
+    padding-top: 14px;
+  }
+  
+  /* Breadcrumb */
+  
+  .room-breadcrumb-inner {
+    width: calc(100% - 20px);
+    
+    min-height: 44px;
+    
+    gap: 5px;
+    
+    font-size: 12px;
+  }
+  
+  .room-breadcrumb-current {
+    max-width: 190px;
+  }
+  
+  .room-breadcrumb-separator {
+    width: 12px;
+    height: 12px;
+  }
+  
+  /* Main layout */
+  
+  .room-detail-layout,
+  .room-skeleton-layout {
+    gap: 14px;
+  }
+  
+  .room-detail-main,
+  .room-skeleton-main {
+    gap: 14px;
+  }
+  
+  /* Cards */
+  
+  .room-detail-card {
+    border-radius: 14px;
+    
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.03),
+      0 5px 16px rgba(15, 23, 42, 0.04);
+  }
+  
+  /* Similar */
+  
+  .room-similar-section {
+    margin-top: 14px;
+  }
+  
+  /* Skeleton */
+  
+  .room-skeleton-container {
+    padding: 16px 0 40px;
+  }
+  
+  .room-skeleton-breadcrumb {
+    width: 220px;
+    
+    margin-bottom: 18px;
+  }
+  
+  .room-skeleton-gallery {
+    height: 280px;
+  }
+  
+  .room-skeleton-info {
+    height: 190px;
+  }
+  
+  .room-skeleton-amenities {
+    height: 300px;
+  }
+  
+  .room-skeleton-sidebar-box {
+    height: 300px;
+  }
+  
+  /* Error */
+  
+  .room-error-container {
+    min-height: 75vh;
+    
+    padding: 16px;
+  }
+  
+  .room-error-card {
+    padding: 28px 20px;
+    
+    border-radius: 16px;
+  }
+  
+  .room-error-icon {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .room-error-title {
+    font-size: 19px;
+  }
+  
+  .room-error-message {
+    font-size: 13px;
+  }
+  
+  .room-error-actions {
+    flex-direction: column;
+    
+    width: 100%;
+  }
+  
+  .room-error-button {
+    width: 100%;
+  }
+
+}
+
+/* =========================================================
+   VERY SMALL MOBILE
+========================================================= */
+
+@media (max-width: 380px) {
+  
+  .room-detail-container,
+  .room-skeleton-wrapper {
+    width: calc(100% - 16px);
+  }
+  
+  .room-breadcrumb-inner {
+    width: calc(100% - 16px);
+  }
+  
+  .room-breadcrumb-current {
+    max-width: 150px;
+  }
+
+}

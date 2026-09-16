@@ -16,6 +16,9 @@ import LandlordContactCard from '../../components/room/LandlordContactCard';
 import BookingModal from '../../components/room/BookingModal';
 import SimilarRooms from '../../components/room/SimilarRooms';
 
+// Import CSS
+import './RoomDetailPage.css';
+
 // Realistic fallback data for frontend preview when backend server is offline
 const FALLBACK_POSTS: Record<number, Post> = {
   1: {
@@ -195,22 +198,19 @@ const RoomDetailPage: React.FC = () => {
   // =========================================================================
   if (loading) {
     return (
-      <div className="bg-[#f6f7f9] min-h-screen py-6">
-        <div className="max-w-[1200px] mx-auto px-4">
-          {/* Breadcrumb Skeleton */}
-          <div className="h-4 w-72 bg-gray-200 rounded animate-pulse mb-6" />
+      <div className="room-skeleton-container">
+        <div className="room-skeleton-wrapper">
+          <div className="room-skeleton-breadcrumb" />
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left Skeleton */}
-            <div className="lg:col-span-8 flex flex-col gap-6">
-              <div className="w-full h-[480px] bg-gray-200 rounded-2xl animate-pulse" />
-              <div className="w-full h-44 bg-gray-200 rounded-2xl animate-pulse" />
-              <div className="w-full h-64 bg-gray-200 rounded-2xl animate-pulse" />
+          <div className="room-skeleton-layout">
+            <div className="room-skeleton-main">
+              <div className="room-skeleton-box room-skeleton-gallery" />
+              <div className="room-skeleton-box room-skeleton-info" />
+              <div className="room-skeleton-box room-skeleton-amenities" />
             </div>
 
-            {/* Right Skeleton */}
-            <div className="lg:col-span-4 flex flex-col gap-6">
-              <div className="w-full h-80 bg-gray-200 rounded-2xl animate-pulse" />
+            <div>
+              <div className="room-skeleton-sidebar-box" />
             </div>
           </div>
         </div>
@@ -223,33 +223,36 @@ const RoomDetailPage: React.FC = () => {
   // =========================================================================
   if (error || !post) {
     return (
-      <div className="bg-[#f6f7f9] min-h-[70vh] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl p-8 border border-gray-200 shadow-sm text-center">
-          <div className="w-16 h-16 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-4">
-            <FiAlertCircle className="w-8 h-8" />
+      <div className="room-error-container">
+        <div className="room-error-card">
+          <div className="room-error-icon">
+            <FiAlertCircle />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
+
+          <h2 className="room-error-title">
             {error === 'Không tìm thấy phòng trọ' ? 'Không tìm thấy phòng trọ' : 'Có lỗi xảy ra'}
           </h2>
-          <p className="text-sm text-gray-500 mb-6">
+
+          <p className="room-error-message">
             {error || 'Không thể tải thông tin chi tiết phòng trọ. Vui lòng kiểm tra lại liên kết.'}
           </p>
 
-          <div className="flex items-center justify-center gap-3">
+          <div className="room-error-actions">
             <button
               type="button"
               onClick={() => id && fetchPostDetail(parseInt(id, 10))}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-300 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer bg-white"
+              className="room-error-button room-error-button-retry"
             >
-              <FiRefreshCw className="w-4 h-4" />
+              <FiRefreshCw />
               Thử lại
             </button>
+
             <button
               type="button"
               onClick={() => navigate(ROUTES.ROOM_LIST || '/rooms')}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0084ff] text-white text-sm font-bold hover:bg-[#0073df] transition-colors shadow-sm cursor-pointer border-none"
+              className="room-error-button room-error-button-back"
             >
-              <FiArrowLeft className="w-4 h-4" />
+              <FiArrowLeft />
               Quay lại danh sách phòng
             </button>
           </div>
@@ -262,44 +265,59 @@ const RoomDetailPage: React.FC = () => {
   // 3. MAIN DETAIL PAGE LAYOUT
   // =========================================================================
   return (
-    <div className="bg-[#f6f7f9] min-h-screen pb-16">
-      {/* Breadcrumb Navigation */}
-      <div className="bg-white border-b border-[#e5e7eb]">
-        <div className="max-w-[1200px] mx-auto px-4 py-3">
-          <nav aria-label="Breadcrumb" className="flex items-center flex-wrap gap-1.5 text-[13px] text-[#6b7280]">
-            <Link to={ROUTES.HOME} className="hover:text-[#0084ff] transition-colors">
-              Trang chủ
-            </Link>
-            <FiChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-            <Link to={ROUTES.ROOM_LIST || '/rooms'} className="hover:text-[#0084ff] transition-colors">
-              Phòng trọ
-            </Link>
-            {post.province && (
-              <>
-                <FiChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                <span className="text-[#6b7280]">{post.province}</span>
-              </>
-            )}
-            {post.district && (
-              <>
-                <FiChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                <span className="text-[#6b7280]">{post.district}</span>
-              </>
-            )}
-            <FiChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-            <span className="text-[#1f2937] font-semibold truncate max-w-[280px] sm:max-w-[420px]">
-              {post.title}
-            </span>
-          </nav>
-        </div>
-      </div>
+  <div className="room-detail-page">
 
-      {/* Main Content Area */}
-      <main className="max-w-[1200px] mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* LEFT CONTENT COLUMN (~68%) */}
-          <div className="lg:col-span-8 flex flex-col gap-6">
-            {/* Gallery Component */}
+    {/* =========================
+        BREADCRUMB
+    ========================== */}
+    <div className="room-breadcrumb">
+      <div className="room-breadcrumb-inner">
+        <Link to={ROUTES.HOME}>
+          Trang chủ
+        </Link>
+
+        <FiChevronRight className="room-breadcrumb-separator" />
+
+        <Link to={ROUTES.ROOM_LIST || '/rooms'}>
+          Phòng trọ
+        </Link>
+
+        {post.province && (
+          <>
+            <FiChevronRight className="room-breadcrumb-separator" />
+            <span>{post.province}</span>
+          </>
+        )}
+
+        {post.district && (
+          <>
+            <FiChevronRight className="room-breadcrumb-separator" />
+            <span>{post.district}</span>
+          </>
+        )}
+
+        <FiChevronRight className="room-breadcrumb-separator" />
+
+        <span className="room-breadcrumb-current">
+          {post.title}
+        </span>
+      </div>
+    </div>
+
+    {/* =========================
+        MAIN CONTENT
+    ========================== */}
+    <main className="room-detail-container">
+
+      <div className="room-detail-layout">
+
+        {/* =========================
+            LEFT CONTENT
+        ========================== */}
+        <section className="room-detail-main">
+
+          {/* Gallery */}
+          <div className="room-detail-card room-gallery-card">
             <RoomImageGallery
               images={post.imageUrls || []}
               title={post.title}
@@ -307,14 +325,20 @@ const RoomDetailPage: React.FC = () => {
               onToggleFavorite={handleToggleFavorite}
               onShare={handleShare}
             />
+          </div>
 
-            {/* Room Info Component */}
+          {/* Information */}
+          <div className="room-detail-card">
             <RoomInformation post={post} />
+          </div>
 
-            {/* Amenities Component */}
+          {/* Amenities */}
+          <div className="room-detail-card">
             <RoomAmenities amenities={post.amenities || []} />
+          </div>
 
-            {/* Location Component */}
+          {/* Location */}
+          <div className="room-detail-card">
             <RoomLocation
               address={post.address}
               ward={post.ward}
@@ -323,28 +347,53 @@ const RoomDetailPage: React.FC = () => {
             />
           </div>
 
-          {/* RIGHT SIDEBAR COLUMN (~32%) */}
-          <aside className="lg:col-span-4">
-            <LandlordContactCard
-              post={post}
-              onBookViewing={handleBookViewing}
-              onSendMessage={handleSendMessage}
-            />
-          </aside>
+        </section>
+
+        {/* =========================
+            RIGHT SIDEBAR
+        ========================== */}
+        <aside className="room-detail-sidebar">
+
+          <div className="room-sidebar-sticky">
+
+            <div className="room-detail-card room-contact-card">
+              <LandlordContactCard
+                post={post}
+                onBookViewing={handleBookViewing}
+                onSendMessage={handleSendMessage}
+              />
+            </div>
+
+          </div>
+
+        </aside>
+
+      </div>
+
+      {/* =========================
+          SIMILAR ROOMS
+      ========================== */}
+      <section className="room-similar-section">
+
+        <div className="room-detail-card">
+          <SimilarRooms currentPostId={post.id} />
         </div>
 
-        {/* Similar Rooms Section */}
-        <SimilarRooms currentPostId={post.id} />
-      </main>
+      </section>
 
-      {/* Booking Appointment Modal */}
-      <BookingModal
-        isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
-        post={post}
-      />
-    </div>
-  );
+    </main>
+
+    {/* =========================
+        BOOKING MODAL
+    ========================== */}
+    <BookingModal
+      isOpen={isBookingModalOpen}
+      onClose={() => setIsBookingModalOpen(false)}
+      post={post}
+    />
+
+  </div>
+);
 };
 
 export default RoomDetailPage;
