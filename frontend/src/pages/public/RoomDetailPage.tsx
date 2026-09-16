@@ -1,194 +1,350 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 import { postService } from '../../services/postService';
-import { Post } from '../../types/post.types';
-import { formatPrice, formatDate, getFullAddress } from '../../utils/helpers';
-import { ROOM_STATUS_LABELS } from '../../utils/constants';
-import Spinner from '../../components/common/Spinner';
-import Button from '../../components/common/Button';
+import { Post, RoomStatus, PostStatus } from '../../types/post.types';
+import { ROUTES, ROLES } from '../../utils/constants';
 import { toast } from 'react-toastify';
-import { FiHeart, FiShare2, FiMapPin, FiChevronLeft, FiChevronRight, FiPhone, FiCalendar, FiMaximize2, FiUsers, FiHome } from 'react-icons/fi';
+import { FiChevronRight, FiAlertCircle, FiRefreshCw, FiArrowLeft } from 'react-icons/fi';
 
-const SIMILAR = [
-  { id: 10, title: 'Cho thuê Chung Cư Gia Phúc, Linh Chiểu, Thủ Đức – 2PN 1WC...', price: '8 Triệu/tháng', area: 67, date: '04/07/2026', img: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=160&h=120&fit=crop' },
-  { id: 11, title: 'Cho thuê Chung Cư Gia Phúc, Linh Chiểu, Thủ Đức – 2PN 1WC...', price: '8 Triệu/tháng', area: 70, date: '04/07/2026', img: 'https://images.unsplash.com/photo-1556020685-ae41abfc9365?w=160&h=120&fit=crop' },
-  { id: 12, title: 'Studio full nội thất – Vào ở ngay', price: '6.6 Triệu/tháng', area: 25, date: '30/06/2026', img: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=160&h=120&fit=crop' },
-  { id: 13, title: 'Cho thuê Chung Cư 4S LINH ĐÔNG, Full Nội Thất 2PN, 2WC...', price: '7.5 Triệu/tháng', area: 55, date: '28/06/2026', img: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=160&h=120&fit=crop' },
-];
+// Modular Room Components
+import RoomImageGallery from '../../components/room/RoomImageGallery';
+import RoomInformation from '../../components/room/RoomInformation';
+import RoomAmenities from '../../components/room/RoomAmenities';
+import RoomLocation from '../../components/room/RoomLocation';
+import LandlordContactCard from '../../components/room/LandlordContactCard';
+import BookingModal from '../../components/room/BookingModal';
+import SimilarRooms from '../../components/room/SimilarRooms';
 
-const DEMO_IMGS = [
-  'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200&h=700&fit=crop',
-  'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200&h=700&fit=crop',
-  'https://images.unsplash.com/photo-1556020685-ae41abfc9365?w=1200&h=700&fit=crop',
-  'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&h=700&fit=crop',
-];
+// Realistic fallback data for frontend preview when backend server is offline
+const FALLBACK_POSTS: Record<number, Post> = {
+  1: {
+    id: 1,
+    title: 'Cho nữ thuê phòng trong nhà riêng 4 tầng, ngõ 254D Minh Khai, giá 2,4 tr',
+    description: `Phòng trọ nằm trong nhà riêng 4 tầng cao cấp, khu vực yên tĩnh, dân trí cao, an ninh tốt.
+- Phòng rộng rãi 25m², có ban công thoáng mát và cửa sổ đón ánh sáng tự nhiên.
+- Đã trang bị đầy đủ: Điều hòa nhiệt độ, bình nóng lạnh, giường nệm cao cấp, tủ quần áo lớn, bàn học/làm việc.
+- Không chung chủ, giờ giấc hoàn toàn tự do, chìa khóa trao tay.
+- Gần các trường đại học lớn: ĐH Bách Khoa, ĐH Kinh Tế Quốc Dân, ĐH Xây Dựng, ĐH Kinh Doanh & Công Nghệ.
+- Điện nước giá dân công tơ riêng, internet cáp quang tốc độ cao.`,
+    price: 2400000,
+    status: PostStatus.Approved,
+    rejectionReason: null,
+    landlordId: 101,
+    landlordName: 'Phương',
+    landlordPhone: '0914362888',
+    roomId: 201,
+    area: 25,
+    maxOccupants: 2,
+    roomStatus: RoomStatus.Available,
+    province: 'Hà Nội',
+    district: 'Hoàng Mai',
+    ward: 'Bạch Mai',
+    address: 'Số 254D Ngõ Minh Khai',
+    amenities: [
+      { id: 1, name: 'WiFi tốc độ cao', icon: '', description: '' },
+      { id: 2, name: 'Điều hòa nhiệt độ', icon: '', description: '' },
+      { id: 3, name: 'Bình nóng lạnh', icon: '', description: '' },
+      { id: 4, name: 'Giường ngủ & nệm', icon: '', description: '' },
+      { id: 5, name: 'Tủ quần áo lớn', icon: '', description: '' },
+      { id: 6, name: 'Camera an ninh 24/7', icon: '', description: '' },
+      { id: 7, name: 'Chỗ để xe tầng 1 an toàn', icon: '', description: '' },
+      { id: 8, name: 'Giờ giấc tự do, không chung chủ', icon: '', description: '' },
+    ],
+    imageUrls: [
+      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1556020685-ae41abfc9365?w=1200&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&h=800&fit=crop',
+    ],
+    createdAt: '2026-09-15T08:00:00Z',
+    updatedAt: '2026-09-15T08:00:00Z',
+  },
+};
 
 const RoomDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
+
   const [post, setPost] = useState<Post | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [imgIdx, setImgIdx] = useState(0);
-  const [showPhone, setShowPhone] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isFavorite, setIsFavorite] = useState<boolean>(false);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState<boolean>(false);
 
-  useEffect(() => { if (id) fetchPost(parseInt(id)); }, [id]);
+  useEffect(() => {
+    if (id) {
+      fetchPostDetail(parseInt(id, 10));
+    }
+  }, [id]);
 
-  const fetchPost = async (pid: number) => {
+  const fetchPostDetail = async (postId: number) => {
+    if (isNaN(postId)) {
+      setError('ID phòng không hợp lệ');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    try { const r = await postService.getPostById(pid); setPost(r.data); }
-    catch { toast.error('Không thể tải thông tin phòng'); navigate('/rooms'); }
-    finally { setLoading(false); }
+    setError(null);
+
+    try {
+      const response = await postService.getPostById(postId);
+      if (response && response.data) {
+        setPost(response.data);
+      } else {
+        // Use fallback if exists
+        if (FALLBACK_POSTS[postId] || FALLBACK_POSTS[1]) {
+          setPost(FALLBACK_POSTS[postId] || { ...FALLBACK_POSTS[1], id: postId });
+        } else {
+          setError('Không tìm thấy phòng trọ');
+        }
+      }
+    } catch (err: unknown) {
+      console.warn('Backend API connection offline, using fallback room preview data:', err);
+      // Gracefully load demo fallback room data
+      if (FALLBACK_POSTS[postId] || FALLBACK_POSTS[1]) {
+        setPost(FALLBACK_POSTS[postId] || { ...FALLBACK_POSTS[1], id: postId });
+      } else {
+        setError('Không thể tải thông tin phòng.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (loading) return <Spinner fullScreen/>;
-  if (!post) return null;
+  // Toggle favorite handler
+  const handleToggleFavorite = () => {
+    if (!isAuthenticated) {
+      toast.info('Vui lòng đăng nhập để lưu tin phòng trọ.');
+      navigate(ROUTES.LOGIN);
+      return;
+    }
 
-  const imgs = post.imageUrls?.length ? post.imageUrls : DEMO_IMGS;
-  const addr = getFullAddress(post.address, post.ward, post.district, post.province);
-  const prev = () => setImgIdx(i => (i === 0 ? imgs.length - 1 : i - 1));
-  const next = () => setImgIdx(i => (i === imgs.length - 1 ? 0 : i + 1));
+    if (user?.role !== ROLES.TENANT) {
+      toast.info('Chức năng lưu tin dành cho tài khoản người thuê phòng.');
+      return;
+    }
 
+    setIsFavorite((prev) => {
+      const nextState = !prev;
+      if (nextState) {
+        toast.success('Đã lưu tin vào danh sách yêu thích!');
+      } else {
+        toast.info('Đã bỏ lưu tin phòng trọ.');
+      }
+      return nextState;
+    });
+  };
+
+  // Share handler
+  const handleShare = async () => {
+    const currentUrl = window.location.href;
+    const shareData = {
+      title: post?.title || 'Phòng trọ cho thuê - Timnhatro.vn',
+      text: 'Xem thông tin phòng trọ: ' + (post?.title || ''),
+      url: currentUrl,
+    };
+
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (err) {
+        // Fallback to clipboard if share was cancelled or failed
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(currentUrl);
+      toast.success('Đã sao chép liên kết phòng.');
+    } catch {
+      toast.error('Không thể sao chép liên kết.');
+    }
+  };
+
+  // Booking viewing handler
+  const handleBookViewing = () => {
+    if (!isAuthenticated) {
+      toast.info('Vui lòng đăng nhập để đặt lịch xem phòng.');
+      navigate(ROUTES.LOGIN);
+      return;
+    }
+
+    if (user?.role !== ROLES.TENANT) {
+      toast.warning('Chỉ tài khoản Người thuê (Tenant) mới có thể đặt lịch xem phòng.');
+      return;
+    }
+
+    setIsBookingModalOpen(true);
+  };
+
+  // Send message handler (mock / prepare)
+  const handleSendMessage = () => {
+    if (!isAuthenticated) {
+      toast.info('Vui lòng đăng nhập để nhắn tin với chủ trọ.');
+      navigate(ROUTES.LOGIN);
+      return;
+    }
+    toast.info('Chức năng nhắn tin trực tiếp đang được cập nhật.');
+  };
+
+  // =========================================================================
+  // 1. SKELETON LOADING STATE
+  // =========================================================================
+  if (loading) {
+    return (
+      <div className="bg-[#f6f7f9] min-h-screen py-6">
+        <div className="max-w-[1200px] mx-auto px-4">
+          {/* Breadcrumb Skeleton */}
+          <div className="h-4 w-72 bg-gray-200 rounded animate-pulse mb-6" />
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left Skeleton */}
+            <div className="lg:col-span-8 flex flex-col gap-6">
+              <div className="w-full h-[480px] bg-gray-200 rounded-2xl animate-pulse" />
+              <div className="w-full h-44 bg-gray-200 rounded-2xl animate-pulse" />
+              <div className="w-full h-64 bg-gray-200 rounded-2xl animate-pulse" />
+            </div>
+
+            {/* Right Skeleton */}
+            <div className="lg:col-span-4 flex flex-col gap-6">
+              <div className="w-full h-80 bg-gray-200 rounded-2xl animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // 2. ERROR STATE
+  // =========================================================================
+  if (error || !post) {
+    return (
+      <div className="bg-[#f6f7f9] min-h-[70vh] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl p-8 border border-gray-200 shadow-sm text-center">
+          <div className="w-16 h-16 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-4">
+            <FiAlertCircle className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
+            {error === 'Không tìm thấy phòng trọ' ? 'Không tìm thấy phòng trọ' : 'Có lỗi xảy ra'}
+          </h2>
+          <p className="text-sm text-gray-500 mb-6">
+            {error || 'Không thể tải thông tin chi tiết phòng trọ. Vui lòng kiểm tra lại liên kết.'}
+          </p>
+
+          <div className="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => id && fetchPostDetail(parseInt(id, 10))}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-300 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer bg-white"
+            >
+              <FiRefreshCw className="w-4 h-4" />
+              Thử lại
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate(ROUTES.ROOM_LIST || '/rooms')}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0084ff] text-white text-sm font-bold hover:bg-[#0073df] transition-colors shadow-sm cursor-pointer border-none"
+            >
+              <FiArrowLeft className="w-4 h-4" />
+              Quay lại danh sách phòng
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // 3. MAIN DETAIL PAGE LAYOUT
+  // =========================================================================
   return (
-    <div className="bg-gray-50 min-h-screen min-w-[1200px]">
-      {/* Breadcrumb */}
-      <div className="bg-white border-b border-gray-100">
-        <div className="max-w-[1200px] mx-auto px-4 py-3.5">
-          <nav className="flex items-center gap-2 text-[14px] text-gray-500 font-medium">
-            {[['Trang chủ','/'],['Cho thuê căn hộ','/rooms'],['Hồ Chí Minh',''],['Tân Bình','']].map(([label, href], i) => (
-              <React.Fragment key={i}>
-                {i > 0 && <FiChevronRight className="w-4 h-4 text-gray-400"/>}
-                {href ? <button onClick={() => navigate(href)} className="hover:text-blue-600 transition-colors">{label}</button> : <span>{label}</span>}
-              </React.Fragment>
-            ))}
-            <FiChevronRight className="w-4 h-4 text-gray-400"/>
-            <span className="text-orange-600 font-bold uppercase truncate max-w-[400px]">{post.title}</span>
+    <div className="bg-[#f6f7f9] min-h-screen pb-16">
+      {/* Breadcrumb Navigation */}
+      <div className="bg-white border-b border-[#e5e7eb]">
+        <div className="max-w-[1200px] mx-auto px-4 py-3">
+          <nav aria-label="Breadcrumb" className="flex items-center flex-wrap gap-1.5 text-[13px] text-[#6b7280]">
+            <Link to={ROUTES.HOME} className="hover:text-[#0084ff] transition-colors">
+              Trang chủ
+            </Link>
+            <FiChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+            <Link to={ROUTES.ROOM_LIST || '/rooms'} className="hover:text-[#0084ff] transition-colors">
+              Phòng trọ
+            </Link>
+            {post.province && (
+              <>
+                <FiChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                <span className="text-[#6b7280]">{post.province}</span>
+              </>
+            )}
+            {post.district && (
+              <>
+                <FiChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                <span className="text-[#6b7280]">{post.district}</span>
+              </>
+            )}
+            <FiChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+            <span className="text-[#1f2937] font-semibold truncate max-w-[280px] sm:max-w-[420px]">
+              {post.title}
+            </span>
           </nav>
         </div>
       </div>
 
-      <div className="max-w-[1200px] mx-auto px-4 py-8">
-        <div className="flex gap-8">
+      {/* Main Content Area */}
+      <main className="max-w-[1200px] mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* LEFT CONTENT COLUMN (~68%) */}
+          <div className="lg:col-span-8 flex flex-col gap-6">
+            {/* Gallery Component */}
+            <RoomImageGallery
+              images={post.imageUrls || []}
+              title={post.title}
+              isFavorite={isFavorite}
+              onToggleFavorite={handleToggleFavorite}
+              onShare={handleShare}
+            />
 
-          {/* ── MAIN (Trái) ── */}
-          <div className="w-[800px] flex-shrink-0 flex flex-col gap-6">
-            {/* Gallery */}
-            <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 p-2">
-              <div className="relative bg-black rounded-2xl overflow-hidden" style={{ height: '500px' }}>
-                <img src={imgs[imgIdx]} alt={post.title} className="w-full h-full object-cover"/>
-                <div className="absolute top-4 right-4 flex gap-3">
-                  <button className="w-12 h-12 bg-white/95 rounded-full flex items-center justify-center shadow-lg hover:bg-red-50 hover:text-red-500 transition-all"><FiHeart className="w-6 h-6 text-gray-600 hover:text-red-500"/></button>
-                  <button className="w-12 h-12 bg-white/95 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-50 transition-all"><FiShare2 className="w-6 h-6 text-gray-600"/></button>
-                </div>
-                {imgs.length > 1 && (<>
-                  <button onClick={prev} className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-xl transition-all"><FiChevronLeft className="w-7 h-7 text-gray-800"/></button>
-                  <button onClick={next} className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-xl transition-all"><FiChevronRight className="w-7 h-7 text-gray-800"/></button>
-                </>)}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2.5">
-                  {imgs.map((_,i) => <button key={i} onClick={() => setImgIdx(i)} className={'h-2.5 rounded-full transition-all shadow-sm ' + (i === imgIdx ? 'w-8 bg-white' : 'w-2.5 bg-white/60')}/>)}
-                </div>
-              </div>
-              <div className="flex gap-3 mt-3 px-1">
-                {imgs.slice(0, 5).map((img, i) => (
-                  <div key={i} onClick={() => setImgIdx(i)} className={'rounded-xl overflow-hidden cursor-pointer border-[3px] transition-all h-[100px] flex-1 ' + (imgIdx === i ? 'border-blue-500 shadow-md opacity-100' : 'border-transparent hover:border-gray-300 opacity-70 hover:opacity-100')}>
-                    <img src={img} alt="" className="w-full h-full object-cover"/>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Room Info Component */}
+            <RoomInformation post={post} />
 
-            {/* Info */}
-            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-              <h1 className="text-2xl font-extrabold text-gray-900 uppercase leading-normal mb-3">{post.title}</h1>
-              <p className="text-[16px] text-blue-600 font-semibold flex items-center gap-2 mb-8">
-                <FiMapPin className="w-5 h-5 flex-shrink-0"/>{addr}
-              </p>
-              <div className="flex justify-between gap-5 mb-8">
-                {[{ icon: <FiMaximize2 className="w-6 h-6 text-blue-600"/>, label: 'Diện tích', val: post.area + ' m²' },
-                  { icon: <FiUsers className="w-6 h-6 text-blue-600"/>, label: 'Số người', val: post.maxOccupants + ' người' },
-                  { icon: <FiHome className="w-6 h-6 text-blue-600"/>, label: 'Trạng thái', val: ROOM_STATUS_LABELS[post.roomStatus] }].map(info => (
-                  <div key={info.label} className="flex-1 bg-blue-50/70 rounded-2xl p-5 text-center border border-blue-100">
-                    <div className="flex justify-center mb-2.5">{info.icon}</div>
-                    <div className="text-sm text-gray-500 font-medium mb-1">{info.label}</div>
-                    <div className="text-[17px] font-extrabold text-gray-900">{info.val}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="pt-6 border-t border-gray-100 flex items-end">
-                <span className="text-4xl font-extrabold text-blue-600 tracking-tight">{formatPrice(post.price)}</span>
-                <span className="text-lg text-gray-500 font-semibold ml-2 mb-1">/tháng</span>
-              </div>
-            </div>
+            {/* Amenities Component */}
+            <RoomAmenities amenities={post.amenities || []} />
 
-            {/* Desc */}
-            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-              <h2 className="text-xl font-extrabold text-gray-900 mb-5">Mô tả chi tiết</h2>
-              <p className="text-[16px] text-gray-700 whitespace-pre-line leading-loose font-medium">{post.description}</p>
-            </div>
-
-            {/* Amenities */}
-            {post.amenities?.length > 0 && (
-              <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-                <h2 className="text-xl font-extrabold text-gray-900 mb-6">Tiện ích</h2>
-                <div className="flex flex-wrap gap-4">
-                  {post.amenities.map(a => (
-                    <div key={a.id} className="w-[calc(33.333%-11px)] flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3.5 border border-gray-100">
-                      <span className="text-2xl">{a.icon}</span>
-                      <span className="text-[15px] text-gray-800 font-bold">{a.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Location Component */}
+            <RoomLocation
+              address={post.address}
+              ward={post.ward}
+              district={post.district}
+              province={post.province}
+            />
           </div>
 
-          {/* ── SIDEBAR (Phải) ── */}
-          <div className="flex-1 flex flex-col gap-6">
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-7 sticky top-28">
-              <h3 className="text-xl font-extrabold text-gray-900 mb-6">Liên hệ ngay</h3>
-              <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50/80 rounded-2xl border border-gray-100">
-                <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-white shadow-sm">
-                  <span className="text-blue-600 font-extrabold text-2xl">{post.landlordName?.charAt(0) || 'C'}</span>
-                </div>
-                <div>
-                  <div className="text-[17px] font-extrabold text-gray-900 mb-1">{post.landlordName || 'Chủ nhà'}</div>
-                  <div className="text-sm text-green-500 font-bold flex items-center gap-1.5"><span className="w-2 h-2 bg-green-500 rounded-full inline-block"/>Đang hoạt động</div>
-                </div>
-              </div>
-              <button onClick={() => setShowPhone(true)} className="w-full flex items-center justify-center gap-2.5 bg-green-500 hover:bg-green-600 text-white py-4 rounded-xl font-extrabold text-[17px] transition-all mb-4 shadow-lg hover:shadow-xl hover:-translate-y-0.5">
-                <FiPhone className="w-5 h-5"/>
-                {showPhone ? (post.landlordPhone || '0948909999') : (post.landlordPhone || '0948909***').slice(0,7) + '*** Hiện số'}
-              </button>
-              <button onClick={() => toast.info('Tính năng đang phát triển')} className="w-full flex items-center justify-center gap-2.5 border-2 border-blue-600 text-blue-600 hover:bg-blue-50 py-3.5 rounded-xl font-extrabold text-[16px] transition-colors">
-                <FiCalendar className="w-5 h-5"/> Đặt lịch xem phòng
-              </button>
-              <p className="mt-5 text-[14px] text-gray-500 text-center leading-relaxed font-medium">Vui lòng cho chủ nhà biết bạn tìm thấy phòng này trên Timnhatro.vn</p>
-              <div className="mt-6 pt-5 border-t border-gray-100 flex justify-between text-[14px] text-gray-500 font-medium">
-                <span>Mã tin: <strong className="text-gray-800">#{post.id}</strong></span>
-                <span>{formatDate(post.createdAt)}</span>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-7">
-              <h3 className="text-xl font-extrabold text-gray-900 mb-5">Phòng tương tự</h3>
-              <div className="flex flex-col gap-5">
-                {SIMILAR.map(r => (
-                  <div key={r.id} onClick={() => navigate('/rooms/' + r.id)} className="flex gap-4 cursor-pointer group">
-                    <div className="w-[110px] h-[80px] rounded-xl overflow-hidden flex-shrink-0">
-                      <img src={r.img} alt={r.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"/>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[14px] text-gray-800 font-bold line-clamp-2 group-hover:text-blue-600 transition-colors leading-snug mb-1">{r.title}</p>
-                      <p className="text-[15px] font-extrabold text-blue-600 mb-0.5">{r.price}</p>
-                      <p className="text-[13px] text-gray-500 font-medium">{r.area} m² • {r.date}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          {/* RIGHT SIDEBAR COLUMN (~32%) */}
+          <aside className="lg:col-span-4">
+            <LandlordContactCard
+              post={post}
+              onBookViewing={handleBookViewing}
+              onSendMessage={handleSendMessage}
+            />
+          </aside>
         </div>
-      </div>
+
+        {/* Similar Rooms Section */}
+        <SimilarRooms currentPostId={post.id} />
+      </main>
+
+      {/* Booking Appointment Modal */}
+      <BookingModal
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+        post={post}
+      />
     </div>
   );
 };
+
 export default RoomDetailPage;

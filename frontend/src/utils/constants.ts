@@ -68,7 +68,7 @@ export const ROUTES = {
   LOGIN: '/login',
   REGISTER: '/register',
   ROOM_LIST: '/rooms',
-  ROOM_DETAIL: '/rooms/:id',
+  ROOM_DETAIL: '/rooms', // Base path, append /:id for router or /id for links
   
   // Tenant
   TENANT_PROFILE: '/tenant/profile',

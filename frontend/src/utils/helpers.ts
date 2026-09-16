@@ -9,6 +9,11 @@ export const formatPrice = (price: number): string => {
 };
 
 /**
+ * Format currency (alias for formatPrice)
+ */
+export const formatCurrency = formatPrice;
+
+/**
  * Format ngày tháng
  */
 export const formatDate = (date: string | Date): string => {

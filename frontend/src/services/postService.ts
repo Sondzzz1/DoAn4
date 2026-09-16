@@ -61,4 +61,11 @@ export const postService = {
     const response = await api.get<ApiResponse<PostListItem[]>>('/post/public', { params });
     return response.data;
   },
+
+  /**
+   * Lấy danh sách tất cả tin đăng (alias for searchPosts)
+   */
+  getPosts: async (params?: PostSearchParams): Promise<ApiResponse<PostListItem[]>> => {
+    return postService.searchPosts(params);
+  },
 };
