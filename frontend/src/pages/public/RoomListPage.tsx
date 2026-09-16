@@ -1,145 +1,267 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { postService } from '../../services/postService';
-import { PostListItem } from '../../types/post.types';
-import { formatPrice } from '../../utils/helpers';
-import Spinner from '../../components/common/Spinner';
-import { toast } from 'react-toastify';
-import { FiSearch, FiMapPin, FiFilter, FiX } from 'react-icons/fi';
+import React, { useMemo, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { FiChevronRight } from 'react-icons/fi';
+
+import RoomSearchBar from '../../components/room/RoomSearchBar';
+import RoomFilterBar from '../../components/room/RoomFilterBar';
+import RoomListCard from '../../components/room/RoomListCard';
+import RoomSidebar from '../../components/room/RoomSidebar';
+
+import {
+  ROOM_CATEGORIES,
+  RoomCategory,
+} from '../../utils/roomCategory';
+
+import { RoomListItem } from '../../types/room.types';
+
+import './RoomListPage.css';
+
+// Demo data
+const DEMO_ROOMS: RoomListItem[] = [
+  {
+    id: 1,
+    title: 'Cần tìm 1 bạn nữ ở ghép cùng (ở luôn)',
+    price: 2450000,
+    area: 25,
+    imageUrl:
+      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800',
+    address: 'Số 20, Ngõ 52 Phú Mỹ',
+    district: 'Nam Từ Liêm',
+    province: 'Hà Nội',
+    createdAt: '2026-08-06',
+    category: 'shared',
+  },
+
+  {
+    id: 2,
+    title:
+      'TÌM NỮ Ở GHÉP 1:1 - Nhà nhỏ nguyên căn mới',
+    price: 2600000,
+    area: 32,
+    imageUrl:
+      'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800',
+    address: 'Phường 10',
+    district: 'Tân Bình',
+    province: 'Hồ Chí Minh',
+    createdAt: '2026-07-20',
+    category: 'shared',
+  },
+
+  {
+    id: 3,
+    title:
+      'Phòng trọ cao cấp đầy đủ nội thất, gần trường đại học',
+    price: 3200000,
+    area: 28,
+    imageUrl:
+      'https://images.unsplash.com/photo-1556020685-ae41abfc9365?w=800',
+    address: 'Ngõ 120',
+    district: 'Cầu Giấy',
+    province: 'Hà Nội',
+    createdAt: '2026-08-01',
+    category: 'room',
+  },
+
+  {
+    id: 4,
+    title:
+      'Nhà nguyên căn 3 tầng, đầy đủ nội thất',
+    price: 8500000,
+    area: 70,
+    imageUrl:
+      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800',
+    address: 'Đường Nguyễn Trãi',
+    district: 'Thanh Xuân',
+    province: 'Hà Nội',
+    createdAt: '2026-08-03',
+    category: 'whole-house',
+  },
+
+  {
+    id: 5,
+    title:
+      'Căn hộ 2 phòng ngủ, nội thất đầy đủ',
+    price: 9500000,
+    area: 65,
+    imageUrl:
+      'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800',
+    address: 'Vinhomes',
+    district: 'Nam Từ Liêm',
+    province: 'Hà Nội',
+    createdAt: '2026-08-04',
+    category: 'apartment',
+  },
+
+  {
+    id: 6,
+    title: 'Tìm Nam ở ghép gần ĐH Bách Khoa',
+    price: 1800000,
+    area: 22,
+    imageUrl:
+      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800',
+    address: 'Ngõ 52 Tạ Quang Bửu',
+    district: 'Hai Bà Trưng',
+    province: 'Hà Nội',
+    createdAt: '2026-08-05',
+    category: 'shared',
+  },
+
+  {
+    id: 7,
+    title: 'Phòng trọ mini giá sinh viên',
+    price: 1500000,
+    area: 18,
+    imageUrl:
+      'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800',
+    address: 'Ngách 15, Ngõ 100 Hoàng Quốc Việt',
+    district: 'Cầu Giấy',
+    province: 'Hà Nội',
+    createdAt: '2026-08-07',
+    category: 'room',
+  },
+
+  {
+    id: 8,
+    title: 'Nhà nguyên căn mặt tiền đường lớn',
+    price: 12000000,
+    area: 90,
+    imageUrl:
+      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800',
+    address: 'Đường Láng',
+    district: 'Đống Đa',
+    province: 'Hà Nội',
+    createdAt: '2026-08-08',
+    category: 'whole-house',
+  },
+
+  {
+    id: 9,
+    title: 'Căn hộ dịch vụ full nội thất cao cấp',
+    price: 7500000,
+    area: 45,
+    imageUrl:
+      'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800',
+    address: 'Royal City',
+    district: 'Thanh Xuân',
+    province: 'Hà Nội',
+    createdAt: '2026-08-09',
+    category: 'apartment',
+  },
+];
 
 const RoomListPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const [posts, setPosts] = useState<PostListItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showFilter, setShowFilter] = useState(false);
-  const [filters, setFilters] = useState({
-    province: searchParams.get('province') || '',
-    district: searchParams.get('district') || '',
-    minPrice: '',
-    maxPrice: '',
-    minArea: '',
-    maxArea: '',
-  });
+  const { category } = useParams<{
+    category?: string;
+  }>();
 
-  useEffect(() => { fetchPosts(); }, [filters]);
+  const [keyword, setKeyword] = useState('');
 
-  const fetchPosts = async () => {
-    setLoading(true);
-    try {
-      const params = {
-        province: filters.province || undefined,
-        district: filters.district || undefined,
-        minPrice: filters.minPrice ? parseFloat(filters.minPrice) * 1000000 : undefined,
-        maxPrice: filters.maxPrice ? parseFloat(filters.maxPrice) * 1000000 : undefined,
-        minArea: filters.minArea ? parseFloat(filters.minArea) : undefined,
-        maxArea: filters.maxArea ? parseFloat(filters.maxArea) : undefined,
-      };
-      const r = await postService.searchPosts(params);
-      setPosts(r.data);
-    } catch { toast.error('Không thể tải danh sách phòng'); }
-    finally { setLoading(false); }
+  const currentCategory: RoomCategory =
+    category === 'whole-house' ||
+    category === 'apartment' ||
+    category === 'shared'
+      ? category
+      : 'room';
+
+  const config = ROOM_CATEGORIES[currentCategory];
+
+  const rooms = useMemo(() => {
+    return DEMO_ROOMS.filter(
+      (room) => room.category === currentCategory
+    );
+  }, [currentCategory]);
+
+  const handleSearch = () => {
+    console.log('Search:', keyword);
   };
 
-  const reset = () => setFilters({ province:'', district:'', minPrice:'', maxPrice:'', minArea:'', maxArea:'' });
-
-  if (loading) return <Spinner fullScreen/>;
-
   return (
-    <div className="bg-gray-50 min-h-screen min-w-[1200px]">
-      {/* Header bar */}
-      <div className="bg-white border-b border-gray-200 sticky top-20 z-40 shadow-sm">
-        <div className="max-w-[1200px] mx-auto px-4 py-4 flex items-center gap-4">
-          <div className="flex-1 flex items-center gap-3 bg-gray-100 rounded-xl px-5 py-3">
-            <FiSearch className="w-5 h-5 text-gray-400"/>
-            <input type="text" placeholder="Tìm theo khu vực, quận..." className="flex-1 bg-transparent text-[15px] text-gray-700 outline-none placeholder-gray-400"/>
-          </div>
-          <button onClick={() => setShowFilter(!showFilter)}
-            className={'flex items-center gap-2 px-6 py-3 rounded-xl text-[15px] font-bold transition-colors border ' + (showFilter ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50')}>
-            <FiFilter className="w-5 h-5"/>Bộ lọc
-          </button>
-        </div>
-
-        {/* Expanded Filter */}
-        {showFilter && (
-          <div className="border-t border-gray-100 px-4 py-6 bg-gray-50/50">
-            <div className="max-w-[1200px] mx-auto flex gap-5">
-              {[
-                { label: 'Tỉnh/Thành phố', key: 'province', placeholder: 'VD: Hồ Chí Minh' },
-                { label: 'Quận/Huyện', key: 'district', placeholder: 'VD: Quận 7' },
-                { label: 'Giá thấp nhất (triệu)', key: 'minPrice', placeholder: 'VD: 2' },
-                { label: 'Giá cao nhất (triệu)', key: 'maxPrice', placeholder: 'VD: 10' },
-              ].map(f => (
-                <div key={f.key} className="flex-1">
-                  <label className="block text-sm font-bold text-gray-700 mb-2">{f.label}</label>
-                  <input type="text" placeholder={f.placeholder} value={(filters as any)[f.key]}
-                    onChange={e => setFilters({ ...filters, [f.key]: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-[15px] outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white"/>
-                </div>
-              ))}
-            </div>
-            <div className="max-w-[1200px] mx-auto flex justify-end mt-5">
-              <button onClick={reset} className="flex items-center gap-2 px-6 py-2.5 text-[15px] font-bold text-gray-600 hover:text-gray-900 border border-gray-200 rounded-xl bg-white hover:bg-gray-100 transition-colors shadow-sm">
-                <FiX className="w-5 h-5"/>Xóa bộ lọc
-              </button>
-            </div>
-          </div>
-        )}
+    <div className="room-list-page">
+      {/* =========================================
+          SEARCH
+      ========================================= */}
+      <div className="room-list-search-wrapper">
+        <RoomSearchBar
+          keyword={keyword}
+          setKeyword={setKeyword}
+          onSearch={handleSearch}
+        />
       </div>
 
-      {/* Content */}
-      <div className="max-w-[1200px] mx-auto px-4 py-10">
-        <div className="flex items-center justify-between mb-8">
-          <p className="text-[16px] text-gray-600 font-medium">
-            Tìm thấy <span className="font-extrabold text-blue-600 text-lg">{posts.length}</span> phòng
-          </p>
-          <select className="text-[15px] font-medium border border-gray-200 rounded-xl px-4 py-2.5 outline-none bg-white text-gray-800 focus:border-blue-400 shadow-sm cursor-pointer hover:bg-gray-50">
-            <option>Mới nhất</option>
-            <option>Giá tăng dần</option>
-            <option>Giá giảm dần</option>
-          </select>
-        </div>
+      {/* =========================================
+          FILTER
+      ========================================= */}
+      <div className="room-list-filter-wrapper">
+        <RoomFilterBar
+          categoryName={config.name}
+        />
+      </div>
 
-        {posts.length === 0 ? (
-          <div className="text-center py-24 bg-white rounded-3xl shadow-sm border border-gray-100">
-            <div className="text-8xl mb-6">🔍</div>
-            <h3 className="text-2xl font-extrabold text-gray-800 mb-3">Không tìm thấy phòng nào</h3>
-            <p className="text-gray-500 text-[16px] font-medium mb-6">Thử thay đổi bộ lọc để xem thêm kết quả</p>
-            <button onClick={reset} className="px-8 py-3.5 bg-blue-600 text-white rounded-xl text-[16px] font-bold hover:bg-blue-700 transition-colors shadow-md">Xóa bộ lọc</button>
-          </div>
-        ) : (
-          <div className="flex flex-wrap gap-6">
-            {posts.map(post => (
-              <div key={post.id} onClick={() => navigate('/rooms/' + post.id)}
-                className="w-[calc(25%-18px)] bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer group overflow-hidden border border-gray-100 hover:-translate-y-1.5">
-                <div className="relative h-52 overflow-hidden">
-                  {post.thumbnailUrl
-                    ? <img src={post.thumbnailUrl} alt={post.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"/>
-                    : <div className="w-full h-full bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center text-7xl">🏠</div>
-                  }
-                  <div className="absolute top-3 right-3">
-                    <span className="bg-blue-600 text-white text-[13px] font-extrabold px-3.5 py-1.5 rounded-full shadow-md">
-                      {formatPrice(post.price)}/tháng
-                    </span>
-                  </div>
-                </div>
-                <div className="p-5">
-                  <h3 className="text-[16px] font-bold text-gray-800 mb-3 line-clamp-2 group-hover:text-blue-600 transition-colors leading-relaxed min-h-[48px]">{post.title}</h3>
-                  <p className="text-[14px] text-gray-500 flex items-center gap-1.5 mb-4">
-                    <FiMapPin className="w-4 h-4 flex-shrink-0 text-gray-400"/>
-                    <span className="line-clamp-1">{post.ward}, {post.district}, {post.province}</span>
-                  </p>
-                  <div className="flex items-center justify-between text-[13px] text-gray-600 pt-3 border-t border-gray-100 font-bold">
-                    <span className="bg-gray-100 px-3 py-1 rounded-md">{post.area} m²</span>
-                    <span className="bg-gray-100 px-3 py-1 rounded-md">{post.maxOccupants} người</span>
-                  </div>
-                </div>
+      {/* =========================================
+          MAIN
+      ========================================= */}
+      <main className="room-list-container">
+        {/* Breadcrumb */}
+        <nav className="room-list-breadcrumb">
+          <Link to="/">
+            Trang chủ
+          </Link>
+
+          <FiChevronRight />
+
+          <span>
+            {config.name}
+          </span>
+        </nav>
+
+        {/* Layout */}
+        <div className="room-list-layout">
+          {/* LEFT */}
+          <section className="room-list-main">
+            <div className="room-list-heading">
+              <div>
+                <h1>
+                  {config.title}
+                </h1>
+
+                <p>
+                  Hiện có {rooms.length} tin
+                </p>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+
+              <select className="room-sort-select">
+                <option>Tin mới đăng</option>
+                <option>Giá thấp đến cao</option>
+                <option>Giá cao đến thấp</option>
+                <option>Diện tích nhỏ đến lớn</option>
+              </select>
+            </div>
+
+            {/* Room list */}
+            <div className="room-list-items">
+              {rooms.length > 0 ? (
+                rooms.map((room) => (
+                  <RoomListCard
+                    key={room.id}
+                    room={room}
+                  />
+                ))
+              ) : (
+                <div className="room-list-empty">
+                  {config.emptyMessage}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* RIGHT */}
+          <RoomSidebar
+            latestRooms={rooms}
+          />
+        </div>
+      </main>
     </div>
   );
 };
+
 export default RoomListPage;

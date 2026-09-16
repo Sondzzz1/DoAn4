@@ -1,167 +1,186 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { FiEye, FiEyeOff, FiMail, FiLock, FiArrowLeft } from 'react-icons/fi';
+import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
 import { ROUTES } from '../../utils/constants';
-import Button from '../../components/common/Button';
-import Input from '../../components/common/Input';
-import { toast } from 'react-toastify';
+import './Auth.css';
 
 const LoginPage: React.FC = () => {
-  const { login, isLandlord, isTenant, isAdmin } = useAuth();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  
+  const { login, isLandlord, isTenant, isAdmin } = useAuth();
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-  });
-
-  const [errors, setErrors] = useState({
-    email: '',
-    password: '',
+    remember: false,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    setErrors(prev => ({ ...prev, [name]: '' }));
-  };
-
-  const validate = (): boolean => {
-    let isValid = true;
-    const newErrors = { email: '', password: '' };
-
-    if (!formData.email) {
-      newErrors.email = 'Email không được để trống';
-      isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email không hợp lệ';
-      isValid = false;
-    }
-
-    if (!formData.password) {
-      newErrors.password = 'Mật khẩu không được để trống';
-      isValid = false;
-    }
-
-    setErrors(newErrors);
-    return isValid;
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validate()) return;
+    if (!formData.email.trim()) {
+      toast.error('Vui lòng nhập email hoặc số điện thoại.');
+      return;
+    }
 
-    setIsLoading(true);
+    if (!formData.password) {
+      toast.error('Vui lòng nhập mật khẩu.');
+      return;
+    }
 
     try {
-      await login(formData);
+      setLoading(true);
+
+      await login({
+        email: formData.email.trim(),
+        password: formData.password,
+      });
+
       toast.success('Đăng nhập thành công!');
 
-      // Redirect based on role
+      // Điều hướng dựa vào vai trò người dùng
       setTimeout(() => {
         if (isLandlord) {
           navigate(ROUTES.LANDLORD_DASHBOARD);
-        } else if (isTenant) {
-          navigate(ROUTES.ROOM_LIST);
         } else if (isAdmin) {
           navigate(ROUTES.ADMIN_DASHBOARD);
         } else {
           navigate(ROUTES.HOME);
         }
-      }, 500);
+      }, 300);
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Đăng nhập thất bại';
+      const errorMessage =
+        error.response?.data?.message || 'Email hoặc mật khẩu không chính xác.';
       toast.error(errorMessage);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        {/* Header */}
-        <div className="text-center">
-          <div className="text-6xl mb-4">🏠</div>
-          <h2 className="text-3xl font-bold text-gray-900">Đăng nhập</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Chưa có tài khoản?{' '}
-            <Link to={ROUTES.REGISTER} className="text-blue-600 hover:text-blue-500 font-medium">
-              Đăng ký ngay
-            </Link>
-          </p>
+    <div className="auth-page">
+      <div className="auth-background">
+        <div className="auth-decoration auth-decoration-1" />
+        <div className="auth-decoration auth-decoration-2" />
+      </div>
+
+      <div className="auth-container">
+        {/* Logo */}
+        <Link to={ROUTES.HOME} className="auth-logo">
+          Timnhatro<span>.vn</span>
+        </Link>
+
+        {/* Card */}
+        <div className="auth-card">
+          <div className="auth-header">
+            <h1>Chào mừng trở lại</h1>
+            <p>
+              Đăng nhập để tiếp tục tìm kiếm
+              <br />
+              phòng trọ phù hợp với bạn
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            {/* Email */}
+            <div className="auth-field">
+              <label htmlFor="email">Email hoặc số điện thoại</label>
+              <div className="auth-input-wrapper">
+                <FiMail className="auth-input-icon" />
+                <input
+                  id="email"
+                  name="email"
+                  type="text"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="Nhập email hoặc số điện thoại"
+                  autoComplete="username"
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div className="auth-field">
+              <div className="auth-label-row">
+                <label htmlFor="password">Mật khẩu</label>
+                <Link to="/forgot-password">Quên mật khẩu?</Link>
+              </div>
+
+              <div className="auth-input-wrapper">
+                <FiLock className="auth-input-icon" />
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Nhập mật khẩu"
+                  autoComplete="current-password"
+                />
+
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                >
+                  {showPassword ? <FiEyeOff /> : <FiEye />}
+                </button>
+              </div>
+            </div>
+
+            {/* Remember */}
+            <label className="auth-checkbox">
+              <input
+                type="checkbox"
+                name="remember"
+                checked={formData.remember}
+                onChange={handleChange}
+              />
+              <span>Ghi nhớ đăng nhập</span>
+            </label>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              className="auth-submit"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="auth-loading">
+                  <span />
+                  Đang đăng nhập...
+                </span>
+              ) : (
+                'Đăng nhập'
+              )}
+            </button>
+          </form>
+
+          {/* Register */}
+          <div className="auth-switch">
+            <span>Chưa có tài khoản?</span>
+            <Link to={ROUTES.REGISTER}>Đăng ký ngay</Link>
+          </div>
         </div>
 
-        {/* Form */}
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <Input
-              label="Email"
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              error={errors.email}
-              placeholder="nguyenvana@example.com"
-              required
-            />
-
-            <Input
-              label="Mật khẩu"
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              error={errors.password}
-              placeholder="••••••••"
-              required
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                Ghi nhớ đăng nhập
-              </label>
-            </div>
-
-            <div className="text-sm">
-              <a href="#" className="text-blue-600 hover:text-blue-500">
-                Quên mật khẩu?
-              </a>
-            </div>
-          </div>
-
-          <Button type="submit" fullWidth isLoading={isLoading}>
-            Đăng nhập
-          </Button>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-50 text-gray-500">Hoặc đăng nhập với</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Button type="button" variant="outline" fullWidth>
-              Google
-            </Button>
-            <Button type="button" variant="outline" fullWidth>
-              Facebook
-            </Button>
-          </div>
-        </form>
+        {/* Back */}
+        <Link to={ROUTES.HOME} className="auth-back">
+          <FiArrowLeft />
+          Quay lại trang chủ
+        </Link>
       </div>
     </div>
   );

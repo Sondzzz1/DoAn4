@@ -1,15 +1,26 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import {
+  FiEye,
+  FiEyeOff,
+  FiUser,
+  FiMail,
+  FiPhone,
+  FiLock,
+  FiArrowLeft,
+} from 'react-icons/fi';
+import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
 import { ROUTES } from '../../utils/constants';
-import Button from '../../components/common/Button';
-import Input from '../../components/common/Input';
-import { toast } from 'react-toastify';
+import './Auth.css';
 
 const RegisterPage: React.FC = () => {
-  const { register } = useAuth();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+  const { register } = useAuth();
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -17,243 +28,252 @@ const RegisterPage: React.FC = () => {
     phone: '',
     password: '',
     confirmPassword: '',
-    roleName: 'Tenant' as 'Tenant' | 'Landlord',
+    agree: false,
   });
 
-  const [errors, setErrors] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
-  });
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    setErrors(prev => ({ ...prev, [name]: '' }));
-  };
-
-  const validate = (): boolean => {
-    let isValid = true;
-    const newErrors = {
-      fullName: '',
-      email: '',
-      phone: '',
-      password: '',
-      confirmPassword: '',
-    };
-
-    if (!formData.fullName) {
-      newErrors.fullName = 'Họ tên không được để trống';
-      isValid = false;
-    }
-
-    if (!formData.email) {
-      newErrors.email = 'Email không được để trống';
-      isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email không hợp lệ';
-      isValid = false;
-    }
-
-    if (!formData.phone) {
-      newErrors.phone = 'Số điện thoại không được để trống';
-      isValid = false;
-    } else if (!/^(0|\+84)[0-9]{9}$/.test(formData.phone)) {
-      newErrors.phone = 'Số điện thoại không hợp lệ';
-      isValid = false;
-    }
-
-    if (!formData.password) {
-      newErrors.password = 'Mật khẩu không được để trống';
-      isValid = false;
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
-      isValid = false;
-    }
-
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Vui lòng xác nhận mật khẩu';
-      isValid = false;
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Mật khẩu xác nhận không khớp';
-      isValid = false;
-    }
-
-    setErrors(newErrors);
-    return isValid;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validate()) return;
+    if (!formData.fullName.trim()) {
+      toast.error('Vui lòng nhập họ và tên.');
+      return;
+    }
 
-    setIsLoading(true);
+    if (!formData.email.trim()) {
+      toast.error('Vui lòng nhập email.');
+      return;
+    }
+
+    if (!/\S+@\S+\.\S+/.test(formData.email.trim())) {
+      toast.error('Email không hợp lệ.');
+      return;
+    }
+
+    if (!formData.phone.trim()) {
+      toast.error('Vui lòng nhập số điện thoại.');
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      toast.error('Mật khẩu phải có ít nhất 6 ký tự.');
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Mật khẩu xác nhận không khớp.');
+      return;
+    }
+
+    if (!formData.agree) {
+      toast.error('Vui lòng đồng ý với điều khoản sử dụng.');
+      return;
+    }
 
     try {
-      const { confirmPassword, ...registerData } = formData;
-      await register(registerData);
-      
-      toast.success('Đăng ký thành công!');
-      
+      setLoading(true);
+
+      // Đăng ký tài khoản mặc định là Tenant
+      await register({
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        password: formData.password,
+        roleName: 'Tenant',
+      });
+
+      toast.success('Đăng ký tài khoản thành công!');
+
       setTimeout(() => {
-        if (formData.roleName === 'Landlord') {
-          navigate(ROUTES.LANDLORD_DASHBOARD);
-        } else {
-          navigate(ROUTES.ROOM_LIST);
-        }
-      }, 500);
+        navigate(ROUTES.HOME);
+      }, 300);
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Đăng ký thất bại';
+      const errorMessage =
+        error.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.';
       toast.error(errorMessage);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        {/* Header */}
-        <div className="text-center">
-          <div className="text-6xl mb-4">🏠</div>
-          <h2 className="text-3xl font-bold text-gray-900">Đăng ký tài khoản</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Đã có tài khoản?{' '}
-            <Link to={ROUTES.LOGIN} className="text-blue-600 hover:text-blue-500 font-medium">
-              Đăng nhập ngay
-            </Link>
-          </p>
-        </div>
+    <div className="auth-page">
+      <div className="auth-background">
+        <div className="auth-decoration auth-decoration-1" />
+        <div className="auth-decoration auth-decoration-2" />
+      </div>
 
-        {/* Form */}
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            {/* Role Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Bạn là <span className="text-red-500">*</span>
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                <label className={`flex items-center justify-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                  formData.roleName === 'Tenant' 
-                    ? 'border-blue-600 bg-blue-50' 
-                    : 'border-gray-300 hover:border-blue-300'
-                }`}>
-                  <input
-                    type="radio"
-                    name="roleName"
-                    value="Tenant"
-                    checked={formData.roleName === 'Tenant'}
-                    onChange={handleChange}
-                    className="sr-only"
-                  />
-                  <div className="text-center">
-                    <div className="text-3xl mb-1">🔍</div>
-                    <div className="font-medium">Người tìm trọ</div>
-                  </div>
-                </label>
+      <div className="auth-container">
+        {/* Logo */}
+        <Link to={ROUTES.HOME} className="auth-logo">
+          Timnhatro<span>.vn</span>
+        </Link>
 
-                <label className={`flex items-center justify-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                  formData.roleName === 'Landlord' 
-                    ? 'border-blue-600 bg-blue-50' 
-                    : 'border-gray-300 hover:border-blue-300'
-                }`}>
-                  <input
-                    type="radio"
-                    name="roleName"
-                    value="Landlord"
-                    checked={formData.roleName === 'Landlord'}
-                    onChange={handleChange}
-                    className="sr-only"
-                  />
-                  <div className="text-center">
-                    <div className="text-3xl mb-1">🏘️</div>
-                    <div className="font-medium">Chủ nhà</div>
-                  </div>
-                </label>
+        {/* Card */}
+        <div className="auth-card auth-register-card">
+          <div className="auth-header">
+            <h1>Tạo tài khoản</h1>
+            <p>
+              Tham gia Timnhatro.vn để tìm kiếm
+              <br />
+              căn phòng phù hợp với bạn
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            {/* Full name */}
+            <div className="auth-field">
+              <label htmlFor="fullName">Họ và tên</label>
+              <div className="auth-input-wrapper">
+                <FiUser className="auth-input-icon" />
+                <input
+                  id="fullName"
+                  name="fullName"
+                  type="text"
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  placeholder="Nguyễn Văn A"
+                  autoComplete="name"
+                />
               </div>
             </div>
 
-            <Input
-              label="Họ và tên"
-              type="text"
-              name="fullName"
-              value={formData.fullName}
-              onChange={handleChange}
-              error={errors.fullName}
-              placeholder="Nguyễn Văn A"
-              required
-            />
+            {/* Email */}
+            <div className="auth-field">
+              <label htmlFor="email">Email</label>
+              <div className="auth-input-wrapper">
+                <FiMail className="auth-input-icon" />
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="example@gmail.com"
+                  autoComplete="email"
+                />
+              </div>
+            </div>
 
-            <Input
-              label="Email"
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              error={errors.email}
-              placeholder="nguyenvana@example.com"
-              required
-            />
+            {/* Phone */}
+            <div className="auth-field">
+              <label htmlFor="phone">Số điện thoại</label>
+              <div className="auth-input-wrapper">
+                <FiPhone className="auth-input-icon" />
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="09xxxxxxxx"
+                  autoComplete="tel"
+                />
+              </div>
+            </div>
 
-            <Input
-              label="Số điện thoại"
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              error={errors.phone}
-              placeholder="0123456789"
-              required
-            />
+            {/* Password */}
+            <div className="auth-field">
+              <label htmlFor="password">Mật khẩu</label>
+              <div className="auth-input-wrapper">
+                <FiLock className="auth-input-icon" />
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Ít nhất 6 ký tự"
+                  autoComplete="new-password"
+                />
 
-            <Input
-              label="Mật khẩu"
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              error={errors.password}
-              placeholder="••••••••"
-              helperText="Tối thiểu 6 ký tự"
-              required
-            />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                >
+                  {showPassword ? <FiEyeOff /> : <FiEye />}
+                </button>
+              </div>
+            </div>
 
-            <Input
-              label="Xác nhận mật khẩu"
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              error={errors.confirmPassword}
-              placeholder="••••••••"
-              required
-            />
-          </div>
+            {/* Confirm password */}
+            <div className="auth-field">
+              <label htmlFor="confirmPassword">Xác nhận mật khẩu</label>
+              <div className="auth-input-wrapper">
+                <FiLock className="auth-input-icon" />
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="Nhập lại mật khẩu"
+                  autoComplete="new-password"
+                />
 
-          <div className="flex items-center">
-            <input
-              id="terms"
-              name="terms"
-              type="checkbox"
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              required
-            />
-            <label htmlFor="terms" className="ml-2 block text-sm text-gray-900">
-              Tôi đồng ý với{' '}
-              <a href="#" className="text-blue-600 hover:text-blue-500">
-                Điều khoản dịch vụ
-              </a>
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  aria-label={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                >
+                  {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                </button>
+              </div>
+            </div>
+
+            {/* Terms */}
+            <label className="auth-checkbox auth-terms">
+              <input
+                type="checkbox"
+                name="agree"
+                checked={formData.agree}
+                onChange={handleChange}
+              />
+              <span>
+                Tôi đồng ý với{' '}
+                <Link to="/terms">Điều khoản sử dụng</Link> và{' '}
+                <Link to="/privacy">Chính sách bảo mật</Link>
+              </span>
             </label>
-          </div>
 
-          <Button type="submit" fullWidth isLoading={isLoading}>
-            Đăng ký
-          </Button>
-        </form>
+            {/* Submit */}
+            <button
+              type="submit"
+              className="auth-submit"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="auth-loading">
+                  <span />
+                  Đang tạo tài khoản...
+                </span>
+              ) : (
+                'Tạo tài khoản'
+              )}
+            </button>
+          </form>
+
+          <div className="auth-switch">
+            <span>Đã có tài khoản?</span>
+            <Link to={ROUTES.LOGIN}>Đăng nhập</Link>
+          </div>
+        </div>
+
+        {/* Back */}
+        <Link to={ROUTES.HOME} className="auth-back">
+          <FiArrowLeft />
+          Quay lại trang chủ
+        </Link>
       </div>
     </div>
   );

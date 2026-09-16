@@ -6,7 +6,7 @@ export interface RegisterRequest {
   email: string;
   phone: string;
   password: string;
-  roleName: 'Tenant' | 'Landlord';
+  roleName?: 'Tenant' | 'Landlord';
 }
 
 /**

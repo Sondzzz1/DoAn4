@@ -264,14 +264,15 @@ const RoomDetailPage: React.FC = () => {
   // =========================================================================
   // 3. MAIN DETAIL PAGE LAYOUT
   // =========================================================================
-  return (
+return (
   <div className="room-detail-page">
 
-    {/* =========================
+    {/* =====================================================
         BREADCRUMB
-    ========================== */}
+    ====================================================== */}
     <div className="room-breadcrumb">
       <div className="room-breadcrumb-inner">
+
         <Link to={ROUTES.HOME}>
           Trang chủ
         </Link>
@@ -301,23 +302,28 @@ const RoomDetailPage: React.FC = () => {
         <span className="room-breadcrumb-current">
           {post.title}
         </span>
+
       </div>
     </div>
 
-    {/* =========================
-        MAIN CONTENT
-    ========================== */}
+
+    {/* =====================================================
+        MAIN
+    ====================================================== */}
     <main className="room-detail-container">
 
+      {/* ===================================================
+          TOP CONTENT
+      ==================================================== */}
       <div className="room-detail-layout">
 
-        {/* =========================
-            LEFT CONTENT
-        ========================== */}
+        {/* =================================================
+            LEFT
+        ================================================== */}
         <section className="room-detail-main">
 
           {/* Gallery */}
-          <div className="room-detail-card room-gallery-card">
+          <div className="room-gallery-wrapper">
             <RoomImageGallery
               images={post.imageUrls || []}
               title={post.title}
@@ -327,41 +333,47 @@ const RoomDetailPage: React.FC = () => {
             />
           </div>
 
-          {/* Information */}
-          <div className="room-detail-card">
+
+          {/* Room information */}
+          <section className="room-content-section">
             <RoomInformation post={post} />
-          </div>
+          </section>
+
 
           {/* Amenities */}
-          <div className="room-detail-card">
+          <section className="room-content-section">
             <RoomAmenities amenities={post.amenities || []} />
-          </div>
+          </section>
+
 
           {/* Location */}
-          <div className="room-detail-card">
+          <section className="room-content-section room-location-section">
             <RoomLocation
               address={post.address}
               ward={post.ward}
               district={post.district}
               province={post.province}
             />
-          </div>
+          </section>
 
         </section>
 
-        {/* =========================
+
+        {/* =================================================
             RIGHT SIDEBAR
-        ========================== */}
+        ================================================== */}
         <aside className="room-detail-sidebar">
 
           <div className="room-sidebar-sticky">
 
-            <div className="room-detail-card room-contact-card">
+            <div className="room-contact-wrapper">
+
               <LandlordContactCard
                 post={post}
                 onBookViewing={handleBookViewing}
                 onSendMessage={handleSendMessage}
               />
+
             </div>
 
           </div>
@@ -370,22 +382,38 @@ const RoomDetailPage: React.FC = () => {
 
       </div>
 
-      {/* =========================
+
+      {/* ===================================================
           SIMILAR ROOMS
-      ========================== */}
+      ==================================================== */}
       <section className="room-similar-section">
 
-        <div className="room-detail-card">
-          <SimilarRooms currentPostId={post.id} />
+        <div className="room-section-heading">
+
+          <div>
+            <h2>Phòng trọ tương tự</h2>
+            <p>
+              Một số phòng trọ khác có thể phù hợp với bạn
+            </p>
+          </div>
+
+          <Link to={ROUTES.ROOM_LIST || '/rooms'}>
+            Xem tất cả
+            <FiChevronRight />
+          </Link>
+
         </div>
+
+        <SimilarRooms currentPostId={post.id} />
 
       </section>
 
     </main>
 
-    {/* =========================
+
+    {/* =====================================================
         BOOKING MODAL
-    ========================== */}
+    ====================================================== */}
     <BookingModal
       isOpen={isBookingModalOpen}
       onClose={() => setIsBookingModalOpen(false)}
@@ -394,6 +422,8 @@ const RoomDetailPage: React.FC = () => {
 
   </div>
 );
+
+
 };
 
 export default RoomDetailPage;

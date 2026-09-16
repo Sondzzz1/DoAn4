@@ -38,17 +38,13 @@ public class RegisterDto
     public string Password { get; set; } = string.Empty;
 
     /// <summary>
-    /// Xác nhận mật khẩu
+    /// Xác nhận mật khẩu (tùy chọn trong request DTO)
     /// </summary>
-    [Required(ErrorMessage = "Xác nhận mật khẩu là bắt buộc")]
     [Compare("Password", ErrorMessage = "Mật khẩu xác nhận không khớp")]
-    public string ConfirmPassword { get; set; } = string.Empty;
+    public string? ConfirmPassword { get; set; }
 
     /// <summary>
-    /// Tên Role: Tenant hoặc Landlord
-    /// Không cho đăng ký trực tiếp với role Admin
+    /// Tên Role mặc định là Tenant nếu không truyền
     /// </summary>
-    [Required(ErrorMessage = "Loại tài khoản là bắt buộc")]
-    [RegularExpression("^(Tenant|Landlord)$", ErrorMessage = "Loại tài khoản phải là Tenant hoặc Landlord")]
-    public string RoleName { get; set; } = string.Empty;
+    public string? RoleName { get; set; } = "Tenant";
 }

@@ -40,9 +40,10 @@ public class AuthService : IAuthService
             throw new Exception("Email đã được sử dụng");
         }
 
-        // Lấy Role từ RoleName
+        // Lấy Role từ RoleName (mặc định là Tenant)
+        var roleName = string.IsNullOrWhiteSpace(registerDto.RoleName) ? "Tenant" : registerDto.RoleName;
         var role = await _context.Roles
-            .FirstOrDefaultAsync(r => r.Name == registerDto.RoleName);
+            .FirstOrDefaultAsync(r => r.Name == roleName);
 
         if (role == null)
         {
