@@ -11,27 +11,20 @@ public class PostAmenityConfiguration : IEntityTypeConfiguration<PostAmenity>
 {
     public void Configure(EntityTypeBuilder<PostAmenity> builder)
     {
-        // Tên bảng
-        builder.ToTable("PostAmenities");
+        builder.ToTable("PhongTro_TienNghi");
 
-        // Composite Primary Key (PostId, AmenityId)
-        builder.HasKey(pa => new { pa.PostId, pa.AmenityId });
+        builder.HasKey(pa => new { pa.RoomId, pa.AmenityId });
 
-        // Properties
-        builder.Property(pa => pa.CreatedAt)
-            .IsRequired()
-            .HasDefaultValueSql("GETUTCDATE()");
+        builder.Property(pa => pa.RoomId).HasColumnName("PhongTroId");
+        builder.Property(pa => pa.AmenityId).HasColumnName("TienNghiId");
 
-        // Relationships
-        // PostAmenity -> Post
-        builder.HasOne(pa => pa.Post)
-            .WithMany(p => p.PostAmenities)
-            .HasForeignKey(pa => pa.PostId)
+        builder.HasOne(pa => pa.Room)
+            .WithMany(r => r.RoomAmenities)
+            .HasForeignKey(pa => pa.RoomId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // PostAmenity -> Amenity
         builder.HasOne(pa => pa.Amenity)
-            .WithMany(a => a.PostAmenities)
+            .WithMany(a => a.RoomAmenities)
             .HasForeignKey(pa => pa.AmenityId)
             .OnDelete(DeleteBehavior.Cascade);
     }

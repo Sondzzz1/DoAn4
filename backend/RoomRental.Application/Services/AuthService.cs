@@ -31,53 +31,70 @@ public class AuthService : IAuthService
     /// </summary>
     public async Task<AuthResponseDto> RegisterAsync(RegisterDto registerDto)
     {
-        // Kiểm tra email đã tồn tại chưa
+        var fullName = registerDto.GetFullName();
+        var email = registerDto.Email?.Trim();
+        var phone = registerDto.GetPhone();
+        var password = registerDto.GetPassword();
+        var roleId = ResolveRegisterRole(registerDto.GetRoleName());
+
+        if (string.IsNullOrWhiteSpace(fullName))
+        {
+            throw new Exception("Họ tên là bắt buộc");
+        }
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            throw new Exception("Email là bắt buộc");
+        }
+
+        if (string.IsNullOrWhiteSpace(phone))
+        {
+            throw new Exception("Số điện thoại là bắt buộc");
+        }
+
+        if (string.IsNullOrWhiteSpace(password) || password.Length < 6)
+        {
+            throw new Exception("Mật khẩu phải có ít nhất 6 ký tự");
+        }
+
         var existingUser = await _context.Users
-            .FirstOrDefaultAsync(u => u.Email == registerDto.Email);
+            .FirstOrDefaultAsync(u => u.Email == email || u.Phone == phone || u.UserName == email);
 
         if (existingUser != null)
         {
-            throw new Exception("Email đã được sử dụng");
+            throw new Exception("Email hoặc số điện thoại đã được sử dụng");
         }
 
-        // Lấy Role từ RoleName (mặc định là Tenant)
-        var roleName = string.IsNullOrWhiteSpace(registerDto.RoleName) ? "Tenant" : registerDto.RoleName;
-        var role = await _context.Roles
-            .FirstOrDefaultAsync(r => r.Name == roleName);
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(password);
 
-        if (role == null)
-        {
-            throw new Exception("Role không hợp lệ");
-        }
-
-        // Không cho phép đăng ký với role Admin
-        if (role.Name == "Admin")
-        {
-            throw new Exception("Không thể đăng ký với quyền Admin");
-        }
-
-        // Hash password bằng BCrypt
-        var passwordHash = BCrypt.Net.BCrypt.HashPassword(registerDto.Password);
-
-        // Tạo User mới
         var user = new User
         {
-            FullName = registerDto.FullName,
-            Email = registerDto.Email,
-            Phone = registerDto.Phone,
+            UserName = email,
+            FullName = fullName,
+            Email = email,
+            Phone = phone,
             PasswordHash = passwordHash,
-            RoleId = role.Id,
-            IsBlocked = false,
-            CreatedAt = DateTime.UtcNow
+            RoleId = roleId,
+            IsActive = true,
+            CreatedAt = DateTime.Now
         };
 
+        await using var transaction = await _context.Database.BeginTransactionAsync();
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        // Load lại để có thông tin Role
-        await _context.Entry(user).Reference(u => u.Role).LoadAsync();
+        if (roleId == 1)
+        {
+            _context.TenantProfiles.Add(new TenantProfile { AccountId = user.Id });
+        }
+        else if (roleId == 2)
+        {
+            _context.LandlordProfiles.Add(new LandlordProfile { AccountId = user.Id });
+        }
 
-        // Tạo JWT Token
+        await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
+
         var token = GenerateJwtToken(user);
 
         return new AuthResponseDto
@@ -85,8 +102,8 @@ public class AuthService : IAuthService
             Token = token,
             UserId = user.Id,
             FullName = user.FullName,
-            Email = user.Email,
-            Role = user.Role.Name,
+            Email = user.Email ?? string.Empty,
+            Role = user.RoleName,
             AvatarUrl = user.AvatarUrl
         };
     }
@@ -96,10 +113,16 @@ public class AuthService : IAuthService
     /// </summary>
     public async Task<AuthResponseDto> LoginAsync(LoginDto loginDto)
     {
-        // Tìm User theo Email
+        var email = loginDto.GetEmail();
+        var password = loginDto.GetPassword();
+
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+        {
+            throw new Exception("Email và mật khẩu là bắt buộc");
+        }
+
         var user = await _context.Users
-            .Include(u => u.Role)
-            .FirstOrDefaultAsync(u => u.Email == loginDto.Email);
+            .FirstOrDefaultAsync(u => u.Email == email);
 
         if (user == null)
         {
@@ -112,8 +135,7 @@ public class AuthService : IAuthService
             throw new Exception("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin");
         }
 
-        // Verify password bằng BCrypt
-        var isPasswordValid = BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash);
+        var isPasswordValid = BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
 
         if (!isPasswordValid)
         {
@@ -128,8 +150,8 @@ public class AuthService : IAuthService
             Token = token,
             UserId = user.Id,
             FullName = user.FullName,
-            Email = user.Email,
-            Role = user.Role.Name,
+            Email = user.Email ?? string.Empty,
+            Role = user.RoleName,
             AvatarUrl = user.AvatarUrl
         };
     }
@@ -151,9 +173,9 @@ public class AuthService : IAuthService
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
             new Claim(ClaimTypes.Name, user.FullName),
-            new Claim(ClaimTypes.Role, user.Role.Name),
+            new Claim(ClaimTypes.Role, user.RoleName),
             new Claim("UserId", user.Id.ToString()),
             new Claim("RoleId", user.RoleId.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
@@ -168,5 +190,18 @@ public class AuthService : IAuthService
         );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private static int ResolveRegisterRole(string roleName)
+    {
+        var normalized = roleName.Trim().ToLowerInvariant();
+
+        return normalized switch
+        {
+            "tenant" or "nguoidung" or "người dùng" or "user" or "1" => 1,
+            "landlord" or "chutro" or "chủ trọ" or "2" => 2,
+            "admin" or "0" => throw new Exception("Không thể đăng ký với quyền Admin"),
+            _ => throw new Exception("Role không hợp lệ. Chỉ hỗ trợ Tenant hoặc Landlord")
+        };
     }
 }

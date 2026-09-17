@@ -11,67 +11,72 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 {
     public void Configure(EntityTypeBuilder<User> builder)
     {
-        // Tên bảng
-        builder.ToTable("Users");
+        builder.ToTable("TaiKhoan");
 
-        // Primary Key
         builder.HasKey(u => u.Id);
 
-        // Properties
-        builder.Property(u => u.FullName)
+        builder.Property(u => u.UserName)
+            .HasColumnName("TenDangNhap")
             .IsRequired()
             .HasMaxLength(100);
-
-        builder.Property(u => u.Email)
-            .IsRequired()
-            .HasMaxLength(100);
-
-        builder.Property(u => u.Phone)
-            .IsRequired()
-            .HasMaxLength(20);
 
         builder.Property(u => u.PasswordHash)
+            .HasColumnName("MatKhauHash")
             .IsRequired()
-            .HasMaxLength(255);
-
-        builder.Property(u => u.AvatarUrl)
             .HasMaxLength(500);
 
-        builder.Property(u => u.IsBlocked)
+        builder.Property(u => u.FullName)
+            .HasColumnName("HoTen")
             .IsRequired()
-            .HasDefaultValue(false);
+            .HasMaxLength(150);
+
+        builder.Property(u => u.Phone)
+            .HasColumnName("SoDienThoai")
+            .HasMaxLength(20);
+
+        builder.Property(u => u.Email)
+            .HasColumnName("Email")
+            .HasMaxLength(150);
+
+        builder.Property(u => u.AvatarUrl)
+            .HasColumnName("AnhDaiDien")
+            .HasMaxLength(500);
+
+        builder.Property(u => u.RoleId)
+            .HasColumnName("VaiTro")
+            .IsRequired()
+            .HasDefaultValue(1);
+
+        builder.Property(u => u.IsActive)
+            .HasColumnName("TrangThai")
+            .IsRequired()
+            .HasDefaultValue(true);
 
         builder.Property(u => u.CreatedAt)
+            .HasColumnName("NgayTao")
             .IsRequired()
-            .HasDefaultValueSql("GETUTCDATE()");
+            .HasDefaultValueSql("SYSDATETIME()");
 
-        // Index - Email phải unique
+        builder.Property(u => u.UpdatedAt)
+            .HasColumnName("NgayCapNhat");
+
+        builder.Ignore(u => u.IsBlocked);
+        builder.Ignore(u => u.RoleName);
+
+        builder.HasIndex(u => u.UserName)
+            .IsUnique();
+
         builder.HasIndex(u => u.Email)
             .IsUnique();
 
-        // Relationships
-        // User -> Role
-        builder.HasOne(u => u.Role)
-            .WithMany(r => r.Users)
-            .HasForeignKey(u => u.RoleId)
+        builder.HasOne(u => u.TenantProfile)
+            .WithOne(p => p.Account)
+            .HasForeignKey<TenantProfile>(p => p.AccountId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // User (Landlord) -> Posts
-        builder.HasMany(u => u.Posts)
-            .WithOne(p => p.Landlord)
-            .HasForeignKey(p => p.LandlordId)
+        builder.HasOne(u => u.LandlordProfile)
+            .WithOne(p => p.Account)
+            .HasForeignKey<LandlordProfile>(p => p.AccountId)
             .OnDelete(DeleteBehavior.Restrict);
-
-        // User (Tenant) -> Favorites
-        builder.HasMany(u => u.Favorites)
-            .WithOne(f => f.User)
-            .HasForeignKey(f => f.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        // User (Tenant) -> Appointments
-        builder.HasMany(u => u.Appointments)
-            .WithOne(a => a.Tenant)
-            .HasForeignKey(a => a.TenantId)
-            .OnDelete(DeleteBehavior.Cascade);
     }
 }

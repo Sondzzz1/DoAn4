@@ -7,44 +7,43 @@ namespace RoomRental.Application.DTOs.Auth;
 /// </summary>
 public class RegisterDto
 {
-    /// <summary>
-    /// Họ và tên đầy đủ
-    /// </summary>
-    [Required(ErrorMessage = "Họ tên là bắt buộc")]
     [StringLength(100, ErrorMessage = "Họ tên không được vượt quá 100 ký tự")]
-    public string FullName { get; set; } = string.Empty;
+    public string? FullName { get; set; }
 
-    /// <summary>
-    /// Email - Dùng để đăng nhập
-    /// </summary>
-    [Required(ErrorMessage = "Email là bắt buộc")]
+    [StringLength(100, ErrorMessage = "Họ tên không được vượt quá 100 ký tự")]
+    public string? HoTen { get; set; }
+
     [EmailAddress(ErrorMessage = "Email không hợp lệ")]
     [StringLength(100, ErrorMessage = "Email không được vượt quá 100 ký tự")]
-    public string Email { get; set; } = string.Empty;
+    public string? Email { get; set; }
 
-    /// <summary>
-    /// Số điện thoại
-    /// </summary>
-    [Required(ErrorMessage = "Số điện thoại là bắt buộc")]
     [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
     [StringLength(20, ErrorMessage = "Số điện thoại không được vượt quá 20 ký tự")]
-    public string Phone { get; set; } = string.Empty;
+    public string? Phone { get; set; }
 
-    /// <summary>
-    /// Mật khẩu
-    /// </summary>
-    [Required(ErrorMessage = "Mật khẩu là bắt buộc")]
+    [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
+    [StringLength(20, ErrorMessage = "Số điện thoại không được vượt quá 20 ký tự")]
+    public string? SoDienThoai { get; set; }
+
     [StringLength(100, MinimumLength = 6, ErrorMessage = "Mật khẩu phải từ 6 đến 100 ký tự")]
-    public string Password { get; set; } = string.Empty;
+    public string? Password { get; set; }
 
-    /// <summary>
-    /// Xác nhận mật khẩu (tùy chọn trong request DTO)
-    /// </summary>
+    [StringLength(100, MinimumLength = 6, ErrorMessage = "Mật khẩu phải từ 6 đến 100 ký tự")]
+    public string? MatKhau { get; set; }
+
     [Compare("Password", ErrorMessage = "Mật khẩu xác nhận không khớp")]
     public string? ConfirmPassword { get; set; }
 
-    /// <summary>
-    /// Tên Role mặc định là Tenant nếu không truyền
-    /// </summary>
     public string? RoleName { get; set; } = "Tenant";
+    public string? VaiTro { get; set; }
+
+    public string GetFullName() => FirstNonEmpty(FullName, HoTen);
+    public string GetPhone() => FirstNonEmpty(Phone, SoDienThoai);
+    public string GetPassword() => FirstNonEmpty(Password, MatKhau);
+    public string GetRoleName() => FirstNonEmpty(RoleName, VaiTro, "Tenant");
+
+    private static string FirstNonEmpty(params string?[] values)
+    {
+        return values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v))?.Trim() ?? string.Empty;
+    }
 }

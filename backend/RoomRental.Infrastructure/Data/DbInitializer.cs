@@ -13,27 +13,37 @@ public static class DbInitializer
     /// </summary>
     public static async Task SeedAdminAsync(ApplicationDbContext context)
     {
-        // Kiểm tra đã có Admin chưa
-        var adminRole = await context.Roles.FirstOrDefaultAsync(r => r.Name == "Admin");
-        if (adminRole == null) return;
-
-        var adminExists = await context.Users.AnyAsync(u => u.RoleId == adminRole.Id);
+        var adminExists = await context.Users.AnyAsync(u => u.RoleId == 0);
         if (adminExists) return;
 
-        // Tạo Admin mặc định
-        // Password: Admin@123
         var adminUser = new User
         {
+            UserName = "admin@roomrental.com",
             FullName = "Administrator",
             Email = "admin@roomrental.com",
             Phone = "0123456789",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
-            RoleId = adminRole.Id,
-            IsBlocked = false,
-            CreatedAt = DateTime.UtcNow
+            RoleId = 0,
+            IsActive = true,
+            CreatedAt = DateTime.Now
         };
 
         context.Users.Add(adminUser);
+        await context.SaveChangesAsync();
+    }
+
+    public static async Task SeedCategoriesAsync(ApplicationDbContext context)
+    {
+        if (await context.RoomCategories.AnyAsync()) return;
+
+        context.RoomCategories.AddRange(
+            new RoomCategory { Name = "Phòng trọ", Description = "Phòng trọ phổ thông" },
+            new RoomCategory { Name = "Ở ghép", Description = "Phòng ở ghép" },
+            new RoomCategory { Name = "Nhà nguyên căn", Description = "Nhà nguyên căn cho thuê" },
+            new RoomCategory { Name = "Căn hộ", Description = "Căn hộ dịch vụ, căn hộ mini" },
+            new RoomCategory { Name = "Chung cư mini", Description = "Chung cư mini cho thuê" }
+        );
+
         await context.SaveChangesAsync();
     }
 
@@ -46,16 +56,16 @@ public static class DbInitializer
 
         var amenities = new List<Amenity>
         {
-            new Amenity { Name = "Wifi", Icon = "wifi", Description = "Wifi miễn phí", CreatedAt = DateTime.UtcNow },
-            new Amenity { Name = "Điều hòa", Icon = "air-conditioner", Description = "Điều hòa nhiệt độ", CreatedAt = DateTime.UtcNow },
-            new Amenity { Name = "Nóng lạnh", Icon = "water-heater", Description = "Máy nước nóng lạnh", CreatedAt = DateTime.UtcNow },
-            new Amenity { Name = "Máy giặt", Icon = "washing-machine", Description = "Máy giặt chung", CreatedAt = DateTime.UtcNow },
-            new Amenity { Name = "Tủ lạnh", Icon = "refrigerator", Description = "Tủ lạnh", CreatedAt = DateTime.UtcNow },
-            new Amenity { Name = "Chỗ để xe", Icon = "parking", Description = "Chỗ để xe miễn phí", CreatedAt = DateTime.UtcNow },
-            new Amenity { Name = "WC riêng", Icon = "toilet", Description = "Nhà vệ sinh riêng", CreatedAt = DateTime.UtcNow },
-            new Amenity { Name = "Ban công", Icon = "balcony", Description = "Ban công", CreatedAt = DateTime.UtcNow },
-            new Amenity { Name = "Bếp", Icon = "kitchen", Description = "Bếp nấu ăn", CreatedAt = DateTime.UtcNow },
-            new Amenity { Name = "An ninh", Icon = "security", Description = "Camera an ninh", CreatedAt = DateTime.UtcNow }
+            new Amenity { Name = "Wifi", Icon = "wifi", Description = "Wifi miễn phí" },
+            new Amenity { Name = "Điều hòa", Icon = "air-conditioner", Description = "Điều hòa nhiệt độ" },
+            new Amenity { Name = "Nóng lạnh", Icon = "water-heater", Description = "Máy nước nóng lạnh" },
+            new Amenity { Name = "Máy giặt", Icon = "washing-machine", Description = "Máy giặt chung" },
+            new Amenity { Name = "Tủ lạnh", Icon = "refrigerator", Description = "Tủ lạnh" },
+            new Amenity { Name = "Chỗ để xe", Icon = "parking", Description = "Chỗ để xe miễn phí" },
+            new Amenity { Name = "WC riêng", Icon = "toilet", Description = "Nhà vệ sinh riêng" },
+            new Amenity { Name = "Ban công", Icon = "balcony", Description = "Ban công" },
+            new Amenity { Name = "Bếp", Icon = "kitchen", Description = "Bếp nấu ăn" },
+            new Amenity { Name = "An ninh", Icon = "security", Description = "Camera an ninh" }
         };
 
         context.Amenities.AddRange(amenities);

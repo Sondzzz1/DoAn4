@@ -1,81 +1,40 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace RoomRental.Domain.Entities;
 
 /// <summary>
-/// Entity User - Người dùng hệ thống
-/// Bao gồm: Tenant (Người tìm trọ), Landlord (Chủ trọ), Admin (Quản trị viên)
+/// Entity TaiKhoan - tài khoản đăng nhập trong database RoomRentalDB.
+/// VaiTro: 0 = Admin, 1 = Tenant/NguoiDung, 2 = Landlord/ChuTro.
 /// </summary>
 public class User
 {
-    /// <summary>
-    /// ID của User - Primary Key
-    /// </summary>
     public int Id { get; set; }
-
-    /// <summary>
-    /// Họ và tên đầy đủ
-    /// </summary>
-    public string FullName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Email - Dùng để đăng nhập (Unique)
-    /// </summary>
-    public string Email { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Số điện thoại
-    /// </summary>
-    public string Phone { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Mật khẩu đã được hash bằng BCrypt
-    /// KHÔNG lưu password dạng plaintext
-    /// </summary>
+    public string UserName { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
-
-    /// <summary>
-    /// URL ảnh đại diện
-    /// </summary>
+    public string FullName { get; set; } = string.Empty;
+    public string? Phone { get; set; }
+    public string? Email { get; set; }
     public string? AvatarUrl { get; set; }
-
-    /// <summary>
-    /// Foreign Key - ID của Role
-    /// </summary>
-    public int RoleId { get; set; }
-
-    /// <summary>
-    /// Trạng thái tài khoản có bị khóa không
-    /// true = Bị khóa, false = Hoạt động bình thường
-    /// </summary>
-    public bool IsBlocked { get; set; } = false;
-
-    /// <summary>
-    /// Ngày tạo tài khoản
-    /// </summary>
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-    /// <summary>
-    /// Ngày cập nhật thông tin lần cuối
-    /// </summary>
+    public int RoleId { get; set; } = 1;
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
     public DateTime? UpdatedAt { get; set; }
 
-    // Navigation Properties
-    /// <summary>
-    /// Role của User này
-    /// </summary>
-    public virtual Role Role { get; set; } = null!;
+    [NotMapped]
+    public bool IsBlocked
+    {
+        get => !IsActive;
+        set => IsActive = !value;
+    }
 
-    /// <summary>
-    /// Danh sách tin đăng của Landlord (chỉ áp dụng khi RoleId = Landlord)
-    /// </summary>
-    public virtual ICollection<Post> Posts { get; set; } = new List<Post>();
+    [NotMapped]
+    public string RoleName => RoleId switch
+    {
+        0 => "Admin",
+        2 => "Landlord",
+        _ => "Tenant"
+    };
 
-    /// <summary>
-    /// Danh sách phòng yêu thích của Tenant (chỉ áp dụng khi RoleId = Tenant)
-    /// </summary>
-    public virtual ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
-
-    /// <summary>
-    /// Danh sách lịch hẹn xem phòng của Tenant (chỉ áp dụng khi RoleId = Tenant)
-    /// </summary>
-    public virtual ICollection<ViewingAppointment> Appointments { get; set; } = new List<ViewingAppointment>();
+    public virtual TenantProfile? TenantProfile { get; set; }
+    public virtual LandlordProfile? LandlordProfile { get; set; }
 }

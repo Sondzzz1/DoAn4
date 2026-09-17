@@ -10,7 +10,7 @@ export const authService = {
    * Đăng ký
    */
   register: async (data: RegisterRequest): Promise<ApiResponse<AuthResponse>> => {
-    const response = await api.post<ApiResponse<AuthResponse>>('/auth/register', data);
+    const response = await api.post<ApiResponse<AuthResponse>>('/xac-thuc/dang-ky', data);
     return response.data;
   },
 
@@ -18,7 +18,7 @@ export const authService = {
    * Đăng nhập
    */
   login: async (data: LoginRequest): Promise<ApiResponse<AuthResponse>> => {
-    const response = await api.post<ApiResponse<AuthResponse>>('/auth/login', data);
+    const response = await api.post<ApiResponse<AuthResponse>>('/xac-thuc/dang-nhap', data);
     return response.data;
   },
 };

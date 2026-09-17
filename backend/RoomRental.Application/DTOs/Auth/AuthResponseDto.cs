@@ -34,4 +34,26 @@ public class AuthResponseDto
     /// Ảnh đại diện
     /// </summary>
     public string? AvatarUrl { get; set; }
+
+    public AuthUserDto User => new()
+    {
+        Id = UserId,
+        HoTen = FullName,
+        FullName = FullName,
+        Email = Email,
+        Role = Role,
+        AnhDaiDien = AvatarUrl,
+        AvatarUrl = AvatarUrl
+    };
+}
+
+public class AuthUserDto
+{
+    public int Id { get; set; }
+    public string HoTen { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+    public string? AnhDaiDien { get; set; }
+    public string? AvatarUrl { get; set; }
 }

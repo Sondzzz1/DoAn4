@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RoomRental.Application.DTOs.User;
 using RoomRental.Application.Interfaces;
+using RoomRental.Domain.Entities;
 using RoomRental.Infrastructure.Data;
 
 namespace RoomRental.Application.Services;
@@ -23,7 +24,8 @@ public class UserService : IUserService
     public async Task<UserDto> GetProfileAsync(int userId)
     {
         var user = await _context.Users
-            .Include(u => u.Role)
+            .Include(u => u.TenantProfile)
+            .Include(u => u.LandlordProfile)
             .FirstOrDefaultAsync(u => u.Id == userId);
 
         if (user == null)
@@ -35,10 +37,12 @@ public class UserService : IUserService
         {
             Id = user.Id,
             FullName = user.FullName,
-            Email = user.Email,
-            Phone = user.Phone,
+            Email = user.Email ?? string.Empty,
+            Phone = user.Phone ?? string.Empty,
             AvatarUrl = user.AvatarUrl,
-            Role = user.Role.Name,
+            Address = user.RoleId == 2 ? user.LandlordProfile?.Address : user.TenantProfile?.CurrentAddress,
+            Introduction = user.RoleId == 2 ? user.LandlordProfile?.Introduction : user.TenantProfile?.Introduction,
+            Role = user.RoleName,
             IsBlocked = user.IsBlocked,
             CreatedAt = user.CreatedAt
         };
@@ -50,7 +54,8 @@ public class UserService : IUserService
     public async Task<UserDto> UpdateProfileAsync(int userId, UpdateProfileDto updateDto)
     {
         var user = await _context.Users
-            .Include(u => u.Role)
+            .Include(u => u.TenantProfile)
+            .Include(u => u.LandlordProfile)
             .FirstOrDefaultAsync(u => u.Id == userId);
 
         if (user == null)
@@ -58,11 +63,29 @@ public class UserService : IUserService
             throw new Exception("Không tìm thấy người dùng");
         }
 
-        // Cập nhật thông tin
-        user.FullName = updateDto.FullName;
-        user.Phone = updateDto.Phone;
-        user.AvatarUrl = updateDto.AvatarUrl;
-        user.UpdatedAt = DateTime.UtcNow;
+        var fullName = updateDto.GetFullName();
+        var phone = updateDto.GetPhone();
+        var avatarUrl = updateDto.GetAvatarUrl();
+        var address = updateDto.GetAddress();
+        var introduction = updateDto.GetIntroduction();
+
+        if (!string.IsNullOrWhiteSpace(fullName)) user.FullName = fullName;
+        if (!string.IsNullOrWhiteSpace(phone)) user.Phone = phone;
+        if (avatarUrl != null) user.AvatarUrl = avatarUrl;
+        user.UpdatedAt = DateTime.Now;
+
+        if (user.RoleId == 1)
+        {
+            user.TenantProfile ??= new TenantProfile { AccountId = user.Id };
+            if (address != null) user.TenantProfile.CurrentAddress = address;
+            if (introduction != null) user.TenantProfile.Introduction = introduction;
+        }
+        else if (user.RoleId == 2)
+        {
+            user.LandlordProfile ??= new LandlordProfile { AccountId = user.Id };
+            if (address != null) user.LandlordProfile.Address = address;
+            if (introduction != null) user.LandlordProfile.Introduction = introduction;
+        }
 
         await _context.SaveChangesAsync();
 
@@ -70,10 +93,12 @@ public class UserService : IUserService
         {
             Id = user.Id,
             FullName = user.FullName,
-            Email = user.Email,
-            Phone = user.Phone,
+            Email = user.Email ?? string.Empty,
+            Phone = user.Phone ?? string.Empty,
             AvatarUrl = user.AvatarUrl,
-            Role = user.Role.Name,
+            Address = user.RoleId == 2 ? user.LandlordProfile?.Address : user.TenantProfile?.CurrentAddress,
+            Introduction = user.RoleId == 2 ? user.LandlordProfile?.Introduction : user.TenantProfile?.Introduction,
+            Role = user.RoleName,
             IsBlocked = user.IsBlocked,
             CreatedAt = user.CreatedAt
         };
@@ -104,7 +129,7 @@ public class UserService : IUserService
 
         // Hash mật khẩu mới
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(changePasswordDto.NewPassword);
-        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedAt = DateTime.Now;
 
         await _context.SaveChangesAsync();
     }

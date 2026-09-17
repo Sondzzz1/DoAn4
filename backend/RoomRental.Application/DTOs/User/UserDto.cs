@@ -10,6 +10,8 @@ public class UserDto
     public string Email { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
     public string? AvatarUrl { get; set; }
+    public string? Address { get; set; }
+    public string? Introduction { get; set; }
     public string Role { get; set; } = string.Empty;
     public bool IsBlocked { get; set; }
     public DateTime CreatedAt { get; set; }

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using RoomRental.Application.DTOs.Amenity;
 using RoomRental.Application.DTOs.Post;
 using RoomRental.Application.Interfaces;
 using RoomRental.Domain.Entities;
@@ -8,7 +9,7 @@ using RoomRental.Infrastructure.Data;
 namespace RoomRental.Application.Services;
 
 /// <summary>
-/// Service xử lý Post Management
+/// Service xử lý Tin đăng (Posts) cho cả Tenant, Landlord và Public
 /// </summary>
 public class PostService : IPostService
 {
@@ -20,116 +21,159 @@ public class PostService : IPostService
     }
 
     /// <summary>
-    /// Tạo post mới
+    /// Tìm kiếm và lọc bài đăng công khai
     /// </summary>
-    public async Task<PostDto> CreatePostAsync(int landlordId, CreatePostDto createDto)
+    public async Task<List<PostListDto>> SearchPostsAsync(PostQueryParameters q)
     {
-        // Verify user is Landlord
-        var landlord = await _context.Users
-            .Include(u => u.Role)
-            .FirstOrDefaultAsync(u => u.Id == landlordId);
-
-        if (landlord == null || landlord.Role.Name != "Landlord")
-        {
-            throw new Exception("Chỉ Landlord mới có thể đăng tin");
-        }
-
-        if (landlord.IsBlocked)
-        {
-            throw new Exception("Tài khoản của bạn đã bị khóa");
-        }
-
-        // Tạo Post
-        var post = new Post
-        {
-            Title = createDto.Title,
-            Description = createDto.Description,
-            Price = createDto.Price,
-            LandlordId = landlordId,
-            Status = PostStatus.Pending, // Mặc định Pending, chờ Admin duyệt
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-
-        _context.Posts.Add(post);
-        await _context.SaveChangesAsync();
-
-        // Tạo Room
-        var room = new Room
-        {
-            PostId = post.Id,
-            Area = createDto.Area,
-            MaxOccupants = createDto.MaxOccupants,
-            Status = RoomStatus.Available,
-            Province = createDto.Province,
-            District = createDto.District,
-            Ward = createDto.Ward,
-            Address = createDto.Address,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-
-        _context.Rooms.Add(room);
-        await _context.SaveChangesAsync();
-
-        // Thêm Amenities
-        if (createDto.AmenityIds.Any())
-        {
-            var postAmenities = createDto.AmenityIds.Select(amenityId => new PostAmenity
-            {
-                PostId = post.Id,
-                AmenityId = amenityId
-            }).ToList();
-
-            _context.PostAmenities.AddRange(postAmenities);
-        }
-
-        // Thêm Images
-        if (createDto.ImageUrls.Any())
-        {
-            var postImages = createDto.ImageUrls.Select((url, index) => new PostImage
-            {
-                PostId = post.Id,
-                ImageUrl = url,
-                DisplayOrder = index
-            }).ToList();
-
-            _context.PostImages.AddRange(postImages);
-        }
-
-        await _context.SaveChangesAsync();
-
-        // Trả về PostDto
-        return await GetPostByIdAsync(post.Id);
-    }
-
-    /// <summary>
-    /// Lấy danh sách post của landlord
-    /// </summary>
-    public async Task<List<PostListDto>> GetMyPostsAsync(int landlordId)
-    {
-        var posts = await _context.Posts
+        var query = _context.Posts
             .Include(p => p.Room)
-            .Include(p => p.Images)
-            .Where(p => p.LandlordId == landlordId)
-            .OrderByDescending(p => p.CreatedAt)
+                .ThenInclude(r => r.Category)
+            .Include(p => p.Room)
+                .ThenInclude(r => r.Images)
+            .Include(p => p.Room)
+                .ThenInclude(r => r.RoomAmenities)
+            .Include(p => p.Landlord)
+                .ThenInclude(l => l.Account)
+            .AsNoTracking();
+
+        // Mặc định chỉ lấy Approved cho tìm kiếm công khai, trừ khi có filter status cụ thể
+        if (q.Status.HasValue)
+        {
+            query = query.Where(p => (int)p.Status == q.Status.Value);
+        }
+        else
+        {
+            query = query.Where(p => p.Status == PostStatus.Approved && p.Room.Status == RoomStatus.Available);
+        }
+
+        // Lọc theo Landlord
+        if (q.LandlordId.HasValue)
+        {
+            query = query.Where(p => p.LandlordId == q.LandlordId.Value || p.Landlord.AccountId == q.LandlordId.Value);
+        }
+
+        // Lọc theo từ khóa
+        if (!string.IsNullOrWhiteSpace(q.Keyword))
+        {
+            var keyword = q.Keyword.Trim().ToLower();
+            query = query.Where(p =>
+                p.Title.ToLower().Contains(keyword) ||
+                p.Content.ToLower().Contains(keyword) ||
+                p.Room.Address.ToLower().Contains(keyword) ||
+                (p.Room.Ward != null && p.Room.Ward.ToLower().Contains(keyword)) ||
+                (p.Room.District != null && p.Room.District.ToLower().Contains(keyword)) ||
+                (p.Room.Province != null && p.Room.Province.ToLower().Contains(keyword)));
+        }
+
+        // Lọc theo địa điểm
+        if (!string.IsNullOrWhiteSpace(q.Province))
+        {
+            var province = q.Province.Trim().ToLower();
+            query = query.Where(p => p.Room.Province != null && p.Room.Province.ToLower().Contains(province));
+        }
+
+        if (!string.IsNullOrWhiteSpace(q.District))
+        {
+            var district = q.District.Trim().ToLower();
+            query = query.Where(p => p.Room.District != null && p.Room.District.ToLower().Contains(district));
+        }
+
+        if (!string.IsNullOrWhiteSpace(q.Ward))
+        {
+            var ward = q.Ward.Trim().ToLower();
+            query = query.Where(p => p.Room.Ward != null && p.Room.Ward.ToLower().Contains(ward));
+        }
+
+        // Lọc theo khoảng giá
+        if (q.MinPrice.HasValue)
+        {
+            query = query.Where(p => p.DisplayPrice >= q.MinPrice.Value);
+        }
+
+        if (q.MaxPrice.HasValue)
+        {
+            query = query.Where(p => p.DisplayPrice <= q.MaxPrice.Value);
+        }
+
+        // Lọc theo diện tích
+        if (q.MinArea.HasValue)
+        {
+            query = query.Where(p => p.Room.Area >= q.MinArea.Value);
+        }
+
+        if (q.MaxArea.HasValue)
+        {
+            query = query.Where(p => p.Room.Area <= q.MaxArea.Value);
+        }
+
+        // Lọc theo danh mục
+        if (q.CategoryId.HasValue && q.CategoryId.Value > 0)
+        {
+            query = query.Where(p => p.Room.CategoryId == q.CategoryId.Value);
+        }
+
+        // Lọc theo số người tối đa
+        if (q.MaxOccupants.HasValue && q.MaxOccupants.Value > 0)
+        {
+            query = query.Where(p => p.Room.MaxOccupants >= q.MaxOccupants.Value);
+        }
+
+        // Lọc theo tiện ích (phòng phải có tất cả tiện ích được chọn)
+        if (q.AmenityIds != null && q.AmenityIds.Any())
+        {
+            foreach (var amenityId in q.AmenityIds)
+            {
+                query = query.Where(p => p.Room.RoomAmenities.Any(ra => ra.AmenityId == amenityId));
+            }
+        }
+
+        // Sắp xếp
+        query = q.SortBy?.ToLowerInvariant() switch
+        {
+            "price_asc" => query.OrderBy(p => p.DisplayPrice),
+            "price_desc" => query.OrderByDescending(p => p.DisplayPrice),
+            "area_asc" => query.OrderBy(p => p.Room.Area),
+            "area_desc" => query.OrderByDescending(p => p.Room.Area),
+            "views" => query.OrderByDescending(p => p.ViewCount),
+            _ => query.OrderByDescending(p => p.CreatedAt)
+        };
+
+        // Phân trang
+        var page = q.PageNumber > 0 ? q.PageNumber : 1;
+        var size = q.PageSize > 0 ? Math.Min(q.PageSize, 100) : 20;
+
+        var posts = await query
+            .Skip((page - 1) * size)
+            .Take(size)
             .Select(p => new PostListDto
             {
                 Id = p.Id,
                 Title = p.Title,
-                Price = p.Price,
+                Price = p.DisplayPrice,
                 Status = p.Status,
                 Area = p.Room.Area,
                 MaxOccupants = p.Room.MaxOccupants,
                 RoomStatus = p.Room.Status,
-                Province = p.Room.Province,
-                District = p.Room.District,
-                Ward = p.Room.Ward,
-                ThumbnailUrl = p.Images.OrderBy(i => i.DisplayOrder).FirstOrDefault() != null 
-                    ? p.Images.OrderBy(i => i.DisplayOrder).FirstOrDefault()!.ImageUrl 
-                    : null,
+                Province = p.Room.Province ?? string.Empty,
+                District = p.Room.District ?? string.Empty,
+                Ward = p.Room.Ward ?? string.Empty,
+                Address = p.Room.Address,
+                Latitude = p.Room.Latitude,
+                Longitude = p.Room.Longitude,
+                CategoryId = p.Room.CategoryId,
+                CategoryName = p.Room.Category.Name,
+                LandlordId = p.LandlordId,
+                LandlordName = p.Landlord.Account.FullName,
+                LandlordPhone = p.Landlord.Account.Phone,
+                ViewCount = p.ViewCount,
+                ThumbnailUrl = p.Room.Images
+                    .OrderByDescending(i => i.IsThumbnail)
+                    .ThenBy(i => i.DisplayOrder)
+                    .Select(i => i.ImageUrl)
+                    .FirstOrDefault(),
+                PostedAt = p.PostedAt,
                 CreatedAt = p.CreatedAt,
-                UpdatedAt = p.UpdatedAt ?? p.CreatedAt
+                UpdatedAt = p.UpdatedAt
             })
             .ToListAsync();
 
@@ -137,65 +181,250 @@ public class PostService : IPostService
     }
 
     /// <summary>
-    /// Lấy chi tiết post
+    /// Lấy chi tiết bài đăng
     /// </summary>
-    public async Task<PostDto> GetPostByIdAsync(int postId)
+    public async Task<PostDto> GetPostByIdAsync(int postId, bool incrementView = true)
     {
         var post = await _context.Posts
             .Include(p => p.Landlord)
+                .ThenInclude(l => l.Account)
             .Include(p => p.Room)
-            .Include(p => p.PostAmenities)
-                .ThenInclude(pa => pa.Amenity)
-            .Include(p => p.Images)
+                .ThenInclude(r => r.Category)
+            .Include(p => p.Room)
+                .ThenInclude(r => r.Images)
+            .Include(p => p.Room)
+                .ThenInclude(r => r.RoomAmenities)
+                    .ThenInclude(ra => ra.Amenity)
             .FirstOrDefaultAsync(p => p.Id == postId);
 
         if (post == null)
         {
             throw new Exception("Không tìm thấy tin đăng");
+        }
+
+        if (incrementView)
+        {
+            post.ViewCount++;
+            await _context.SaveChangesAsync();
         }
 
         return new PostDto
         {
             Id = post.Id,
             Title = post.Title,
-            Description = post.Description,
-            Price = post.Price,
+            Description = post.Content,
+            Price = post.DisplayPrice,
             Status = post.Status,
             RejectionReason = post.RejectionReason,
+            ViewCount = post.ViewCount,
+
+            CategoryId = post.Room.CategoryId,
+            CategoryName = post.Room.Category?.Name ?? string.Empty,
+
             LandlordId = post.LandlordId,
-            LandlordName = post.Landlord.FullName,
-            LandlordPhone = post.Landlord.Phone ?? string.Empty,
+            LandlordAccountId = post.Landlord.AccountId,
+            LandlordName = post.Landlord.Account.FullName,
+            LandlordPhone = post.Landlord.Account.Phone ?? string.Empty,
+            LandlordAvatar = post.Landlord.Account.AvatarUrl,
+
             RoomId = post.Room.Id,
+            RoomName = post.Room.RoomName,
             Area = post.Room.Area,
             MaxOccupants = post.Room.MaxOccupants,
+            CurrentOccupants = post.Room.CurrentOccupants,
+            Bedrooms = post.Room.Bedrooms,
+            Bathrooms = post.Room.Bathrooms,
+            Floor = post.Room.Floor,
             RoomStatus = post.Room.Status,
-            Province = post.Room.Province,
-            District = post.Room.District,
-            Ward = post.Room.Ward,
+
+            Province = post.Room.Province ?? string.Empty,
+            District = post.Room.District ?? string.Empty,
+            Ward = post.Room.Ward ?? string.Empty,
             Address = post.Room.Address,
-            Amenities = post.PostAmenities.Select(pa => new AmenityDto
-            {
-                Id = pa.Amenity.Id,
-                Name = pa.Amenity.Name,
-                Icon = pa.Amenity.Icon,
-                Description = pa.Amenity.Description
-            }).ToList(),
-            ImageUrls = post.Images
-                .OrderBy(i => i.DisplayOrder)
+            Latitude = post.Room.Latitude,
+            Longitude = post.Room.Longitude,
+
+            ElectricityPrice = post.Room.ElectricityPrice,
+            WaterPrice = post.Room.WaterPrice,
+            ServiceFee = post.Room.ServiceFee,
+
+            Amenities = post.Room.RoomAmenities
+                .Where(ra => ra.Amenity != null && ra.Amenity.IsActive)
+                .Select(ra => new AmenityDto
+                {
+                    Id = ra.Amenity.Id,
+                    Name = ra.Amenity.Name,
+                    Icon = ra.Amenity.Icon,
+                    Description = ra.Amenity.Description
+                }).ToList(),
+
+            ImageUrls = post.Room.Images
+                .OrderByDescending(i => i.IsThumbnail)
+                .ThenBy(i => i.DisplayOrder)
                 .Select(i => i.ImageUrl)
                 .ToList(),
+
+            PostedAt = post.PostedAt,
             CreatedAt = post.CreatedAt,
-            UpdatedAt = post.UpdatedAt ?? post.CreatedAt
+            UpdatedAt = post.UpdatedAt
         };
     }
 
     /// <summary>
-    /// Cập nhật post
+    /// Landlord đăng bài mới
     /// </summary>
-    public async Task<PostDto> UpdatePostAsync(int landlordId, int postId, UpdatePostDto updateDto)
+    public async Task<PostDto> CreatePostAsync(int accountId, CreatePostDto createDto)
     {
+        var landlord = await GetOrCreateLandlordProfileAsync(accountId);
+
+        var title = createDto.GetTitle();
+        var description = createDto.GetDescription();
+        var price = createDto.GetPrice();
+
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            throw new Exception("Tiêu đề không được để trống");
+        }
+
+        if (price <= 0)
+        {
+            throw new Exception("Giá thuê phòng phải lớn hơn 0");
+        }
+
+        // Tạo Room tương ứng
+        var room = new Room
+        {
+            LandlordId = landlord.Id,
+            CategoryId = createDto.GetCategoryId(),
+            RoomName = title,
+            Description = description,
+            Price = price,
+            Area = createDto.GetArea() > 0 ? createDto.GetArea() : 20,
+            MaxOccupants = createDto.GetMaxOccupants() > 0 ? createDto.GetMaxOccupants() : 2,
+            CurrentOccupants = 0,
+            Address = createDto.GetAddress(),
+            Ward = createDto.GetWard(),
+            District = createDto.GetDistrict(),
+            Province = createDto.GetProvince(),
+            Latitude = createDto.GetLatitude(),
+            Longitude = createDto.GetLongitude(),
+            ElectricityPrice = createDto.ElectricityPrice ?? createDto.TienDien,
+            WaterPrice = createDto.WaterPrice ?? createDto.TienNuoc,
+            ServiceFee = createDto.ServiceFee ?? createDto.PhiDichVu,
+            Status = RoomStatus.Available,
+            CreatedAt = DateTime.Now
+        };
+
+        _context.Rooms.Add(room);
+        await _context.SaveChangesAsync();
+
+        // Thêm Amenities
+        if (createDto.AmenityIds != null && createDto.AmenityIds.Any())
+        {
+            var amenities = createDto.AmenityIds.Distinct().Select(aId => new PostAmenity
+            {
+                RoomId = room.Id,
+                AmenityId = aId
+            });
+            _context.PostAmenities.AddRange(amenities);
+        }
+
+        // Thêm Images
+        if (createDto.ImageUrls != null && createDto.ImageUrls.Any())
+        {
+            var images = createDto.ImageUrls.Select((url, index) => new PostImage
+            {
+                RoomId = room.Id,
+                ImageUrl = url,
+                IsThumbnail = index == 0,
+                DisplayOrder = index,
+                CreatedAt = DateTime.Now
+            });
+            _context.PostImages.AddRange(images);
+        }
+
+        // Tạo Post ở trạng thái Pending
+        var post = new Post
+        {
+            RoomId = room.Id,
+            LandlordId = landlord.Id,
+            Title = title,
+            Content = description,
+            DisplayPrice = price,
+            Status = PostStatus.Pending, // Chờ Admin duyệt
+            ViewCount = 0,
+            CreatedAt = DateTime.Now
+        };
+
+        _context.Posts.Add(post);
+        await _context.SaveChangesAsync();
+
+        return await GetPostByIdAsync(post.Id, incrementView: false);
+    }
+
+    /// <summary>
+    /// Lấy danh sách tin của Landlord
+    /// </summary>
+    public async Task<List<PostListDto>> GetMyPostsAsync(int accountId)
+    {
+        var landlord = await GetOrCreateLandlordProfileAsync(accountId);
+
+        var posts = await _context.Posts
+            .Include(p => p.Room)
+                .ThenInclude(r => r.Category)
+            .Include(p => p.Room)
+                .ThenInclude(r => r.Images)
+            .Include(p => p.Landlord)
+                .ThenInclude(l => l.Account)
+            .Where(p => p.LandlordId == landlord.Id)
+            .OrderByDescending(p => p.CreatedAt)
+            .Select(p => new PostListDto
+            {
+                Id = p.Id,
+                Title = p.Title,
+                Price = p.DisplayPrice,
+                Status = p.Status,
+                Area = p.Room.Area,
+                MaxOccupants = p.Room.MaxOccupants,
+                RoomStatus = p.Room.Status,
+                Province = p.Room.Province ?? string.Empty,
+                District = p.Room.District ?? string.Empty,
+                Ward = p.Room.Ward ?? string.Empty,
+                Address = p.Room.Address,
+                Latitude = p.Room.Latitude,
+                Longitude = p.Room.Longitude,
+                CategoryId = p.Room.CategoryId,
+                CategoryName = p.Room.Category.Name,
+                LandlordId = p.LandlordId,
+                LandlordName = p.Landlord.Account.FullName,
+                LandlordPhone = p.Landlord.Account.Phone,
+                ViewCount = p.ViewCount,
+                ThumbnailUrl = p.Room.Images
+                    .OrderByDescending(i => i.IsThumbnail)
+                    .ThenBy(i => i.DisplayOrder)
+                    .Select(i => i.ImageUrl)
+                    .FirstOrDefault(),
+                PostedAt = p.PostedAt,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt
+            })
+            .ToListAsync();
+
+        return posts;
+    }
+
+    /// <summary>
+    /// Cập nhật tin đăng
+    /// </summary>
+    public async Task<PostDto> UpdatePostAsync(int accountId, int postId, UpdatePostDto updateDto)
+    {
+        var landlord = await GetOrCreateLandlordProfileAsync(accountId);
+
         var post = await _context.Posts
             .Include(p => p.Room)
+                .ThenInclude(r => r.Images)
+            .Include(p => p.Room)
+                .ThenInclude(r => r.RoomAmenities)
             .FirstOrDefaultAsync(p => p.Id == postId);
 
         if (post == null)
@@ -203,114 +432,127 @@ public class PostService : IPostService
             throw new Exception("Không tìm thấy tin đăng");
         }
 
-        if (post.LandlordId != landlordId)
+        if (post.LandlordId != landlord.Id)
         {
-            throw new Exception("Bạn không có quyền chỉnh sửa tin này");
+            throw new Exception("Bạn không có quyền chỉnh sửa tin đăng này");
         }
 
-        // Không cho phép chỉnh sửa nếu đang Approved
-        if (post.Status == PostStatus.Approved)
+        // Cập nhật Post
+        var title = updateDto.GetTitle();
+        if (!string.IsNullOrWhiteSpace(title))
         {
-            throw new Exception("Không thể chỉnh sửa tin đã được duyệt. Vui lòng ẩn tin trước khi chỉnh sửa");
+            post.Title = title;
+            post.Room.RoomName = title;
         }
 
-        // Update Post
-        post.Title = updateDto.Title;
-        post.Description = updateDto.Description;
-        post.Price = updateDto.Price;
-        post.UpdatedAt = DateTime.UtcNow;
-
-        // Nếu bị Rejected, khi update thì chuyển về Pending
-        if (post.Status == PostStatus.Rejected)
+        var description = updateDto.GetDescription();
+        if (description != null)
         {
-            post.Status = PostStatus.Pending;
-            post.RejectionReason = null;
+            post.Content = description;
+            post.Room.Description = description;
         }
 
-        // Update Room
-        post.Room.Area = updateDto.Area;
-        post.Room.MaxOccupants = updateDto.MaxOccupants;
-        post.Room.Province = updateDto.Province;
-        post.Room.District = updateDto.District;
-        post.Room.Ward = updateDto.Ward;
-        post.Room.Address = updateDto.Address;
-        post.Room.UpdatedAt = DateTime.UtcNow;
-
-        // Update Amenities
-        var existingAmenities = await _context.PostAmenities
-            .Where(pa => pa.PostId == postId)
-            .ToListAsync();
-
-        _context.PostAmenities.RemoveRange(existingAmenities);
-
-        if (updateDto.AmenityIds.Any())
+        var price = updateDto.GetPrice();
+        if (price.HasValue && price.Value > 0)
         {
-            var newAmenities = updateDto.AmenityIds.Select(amenityId => new PostAmenity
+            post.DisplayPrice = price.Value;
+            post.Room.Price = price.Value;
+        }
+
+        var area = updateDto.GetArea();
+        if (area.HasValue && area.Value > 0)
+        {
+            post.Room.Area = area.Value;
+        }
+
+        var maxOccupants = updateDto.GetMaxOccupants();
+        if (maxOccupants.HasValue && maxOccupants.Value > 0)
+        {
+            post.Room.MaxOccupants = maxOccupants.Value;
+        }
+
+        var categoryId = updateDto.GetCategoryId();
+        if (categoryId.HasValue && categoryId.Value > 0)
+        {
+            post.Room.CategoryId = categoryId.Value;
+        }
+
+        var address = updateDto.GetAddress();
+        if (!string.IsNullOrWhiteSpace(address))
+        {
+            post.Room.Address = address;
+        }
+
+        var province = updateDto.GetProvince();
+        if (!string.IsNullOrWhiteSpace(province))
+        {
+            post.Room.Province = province;
+        }
+
+        var district = updateDto.GetDistrict();
+        if (!string.IsNullOrWhiteSpace(district))
+        {
+            post.Room.District = district;
+        }
+
+        var ward = updateDto.GetWard();
+        if (!string.IsNullOrWhiteSpace(ward))
+        {
+            post.Room.Ward = ward;
+        }
+
+        if (updateDto.GetLatitude().HasValue) post.Room.Latitude = updateDto.GetLatitude();
+        if (updateDto.GetLongitude().HasValue) post.Room.Longitude = updateDto.GetLongitude();
+
+        if (updateDto.ElectricityPrice.HasValue) post.Room.ElectricityPrice = updateDto.ElectricityPrice;
+        if (updateDto.WaterPrice.HasValue) post.Room.WaterPrice = updateDto.WaterPrice;
+        if (updateDto.ServiceFee.HasValue) post.Room.ServiceFee = updateDto.ServiceFee;
+
+        // Nếu bài đăng đang Rejected hoặc Approved, cập nhật sẽ đưa về Pending để Admin kiểm duyệt lại
+        post.Status = PostStatus.Pending;
+        post.RejectionReason = null;
+        post.UpdatedAt = DateTime.Now;
+        post.Room.UpdatedAt = DateTime.Now;
+
+        // Cập nhật Amenities
+        if (updateDto.AmenityIds != null)
+        {
+            _context.PostAmenities.RemoveRange(post.Room.RoomAmenities);
+            var newAmenities = updateDto.AmenityIds.Distinct().Select(aId => new PostAmenity
             {
-                PostId = postId,
-                AmenityId = amenityId
-            }).ToList();
-
+                RoomId = post.Room.Id,
+                AmenityId = aId
+            });
             _context.PostAmenities.AddRange(newAmenities);
         }
 
-        // Update Images
-        var existingImages = await _context.PostImages
-            .Where(pi => pi.PostId == postId)
-            .ToListAsync();
-
-        _context.PostImages.RemoveRange(existingImages);
-
-        if (updateDto.ImageUrls.Any())
+        // Cập nhật Images
+        if (updateDto.ImageUrls != null)
         {
+            _context.PostImages.RemoveRange(post.Room.Images);
             var newImages = updateDto.ImageUrls.Select((url, index) => new PostImage
             {
-                PostId = postId,
+                RoomId = post.Room.Id,
                 ImageUrl = url,
-                DisplayOrder = index
-            }).ToList();
-
+                IsThumbnail = index == 0,
+                DisplayOrder = index,
+                CreatedAt = DateTime.Now
+            });
             _context.PostImages.AddRange(newImages);
         }
 
         await _context.SaveChangesAsync();
 
-        return await GetPostByIdAsync(postId);
+        return await GetPostByIdAsync(postId, incrementView: false);
     }
 
     /// <summary>
-    /// Xóa post
+    /// Xóa tin đăng (Mục 14: Xóa tin / Ẩn tin)
     /// </summary>
-    public async Task DeletePostAsync(int landlordId, int postId)
+    public async Task DeletePostAsync(int accountId, int postId)
     {
-        var post = await _context.Posts
-            .FirstOrDefaultAsync(p => p.Id == postId);
+        var landlord = await GetOrCreateLandlordProfileAsync(accountId);
 
-        if (post == null)
-        {
-            throw new Exception("Không tìm thấy tin đăng");
-        }
-
-        if (post.LandlordId != landlordId)
-        {
-            throw new Exception("Bạn không có quyền xóa tin này");
-        }
-
-        // Không cho phép xóa nếu đang Approved (phải ẩn trước)
-        if (post.Status == PostStatus.Approved)
-        {
-            throw new Exception("Không thể xóa tin đang được duyệt. Vui lòng ẩn tin trước");
-        }
-
-        _context.Posts.Remove(post);
-        await _context.SaveChangesAsync();
-    }
-
-    /// <summary>
-    /// Cập nhật trạng thái post (Landlord chỉ được Hidden hoặc Pending)
-    /// </summary>
-    public async Task<PostDto> UpdatePostStatusAsync(int landlordId, int postId, PostStatus status)
-    {
         var post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == postId);
 
         if (post == null)
@@ -318,69 +560,85 @@ public class PostService : IPostService
             throw new Exception("Không tìm thấy tin đăng");
         }
 
-        if (post.LandlordId != landlordId)
+        if (post.LandlordId != landlord.Id)
         {
-            throw new Exception("Bạn không có quyền thay đổi trạng thái tin này");
+            throw new Exception("Bạn không có quyền xóa tin đăng này");
         }
 
-        // Landlord chỉ được phép chuyển sang Hidden hoặc Pending
-        if (status != PostStatus.Hidden && status != PostStatus.Pending)
-        {
-            throw new Exception("Bạn chỉ có thể ẩn tin hoặc gửi duyệt lại");
-        }
-
-        // Nếu đang Hidden, có thể chuyển sang Pending để gửi duyệt lại
-        // Nếu đang Approved, có thể chuyển sang Hidden để tạm ẩn
-        post.Status = status;
-        post.UpdatedAt = DateTime.UtcNow;
+        // Đổi trạng thái sang Hidden thay vì xóa cứng khỏi Database
+        post.Status = PostStatus.Hidden;
+        post.UpdatedAt = DateTime.Now;
 
         await _context.SaveChangesAsync();
-
-        return await GetPostByIdAsync(postId);
     }
 
     /// <summary>
-    /// Lấy danh sách post công khai (cho Tenant)
+    /// Cập nhật trạng thái post bởi Landlord
     /// </summary>
-    public async Task<List<PostListDto>> GetPublicPostsAsync(string? province = null, string? district = null)
+    public async Task<PostDto> UpdatePostStatusAsync(int accountId, int postId, PostStatus status)
     {
-        var query = _context.Posts
-            .Include(p => p.Room)
-            .Include(p => p.Images)
-            .Where(p => p.Status == PostStatus.Approved && p.Room.Status == RoomStatus.Available);
+        var landlord = await GetOrCreateLandlordProfileAsync(accountId);
 
-        if (!string.IsNullOrWhiteSpace(province))
+        var post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == postId);
+
+        if (post == null)
         {
-            query = query.Where(p => p.Room.Province.Contains(province));
+            throw new Exception("Không tìm thấy tin đăng");
         }
 
-        if (!string.IsNullOrWhiteSpace(district))
+        if (post.LandlordId != landlord.Id)
         {
-            query = query.Where(p => p.Room.District.Contains(district));
+            throw new Exception("Bạn không có quyền đổi trạng thái tin này");
         }
 
-        var posts = await query
-            .OrderByDescending(p => p.UpdatedAt)
-            .Select(p => new PostListDto
-            {
-                Id = p.Id,
-                Title = p.Title,
-                Price = p.Price,
-                Status = p.Status,
-                Area = p.Room.Area,
-                MaxOccupants = p.Room.MaxOccupants,
-                RoomStatus = p.Room.Status,
-                Province = p.Room.Province,
-                District = p.Room.District,
-                Ward = p.Room.Ward,
-                ThumbnailUrl = p.Images.OrderBy(i => i.DisplayOrder).FirstOrDefault() != null 
-                    ? p.Images.OrderBy(i => i.DisplayOrder).FirstOrDefault()!.ImageUrl 
-                    : null,
-                CreatedAt = p.CreatedAt,
-                UpdatedAt = p.UpdatedAt ?? p.CreatedAt
-            })
-            .ToListAsync();
+        // Landlord có thể ẩn tin (Hidden) hoặc gửi duyệt lại (Pending)
+        if (status != PostStatus.Hidden && status != PostStatus.Pending)
+        {
+            throw new Exception("Chủ trọ chỉ có thể ẩn tin hoặc gửi yêu cầu duyệt lại");
+        }
 
-        return posts;
+        post.Status = status;
+        post.UpdatedAt = DateTime.Now;
+
+        await _context.SaveChangesAsync();
+
+        return await GetPostByIdAsync(postId, incrementView: false);
+    }
+
+    private async Task<LandlordProfile> GetOrCreateLandlordProfileAsync(int accountId)
+    {
+        var user = await _context.Users
+            .Include(u => u.LandlordProfile)
+            .FirstOrDefaultAsync(u => u.Id == accountId);
+
+        if (user == null)
+        {
+            throw new Exception("Người dùng không tồn tại");
+        }
+
+        if (user.RoleId != 2 && user.RoleId != 0) // 2: Landlord, 0: Admin
+        {
+            throw new Exception("Chỉ tài khoản Chủ trọ (Landlord) mới có quyền thực hiện thao tác này");
+        }
+
+        if (user.IsBlocked)
+        {
+            throw new Exception("Tài khoản của bạn đã bị khóa");
+        }
+
+        if (user.LandlordProfile != null)
+        {
+            return user.LandlordProfile;
+        }
+
+        var profile = new LandlordProfile
+        {
+            AccountId = user.Id
+        };
+
+        _context.LandlordProfiles.Add(profile);
+        await _context.SaveChangesAsync();
+
+        return profile;
     }
 }

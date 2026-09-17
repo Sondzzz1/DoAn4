@@ -12,48 +12,67 @@ public class ViewingAppointmentConfiguration : IEntityTypeConfiguration<ViewingA
 {
     public void Configure(EntityTypeBuilder<ViewingAppointment> builder)
     {
-        // Tên bảng
-        builder.ToTable("ViewingAppointments");
+        builder.ToTable("LichHenXemPhong");
 
-        // Primary Key
         builder.HasKey(va => va.Id);
 
-        // Properties
+        builder.Property(va => va.TenantId)
+            .HasColumnName("NguoiDungId")
+            .IsRequired();
+
+        builder.Property(va => va.PostId)
+            .HasColumnName("TinDangId")
+            .IsRequired();
+
+        builder.Property(va => va.LandlordId)
+            .HasColumnName("ChuTroId")
+            .IsRequired();
+
         builder.Property(va => va.ScheduledAt)
+            .HasColumnName("ThoiGianHen")
             .IsRequired();
 
         builder.Property(va => va.Status)
+            .HasColumnName("TrangThai")
             .IsRequired()
             .HasDefaultValue(AppointmentStatus.Pending)
-            .HasConversion<int>(); // Lưu Enum dưới dạng int
+            .HasConversion<int>();
 
         builder.Property(va => va.TenantNote)
+            .HasColumnName("NoiDung")
             .HasMaxLength(500);
 
         builder.Property(va => va.LandlordResponse)
+            .HasColumnName("LyDoTuChoi")
             .HasMaxLength(500);
 
         builder.Property(va => va.CreatedAt)
+            .HasColumnName("NgayTao")
             .IsRequired()
-            .HasDefaultValueSql("GETUTCDATE()");
+            .HasDefaultValueSql("SYSDATETIME()");
 
-        // Index
+        builder.Property(va => va.UpdatedAt)
+            .HasColumnName("NgayCapNhat");
+
         builder.HasIndex(va => va.TenantId);
+        builder.HasIndex(va => va.LandlordId);
         builder.HasIndex(va => va.PostId);
         builder.HasIndex(va => va.Status);
         builder.HasIndex(va => va.ScheduledAt);
 
-        // Relationships
-        // ViewingAppointment -> Tenant (User)
         builder.HasOne(va => va.Tenant)
             .WithMany(u => u.Appointments)
             .HasForeignKey(va => va.TenantId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
-        // ViewingAppointment -> Post
+        builder.HasOne(va => va.Landlord)
+            .WithMany(l => l.Appointments)
+            .HasForeignKey(va => va.LandlordId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasOne(va => va.Post)
             .WithMany(p => p.Appointments)
             .HasForeignKey(va => va.PostId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -9,9 +9,9 @@ using System.Security.Claims;
 namespace RoomRental.API.Controllers;
 
 /// <summary>
-/// Controller xử lý Post Management
+/// Controller xử lý Bài đăng tìm/cho thuê phòng (Mục 4, 5, 11, 13, 14, 31)
 /// </summary>
-[Route("api/[controller]")]
+[Route("api/bai-dang")]
 [ApiController]
 public class PostController : ControllerBase
 {
@@ -25,184 +25,165 @@ public class PostController : ControllerBase
     }
 
     /// <summary>
-    /// Tạo post mới (Landlord only)
+    /// Tìm kiếm và lọc danh sách tin đăng phòng trọ (Mục 4: GET /api/posts)
+    /// </summary>
+    [HttpGet]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<List<PostListDto>>), 200)]
+    public async Task<IActionResult> SearchPosts([FromQuery] PostQueryParameters queryParams)
+    {
+        try
+        {
+            var posts = await _postService.SearchPostsAsync(queryParams);
+            return Ok(ApiResponse<List<PostListDto>>.SuccessResponse(posts, "Lấy danh sách tin đăng thành công"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi tìm kiếm bài đăng");
+            return BadRequest(ApiResponse<List<PostListDto>>.ErrorResponse(ex.Message));
+        }
+    }
+
+    /// <summary>
+    /// Xem chi tiết phòng / tin đăng (Mục 5 & 31: GET /api/posts/{id})
+    /// </summary>
+    [HttpGet("{id:int}")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<PostDto>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<PostDto>), 404)]
+    public async Task<IActionResult> GetPostById(int id)
+    {
+        try
+        {
+            var post = await _postService.GetPostByIdAsync(id, incrementView: true);
+            return Ok(ApiResponse<PostDto>.SuccessResponse(post, "Lấy chi tiết tin đăng thành công"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi lấy chi tiết tin đăng ID: {Id}", id);
+            return NotFound(ApiResponse<PostDto>.ErrorResponse(ex.Message));
+        }
+    }
+
+    /// <summary>
+    /// Landlord đăng tin mới (Mục 11: POST /api/posts)
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = "Landlord")]
+    [Authorize(Roles = "Landlord,Admin")]
     [ProducesResponseType(typeof(ApiResponse<PostDto>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<PostDto>), 400)]
     public async Task<IActionResult> CreatePost([FromBody] CreatePostDto createDto)
     {
         try
         {
-            if (!ModelState.IsValid)
-            {
-                var errors = ModelState.Values
-                    .SelectMany(v => v.Errors)
-                    .Select(e => e.ErrorMessage)
-                    .ToList();
+            var accountId = GetCurrentUserId();
+            var post = await _postService.CreatePostAsync(accountId, createDto);
 
-                return BadRequest(ApiResponse<PostDto>.ErrorResponse("Dữ liệu không hợp lệ", errors));
-            }
-
-            var userId = GetCurrentUserId();
-            var post = await _postService.CreatePostAsync(userId, createDto);
-
-            return Ok(ApiResponse<PostDto>.SuccessResponse(post, "Tạo tin đăng thành công. Tin của bạn đang chờ Admin duyệt"));
+            return Ok(ApiResponse<PostDto>.SuccessResponse(post, "Đăng tin thành công. Tin của bạn đang chờ Admin duyệt."));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Lỗi khi tạo post");
+            _logger.LogError(ex, "Lỗi khi đăng tin mới");
             return BadRequest(ApiResponse<PostDto>.ErrorResponse(ex.Message));
         }
     }
 
     /// <summary>
-    /// Lấy danh sách post của landlord (My Posts)
+    /// Landlord lấy danh sách tin đã đăng của mình (GET /api/posts/my-posts)
     /// </summary>
-    [HttpGet("my-posts")]
-    [Authorize(Roles = "Landlord")]
+    [HttpGet("cua-toi")]
+    [Authorize(Roles = "Landlord,Admin")]
     [ProducesResponseType(typeof(ApiResponse<List<PostListDto>>), 200)]
     public async Task<IActionResult> GetMyPosts()
     {
         try
         {
-            var userId = GetCurrentUserId();
-            var posts = await _postService.GetMyPostsAsync(userId);
+            var accountId = GetCurrentUserId();
+            var posts = await _postService.GetMyPostsAsync(accountId);
 
-            return Ok(ApiResponse<List<PostListDto>>.SuccessResponse(posts, $"Lấy danh sách thành công. Tổng: {posts.Count} tin"));
+            return Ok(ApiResponse<List<PostListDto>>.SuccessResponse(posts, "Lấy danh sách tin đăng của bạn thành công"));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Lỗi khi lấy danh sách post");
+            _logger.LogError(ex, "Lỗi khi lấy danh sách tin đăng của chủ trọ");
             return BadRequest(ApiResponse<List<PostListDto>>.ErrorResponse(ex.Message));
         }
     }
 
     /// <summary>
-    /// Lấy chi tiết post theo ID
+    /// Landlord chỉnh sửa tin đã đăng (Mục 13: PUT /api/posts/{id})
     /// </summary>
-    [HttpGet("{id}")]
-    [ProducesResponseType(typeof(ApiResponse<PostDto>), 200)]
-    public async Task<IActionResult> GetPostById(int id)
-    {
-        try
-        {
-            var post = await _postService.GetPostByIdAsync(id);
-            return Ok(ApiResponse<PostDto>.SuccessResponse(post, "Lấy thông tin thành công"));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Lỗi khi lấy chi tiết post");
-            return BadRequest(ApiResponse<PostDto>.ErrorResponse(ex.Message));
-        }
-    }
-
-    /// <summary>
-    /// Cập nhật post (Landlord only)
-    /// </summary>
-    [HttpPut("{id}")]
-    [Authorize(Roles = "Landlord")]
+    [HttpPut("{id:int}")]
+    [Authorize(Roles = "Landlord,Admin")]
     [ProducesResponseType(typeof(ApiResponse<PostDto>), 200)]
     public async Task<IActionResult> UpdatePost(int id, [FromBody] UpdatePostDto updateDto)
     {
         try
         {
-            if (!ModelState.IsValid)
-            {
-                var errors = ModelState.Values
-                    .SelectMany(v => v.Errors)
-                    .Select(e => e.ErrorMessage)
-                    .ToList();
+            var accountId = GetCurrentUserId();
+            var post = await _postService.UpdatePostAsync(accountId, id, updateDto);
 
-                return BadRequest(ApiResponse<PostDto>.ErrorResponse("Dữ liệu không hợp lệ", errors));
-            }
-
-            var userId = GetCurrentUserId();
-            var post = await _postService.UpdatePostAsync(userId, id, updateDto);
-
-            return Ok(ApiResponse<PostDto>.SuccessResponse(post, "Cập nhật tin đăng thành công"));
+            return Ok(ApiResponse<PostDto>.SuccessResponse(post, "Cập nhật tin đăng thành công. Tin được chuyển sang trạng thái chờ duyệt lại."));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Lỗi khi cập nhật post");
+            _logger.LogError(ex, "Lỗi khi cập nhật tin đăng ID: {Id}", id);
             return BadRequest(ApiResponse<PostDto>.ErrorResponse(ex.Message));
         }
     }
 
     /// <summary>
-    /// Xóa post (Landlord only)
+    /// Landlord xóa/ẩn tin đã đăng (Mục 14: DELETE /api/posts/{id})
     /// </summary>
-    [HttpDelete("{id}")]
-    [Authorize(Roles = "Landlord")]
-    [ProducesResponseType(typeof(ApiResponse<object?>), 200)]
+    [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Landlord,Admin")]
+    [ProducesResponseType(typeof(ApiResponse<object>), 200)]
     public async Task<IActionResult> DeletePost(int id)
     {
         try
         {
-            var userId = GetCurrentUserId();
-            await _postService.DeletePostAsync(userId, id);
+            var accountId = GetCurrentUserId();
+            await _postService.DeletePostAsync(accountId, id);
 
-            return Ok(ApiResponse<object?>.SuccessResponse(null, "Xóa tin đăng thành công"));
+            return Ok(ApiResponse<object?>.SuccessResponse(null, "Đã ẩn/xóa tin đăng thành công"));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Lỗi khi xóa post");
-            return BadRequest(ApiResponse<object?>.ErrorResponse(ex.Message));
+            _logger.LogError(ex, "Lỗi khi xóa tin đăng ID: {Id}", id);
+            return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
         }
     }
 
     /// <summary>
-    /// Cập nhật trạng thái post (Landlord: Hidden/Pending only)
+    /// Landlord cập nhật trạng thái tin đăng (PUT /api/posts/{id}/status)
     /// </summary>
-    [HttpPatch("{id}/status")]
-    [Authorize(Roles = "Landlord")]
+    [HttpPut("{id:int}/trang-thai")]
+    [Authorize(Roles = "Landlord,Admin")]
     [ProducesResponseType(typeof(ApiResponse<PostDto>), 200)]
     public async Task<IActionResult> UpdatePostStatus(int id, [FromBody] UpdatePostStatusDto statusDto)
     {
         try
         {
-            var userId = GetCurrentUserId();
-            var post = await _postService.UpdatePostStatusAsync(userId, id, statusDto.Status);
+            var accountId = GetCurrentUserId();
+            var post = await _postService.UpdatePostStatusAsync(accountId, id, statusDto.Status);
 
-            return Ok(ApiResponse<PostDto>.SuccessResponse(post, "Cập nhật trạng thái thành công"));
+            return Ok(ApiResponse<PostDto>.SuccessResponse(post, "Cập nhật trạng thái tin thành công"));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Lỗi khi cập nhật trạng thái post");
+            _logger.LogError(ex, "Lỗi khi cập nhật trạng thái tin ID: {Id}", id);
             return BadRequest(ApiResponse<PostDto>.ErrorResponse(ex.Message));
         }
     }
 
-    /// <summary>
-    /// Lấy danh sách post công khai (Public - cho Tenant search)
-    /// </summary>
-    [HttpGet("public")]
-    [ProducesResponseType(typeof(ApiResponse<List<PostListDto>>), 200)]
-    public async Task<IActionResult> GetPublicPosts([FromQuery] string? province = null, [FromQuery] string? district = null)
-    {
-        try
-        {
-            var posts = await _postService.GetPublicPostsAsync(province, district);
-            return Ok(ApiResponse<List<PostListDto>>.SuccessResponse(posts, $"Lấy danh sách thành công. Tổng: {posts.Count} tin"));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Lỗi khi lấy danh sách post công khai");
-            return BadRequest(ApiResponse<List<PostListDto>>.ErrorResponse(ex.Message));
-        }
-    }
-
-    /// <summary>
-    /// Helper: Lấy UserId từ JWT Claims
-    /// </summary>
     private int GetCurrentUserId()
     {
-        var userIdClaim = User.FindFirst("UserId")?.Value
+        var userIdClaim = User.FindFirst("UserId")?.Value 
             ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
         {
-            throw new Exception("Không thể xác định user");
+            throw new Exception("Không thể xác thực người dùng");
         }
 
         return userId;

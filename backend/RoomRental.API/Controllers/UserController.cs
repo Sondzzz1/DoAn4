@@ -8,11 +8,11 @@ using System.Security.Claims;
 namespace RoomRental.API.Controllers;
 
 /// <summary>
-/// Controller xử lý User Profile
+/// Controller xử lý User Profile (Mục 9: Quản lý thông tin cá nhân)
 /// </summary>
-[Route("api/[controller]")]
+[Route("api/nguoi-dung")]
 [ApiController]
-[Authorize] // Yêu cầu đăng nhập
+[Authorize]
 public class UserController : ControllerBase
 {
     private readonly IUserService _userService;
@@ -25,9 +25,9 @@ public class UserController : ControllerBase
     }
 
     /// <summary>
-    /// Lấy thông tin profile của user hiện tại
+    /// Lấy thông tin profile của user hiện tại (Mục 9: GET /api/users/me)
     /// </summary>
-    [HttpGet("profile")]
+    [HttpGet("thong-tin")]
     [ProducesResponseType(typeof(ApiResponse<UserDto>), 200)]
     public async Task<IActionResult> GetProfile()
     {
@@ -46,9 +46,9 @@ public class UserController : ControllerBase
     }
 
     /// <summary>
-    /// Cập nhật thông tin profile
+    /// Cập nhật thông tin profile (Mục 9: PUT /api/users/me)
     /// </summary>
-    [HttpPut("profile")]
+    [HttpPut("thong-tin")]
     [ProducesResponseType(typeof(ApiResponse<UserDto>), 200)]
     public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto updateDto)
     {
@@ -79,7 +79,7 @@ public class UserController : ControllerBase
     /// <summary>
     /// Đổi mật khẩu
     /// </summary>
-    [HttpPost("change-password")]
+    [HttpPost("doi-mat-khau")]
     [ProducesResponseType(typeof(ApiResponse<object>), 200)]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto changePasswordDto)
     {
@@ -107,9 +107,6 @@ public class UserController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Lấy UserId từ JWT Claims
-    /// </summary>
     private int GetCurrentUserId()
     {
         var userIdClaim = User.FindFirst("UserId")?.Value 
@@ -117,7 +114,7 @@ public class UserController : ControllerBase
 
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
         {
-            throw new Exception("Không thể xác định user");
+            throw new Exception("Không thể xác thực người dùng");
         }
 
         return userId;

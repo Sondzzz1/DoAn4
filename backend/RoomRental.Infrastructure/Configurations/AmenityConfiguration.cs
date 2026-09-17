@@ -11,34 +11,32 @@ public class AmenityConfiguration : IEntityTypeConfiguration<Amenity>
 {
     public void Configure(EntityTypeBuilder<Amenity> builder)
     {
-        // Tên bảng
-        builder.ToTable("Amenities");
+        builder.ToTable("TienNghi");
 
-        // Primary Key
         builder.HasKey(a => a.Id);
 
-        // Properties
         builder.Property(a => a.Name)
+            .HasColumnName("TenTienNghi")
             .IsRequired()
             .HasMaxLength(100);
 
         builder.Property(a => a.Icon)
-            .HasMaxLength(100);
+            .HasColumnName("Icon")
+            .HasMaxLength(200);
 
         builder.Property(a => a.Description)
-            .HasMaxLength(255);
+            .HasColumnName("MoTa")
+            .HasMaxLength(300);
 
-        builder.Property(a => a.CreatedAt)
+        builder.Property(a => a.IsActive)
+            .HasColumnName("TrangThai")
             .IsRequired()
-            .HasDefaultValueSql("GETUTCDATE()");
+            .HasDefaultValue(true);
 
-        // Index - Name phải unique
         builder.HasIndex(a => a.Name)
             .IsUnique();
 
-        // Relationships
-        // Amenity -> PostAmenities
-        builder.HasMany(a => a.PostAmenities)
+        builder.HasMany(a => a.RoomAmenities)
             .WithOne(pa => pa.Amenity)
             .HasForeignKey(pa => pa.AmenityId)
             .OnDelete(DeleteBehavior.Cascade);

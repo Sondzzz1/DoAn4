@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using RoomRental.Domain.Entities;
-using RoomRental.Domain.Enums;
 
 namespace RoomRental.Infrastructure.Data;
 
@@ -16,8 +15,10 @@ public class ApplicationDbContext : DbContext
     }
 
     // DbSet cho các Entity
-    public DbSet<Role> Roles { get; set; } = null!;
     public DbSet<User> Users { get; set; } = null!;
+    public DbSet<TenantProfile> TenantProfiles { get; set; } = null!;
+    public DbSet<LandlordProfile> LandlordProfiles { get; set; } = null!;
+    public DbSet<RoomCategory> RoomCategories { get; set; } = null!;
     public DbSet<Post> Posts { get; set; } = null!;
     public DbSet<Room> Rooms { get; set; } = null!;
     public DbSet<PostImage> PostImages { get; set; } = null!;
@@ -25,6 +26,10 @@ public class ApplicationDbContext : DbContext
     public DbSet<PostAmenity> PostAmenities { get; set; } = null!;
     public DbSet<Favorite> Favorites { get; set; } = null!;
     public DbSet<ViewingAppointment> ViewingAppointments { get; set; } = null!;
+    public DbSet<Report> Reports { get; set; } = null!;
+    public DbSet<BlogPost> BlogPosts { get; set; } = null!;
+    public DbSet<BlogComment> BlogComments { get; set; } = null!;
+    public DbSet<Notification> Notifications { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,35 +38,6 @@ public class ApplicationDbContext : DbContext
         // Áp dụng tất cả các Entity Configuration
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
 
-        // Seed dữ liệu mặc định cho Role
-        SeedRoles(modelBuilder);
-    }
-
-    /// <summary>
-    /// Seed 3 Role mặc định: Tenant, Landlord, Admin
-    /// </summary>
-    private void SeedRoles(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<Role>().HasData(
-            new Role
-            {
-                Id = 1,
-                Name = "Tenant",
-                Description = "Người tìm trọ - Có thể tìm kiếm, xem phòng và đặt lịch xem phòng"
-            },
-            new Role
-            {
-                Id = 2,
-                Name = "Landlord",
-                Description = "Chủ nhà trọ - Có thể đăng tin cho thuê phòng và quản lý tin đăng"
-            },
-            new Role
-            {
-                Id = 3,
-                Name = "Admin",
-                Description = "Quản trị viên - Quản lý toàn bộ hệ thống, duyệt tin đăng"
-            }
-        );
     }
 
     /// <summary>

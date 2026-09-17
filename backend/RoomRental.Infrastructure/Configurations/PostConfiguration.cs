@@ -12,77 +12,64 @@ public class PostConfiguration : IEntityTypeConfiguration<Post>
 {
     public void Configure(EntityTypeBuilder<Post> builder)
     {
-        // Tên bảng
-        builder.ToTable("Posts");
+        builder.ToTable("TinDang");
 
-        // Primary Key
         builder.HasKey(p => p.Id);
 
-        // Properties
+        builder.Property(p => p.RoomId)
+            .HasColumnName("PhongTroId")
+            .IsRequired();
+
+        builder.Property(p => p.LandlordId)
+            .HasColumnName("ChuTroId")
+            .IsRequired();
+
         builder.Property(p => p.Title)
+            .HasColumnName("TieuDe")
             .IsRequired()
-            .HasMaxLength(200);
+            .HasMaxLength(300);
 
-        builder.Property(p => p.Description)
-            .IsRequired()
-            .HasMaxLength(2000);
+        builder.Property(p => p.Content)
+            .HasColumnName("NoiDung")
+            .IsRequired();
 
-        builder.Property(p => p.Price)
+        builder.Property(p => p.DisplayPrice)
+            .HasColumnName("GiaHienThi")
             .IsRequired()
             .HasColumnType("decimal(18,2)");
 
         builder.Property(p => p.Status)
+            .HasColumnName("TrangThai")
             .IsRequired()
             .HasDefaultValue(PostStatus.Pending)
-            .HasConversion<int>(); // Lưu Enum dưới dạng int
+            .HasConversion<int>();
 
         builder.Property(p => p.RejectionReason)
+            .HasColumnName("LyDoTuChoi")
             .HasMaxLength(500);
 
-        builder.Property(p => p.CreatedAt)
-            .IsRequired()
-            .HasDefaultValueSql("GETUTCDATE()");
+        builder.Property(p => p.ViewCount)
+            .HasColumnName("LuotXem")
+            .IsRequired();
 
-        // Index
+        builder.Property(p => p.PostedAt).HasColumnName("NgayDang");
+        builder.Property(p => p.ExpiredAt).HasColumnName("NgayHetHan");
+        builder.Property(p => p.ApprovedAt).HasColumnName("NgayDuyet");
+        builder.Property(p => p.CreatedAt).HasColumnName("NgayTao").HasDefaultValueSql("SYSDATETIME()");
+        builder.Property(p => p.UpdatedAt).HasColumnName("NgayCapNhat");
+
         builder.HasIndex(p => p.Status);
-        builder.HasIndex(p => p.CreatedAt);
         builder.HasIndex(p => p.LandlordId);
+        builder.HasIndex(p => p.RoomId);
 
-        // Relationships
-        // Post -> Landlord (User)
         builder.HasOne(p => p.Landlord)
-            .WithMany(u => u.Posts)
+            .WithMany(l => l.Posts)
             .HasForeignKey(p => p.LandlordId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Post -> Room (1-1)
         builder.HasOne(p => p.Room)
-            .WithOne(r => r.Post)
-            .HasForeignKey<Room>(r => r.PostId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        // Post -> PostImages
-        builder.HasMany(p => p.Images)
-            .WithOne(pi => pi.Post)
-            .HasForeignKey(pi => pi.PostId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        // Post -> PostAmenities
-        builder.HasMany(p => p.PostAmenities)
-            .WithOne(pa => pa.Post)
-            .HasForeignKey(pa => pa.PostId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        // Post -> Favorites
-        builder.HasMany(p => p.Favorites)
-            .WithOne(f => f.Post)
-            .HasForeignKey(f => f.PostId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        // Post -> Appointments
-        builder.HasMany(p => p.Appointments)
-            .WithOne(a => a.Post)
-            .HasForeignKey(a => a.PostId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .WithMany(r => r.Posts)
+            .HasForeignKey(p => p.RoomId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

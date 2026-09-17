@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using RoomRental.Application.Interfaces;
 using RoomRental.Application.Services;
 using RoomRental.Infrastructure.Data;
 using System.Text;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,14 +20,22 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     )
 );
 
-// Đăng ký Services
+// Đăng ký toàn bộ Application Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPostService, PostService>();
+builder.Services.AddScoped<IFavoriteService, FavoriteService>();
+builder.Services.AddScoped<IViewingAppointmentService, ViewingAppointmentService>();
+builder.Services.AddScoped<IRoomService, RoomService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IAmenityService, AmenityService>();
+builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<IBlogService, BlogService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
 
 // Cấu hình JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey = jwtSettings["SecretKey"] ?? throw new Exception("JWT SecretKey không được cấu hình");
+var secretKey = jwtSettings["SecretKey"] ?? "RoomRentalSecretKeyForJwtAuthentication2026123456";
 
 builder.Services.AddAuthentication(options =>
 {
@@ -40,8 +50,8 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings["Issuer"],
-        ValidAudience = jwtSettings["Audience"],
+        ValidIssuer = jwtSettings["Issuer"] ?? "RoomRentalAPI",
+        ValidAudience = jwtSettings["Audience"] ?? "RoomRentalClient",
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
         ClockSkew = TimeSpan.Zero
     };
@@ -50,19 +60,50 @@ builder.Services.AddAuthentication(options =>
 // Add Authorization
 builder.Services.AddAuthorization();
 
-// Add Controllers
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    });
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// Cấu hình Swagger với JWT Bearer Authentication & Tránh xung đột Schema
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Room Rental API - Hệ Thống Tìm Kiếm & Cho Thuê Phòng Trọ",
+        Version = "v1",
+        Description = "API cho 3 Roles: Tenant (Người thuê), Landlord (Chủ trọ), Admin (Quản trị viên)"
+    });
+
+    // Tránh lỗi xung đột Schema ID
+    c.CustomSchemaIds(type => type.FullName);
+
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "Nhập JWT Bearer token theo định dạng: Bearer {token}",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecuritySchemeReference("Bearer", document, null),
+            new List<string>()
+        }
+    });
+});
 
 // Add CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173") // Frontend URL
+        policy.WithOrigins("http://localhost:5173", "http://localhost:3000")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -78,8 +119,9 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
-        await RoomRental.Infrastructure.Data.DbInitializer.SeedAdminAsync(context);
-        await RoomRental.Infrastructure.Data.DbInitializer.SeedAmenitiesAsync(context);
+        await DbInitializer.SeedAdminAsync(context);
+        await DbInitializer.SeedCategoriesAsync(context);
+        await DbInitializer.SeedAmenitiesAsync(context);
     }
     catch (Exception ex)
     {
@@ -92,7 +134,11 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Room Rental API v1");
+        c.RoutePrefix = "swagger";
+    });
 }
 
 app.UseHttpsRedirection();

@@ -11,29 +11,31 @@ public class FavoriteConfiguration : IEntityTypeConfiguration<Favorite>
 {
     public void Configure(EntityTypeBuilder<Favorite> builder)
     {
-        // Tên bảng
-        builder.ToTable("Favorites");
+        builder.ToTable("YeuThich");
 
-        // Primary Key
         builder.HasKey(f => f.Id);
 
-        // Properties
-        builder.Property(f => f.CreatedAt)
-            .IsRequired()
-            .HasDefaultValueSql("GETUTCDATE()");
+        builder.Property(f => f.TenantId)
+            .HasColumnName("NguoiDungId")
+            .IsRequired();
 
-        // Index - Đảm bảo 1 User không thể yêu thích 1 Post nhiều lần
-        builder.HasIndex(f => new { f.UserId, f.PostId })
+        builder.Property(f => f.PostId)
+            .HasColumnName("TinDangId")
+            .IsRequired();
+
+        builder.Property(f => f.CreatedAt)
+            .HasColumnName("NgayLuu")
+            .IsRequired()
+            .HasDefaultValueSql("SYSDATETIME()");
+
+        builder.HasIndex(f => new { f.TenantId, f.PostId })
             .IsUnique();
 
-        // Relationships
-        // Favorite -> User (Tenant)
-        builder.HasOne(f => f.User)
+        builder.HasOne(f => f.Tenant)
             .WithMany(u => u.Favorites)
-            .HasForeignKey(f => f.UserId)
+            .HasForeignKey(f => f.TenantId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Favorite -> Post
         builder.HasOne(f => f.Post)
             .WithMany(p => p.Favorites)
             .HasForeignKey(f => f.PostId)

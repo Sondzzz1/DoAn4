@@ -3,74 +3,38 @@ using RoomRental.Domain.Enums;
 namespace RoomRental.Domain.Entities;
 
 /// <summary>
-/// Entity Room - Thông tin phòng trọ
-/// Quan hệ 1-1 với Post (Mỗi Post có 1 Room)
+/// Entity PhongTro - thông tin phòng trọ thực tế.
 /// </summary>
 public class Room
 {
-    /// <summary>
-    /// ID của Room - Primary Key
-    /// </summary>
     public int Id { get; set; }
-
-    /// <summary>
-    /// Foreign Key - ID của Post
-    /// Quan hệ 1-1: 1 Room thuộc về 1 Post
-    /// </summary>
-    public int PostId { get; set; }
-
-    /// <summary>
-    /// Diện tích phòng (m²)
-    /// </summary>
+    public int LandlordId { get; set; }
+    public int CategoryId { get; set; }
+    public string RoomName { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public decimal Price { get; set; }
     public decimal Area { get; set; }
-
-    /// <summary>
-    /// Số người tối đa có thể ở
-    /// </summary>
     public int MaxOccupants { get; set; }
-
-    /// <summary>
-    /// Trạng thái phòng: Available, Rented, TemporarilyUnavailable
-    /// </summary>
-    public RoomStatus Status { get; set; } = RoomStatus.Available;
-
-    /// <summary>
-    /// Tỉnh/Thành phố
-    /// Ví dụ: "Hồ Chí Minh", "Hà Nội"
-    /// </summary>
-    public string Province { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Quận/Huyện
-    /// Ví dụ: "Quận 7", "Huyện Bình Chánh"
-    /// </summary>
-    public string District { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Phường/Xã
-    /// Ví dụ: "Phường Tân Phú", "Xã Tân Kiên"
-    /// </summary>
-    public string Ward { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Địa chỉ chi tiết
-    /// Ví dụ: "123 Nguyễn Văn Linh"
-    /// </summary>
+    public int CurrentOccupants { get; set; }
+    public int? Bedrooms { get; set; }
+    public int? Bathrooms { get; set; }
+    public int? Floor { get; set; }
     public string Address { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Ngày tạo
-    /// </summary>
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-    /// <summary>
-    /// Ngày cập nhật lần cuối
-    /// </summary>
+    public string? Ward { get; set; }
+    public string? District { get; set; }
+    public string? Province { get; set; }
+    public decimal? Latitude { get; set; }
+    public decimal? Longitude { get; set; }
+    public decimal? ElectricityPrice { get; set; }
+    public decimal? WaterPrice { get; set; }
+    public decimal? ServiceFee { get; set; }
+    public RoomStatus Status { get; set; } = RoomStatus.Available;
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
     public DateTime? UpdatedAt { get; set; }
 
-    // Navigation Properties
-    /// <summary>
-    /// Tin đăng sở hữu phòng này (quan hệ 1-1)
-    /// </summary>
-    public virtual Post Post { get; set; } = null!;
+    public virtual LandlordProfile Landlord { get; set; } = null!;
+    public virtual RoomCategory Category { get; set; } = null!;
+    public virtual ICollection<Post> Posts { get; set; } = new List<Post>();
+    public virtual ICollection<PostImage> Images { get; set; } = new List<PostImage>();
+    public virtual ICollection<PostAmenity> RoomAmenities { get; set; } = new List<PostAmenity>();
 }

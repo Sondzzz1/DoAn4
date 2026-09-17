@@ -9,37 +9,37 @@ namespace RoomRental.Application.Interfaces;
 public interface IPostService
 {
     /// <summary>
-    /// Tạo post mới (Landlord)
+    /// Tìm kiếm và lọc bài đăng công khai (cho Tenant & Khách vãng lai)
     /// </summary>
-    Task<PostDto> CreatePostAsync(int landlordId, CreatePostDto createDto);
+    Task<List<PostListDto>> SearchPostsAsync(PostQueryParameters queryParams);
+
+    /// <summary>
+    /// Lấy chi tiết 1 post kèm đầy đủ thông tin phòng, tiện ích, ảnh, tọa độ maps
+    /// </summary>
+    Task<PostDto> GetPostByIdAsync(int postId, bool incrementView = true);
+
+    /// <summary>
+    /// Tạo post mới (Landlord đăng tin)
+    /// </summary>
+    Task<PostDto> CreatePostAsync(int accountId, CreatePostDto createDto);
 
     /// <summary>
     /// Lấy danh sách post của landlord
     /// </summary>
-    Task<List<PostListDto>> GetMyPostsAsync(int landlordId);
-
-    /// <summary>
-    /// Lấy chi tiết 1 post
-    /// </summary>
-    Task<PostDto> GetPostByIdAsync(int postId);
+    Task<List<PostListDto>> GetMyPostsAsync(int accountId);
 
     /// <summary>
     /// Cập nhật post (chỉ landlord sở hữu)
     /// </summary>
-    Task<PostDto> UpdatePostAsync(int landlordId, int postId, UpdatePostDto updateDto);
+    Task<PostDto> UpdatePostAsync(int accountId, int postId, UpdatePostDto updateDto);
 
     /// <summary>
-    /// Xóa post (chỉ landlord sở hữu)
+    /// Xóa mềm post (chỉ landlord sở hữu)
     /// </summary>
-    Task DeletePostAsync(int landlordId, int postId);
+    Task DeletePostAsync(int accountId, int postId);
 
     /// <summary>
-    /// Cập nhật trạng thái post (Landlord: Hidden/Pending only)
+    /// Cập nhật trạng thái post bởi Landlord
     /// </summary>
-    Task<PostDto> UpdatePostStatusAsync(int landlordId, int postId, PostStatus status);
-
-    /// <summary>
-    /// Lấy danh sách post công khai (cho Tenant search)
-    /// </summary>
-    Task<List<PostListDto>> GetPublicPostsAsync(string? province = null, string? district = null);
+    Task<PostDto> UpdatePostStatusAsync(int accountId, int postId, PostStatus status);
 }

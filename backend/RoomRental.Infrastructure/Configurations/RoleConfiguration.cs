@@ -11,13 +11,10 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
 {
     public void Configure(EntityTypeBuilder<Role> builder)
     {
-        // Tên bảng
-        builder.ToTable("Roles");
+        builder.ToTable("__UnusedRoles");
 
-        // Primary Key
         builder.HasKey(r => r.Id);
 
-        // Properties
         builder.Property(r => r.Name)
             .IsRequired()
             .HasMaxLength(50);
@@ -25,14 +22,7 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
         builder.Property(r => r.Description)
             .HasMaxLength(255);
 
-        // Index - Name phải unique
         builder.HasIndex(r => r.Name)
             .IsUnique();
-
-        // Relationships
-        builder.HasMany(r => r.Users)
-            .WithOne(u => u.Role)
-            .HasForeignKey(u => u.RoleId)
-            .OnDelete(DeleteBehavior.Restrict); // Không cho xóa Role nếu còn User
     }
 }

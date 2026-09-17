@@ -11,34 +11,40 @@ public class PostImageConfiguration : IEntityTypeConfiguration<PostImage>
 {
     public void Configure(EntityTypeBuilder<PostImage> builder)
     {
-        // Tên bảng
-        builder.ToTable("PostImages");
+        builder.ToTable("HinhAnhPhong");
 
-        // Primary Key
         builder.HasKey(pi => pi.Id);
 
-        // Properties
+        builder.Property(pi => pi.RoomId)
+            .HasColumnName("PhongTroId")
+            .IsRequired();
+
         builder.Property(pi => pi.ImageUrl)
+            .HasColumnName("DuongDan")
             .IsRequired()
-            .HasMaxLength(500);
+            .HasMaxLength(1000);
+
+        builder.Property(pi => pi.IsThumbnail)
+            .HasColumnName("LaAnhDaiDien")
+            .IsRequired()
+            .HasDefaultValue(false);
 
         builder.Property(pi => pi.DisplayOrder)
+            .HasColumnName("ThuTu")
             .IsRequired()
             .HasDefaultValue(0);
 
         builder.Property(pi => pi.CreatedAt)
+            .HasColumnName("NgayTao")
             .IsRequired()
-            .HasDefaultValueSql("GETUTCDATE()");
+            .HasDefaultValueSql("SYSDATETIME()");
 
-        // Index
-        builder.HasIndex(pi => pi.PostId);
+        builder.HasIndex(pi => pi.RoomId);
         builder.HasIndex(pi => pi.DisplayOrder);
 
-        // Relationships
-        // PostImage -> Post
-        builder.HasOne(pi => pi.Post)
-            .WithMany(p => p.Images)
-            .HasForeignKey(pi => pi.PostId)
+        builder.HasOne(pi => pi.Room)
+            .WithMany(r => r.Images)
+            .HasForeignKey(pi => pi.RoomId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

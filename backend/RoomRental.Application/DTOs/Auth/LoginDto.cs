@@ -10,13 +10,12 @@ public class LoginDto
     /// <summary>
     /// Email
     /// </summary>
-    [Required(ErrorMessage = "Email là bắt buộc")]
     [EmailAddress(ErrorMessage = "Email không hợp lệ")]
-    public string Email { get; set; } = string.Empty;
+    public string? Email { get; set; }
 
-    /// <summary>
-    /// Mật khẩu
-    /// </summary>
-    [Required(ErrorMessage = "Mật khẩu là bắt buộc")]
-    public string Password { get; set; } = string.Empty;
+    public string? Password { get; set; }
+    public string? MatKhau { get; set; }
+
+    public string GetEmail() => Email?.Trim() ?? string.Empty;
+    public string GetPassword() => !string.IsNullOrWhiteSpace(Password) ? Password : MatKhau ?? string.Empty;
 }

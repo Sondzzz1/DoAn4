@@ -8,7 +8,7 @@ namespace RoomRental.API.Controllers;
 /// <summary>
 /// Controller xử lý Authentication (Đăng ký, Đăng nhập)
 /// </summary>
-[Route("api/[controller]")]
+[Route("api/xac-thuc")]
 [ApiController]
 public class AuthController : ControllerBase
 {
@@ -26,7 +26,7 @@ public class AuthController : ControllerBase
     /// </summary>
     /// <param name="registerDto">Thông tin đăng ký</param>
     /// <returns>Thông tin user và JWT token</returns>
-    [HttpPost("register")]
+    [HttpPost("dang-ky")]
     [ProducesResponseType(typeof(ApiResponse<AuthResponseDto>), 200)]
     [ProducesResponseType(typeof(ApiResponse<AuthResponseDto>), 400)]
     public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
@@ -65,7 +65,7 @@ public class AuthController : ControllerBase
     /// </summary>
     /// <param name="loginDto">Thông tin đăng nhập</param>
     /// <returns>Thông tin user và JWT token</returns>
-    [HttpPost("login")]
+    [HttpPost("dang-nhap")]
     [ProducesResponseType(typeof(ApiResponse<AuthResponseDto>), 200)]
     [ProducesResponseType(typeof(ApiResponse<AuthResponseDto>), 400)]
     public async Task<IActionResult> Login([FromBody] LoginDto loginDto)

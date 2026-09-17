@@ -10,7 +10,7 @@ export const userService = {
    * Lấy thông tin profile
    */
   getProfile: async (): Promise<ApiResponse<UserProfile>> => {
-    const response = await api.get<ApiResponse<UserProfile>>('/user/profile');
+    const response = await api.get<ApiResponse<UserProfile>>('/nguoi-dung/thong-tin');
     return response.data;
   },
 
@@ -18,7 +18,7 @@ export const userService = {
    * Cập nhật profile
    */
   updateProfile: async (data: UpdateProfileRequest): Promise<ApiResponse<UserProfile>> => {
-    const response = await api.put<ApiResponse<UserProfile>>('/user/profile', data);
+    const response = await api.put<ApiResponse<UserProfile>>('/nguoi-dung/thong-tin', data);
     return response.data;
   },
 
@@ -26,7 +26,7 @@ export const userService = {
    * Đổi mật khẩu
    */
   changePassword: async (data: ChangePasswordRequest): Promise<ApiResponse<null>> => {
-    const response = await api.post<ApiResponse<null>>('/user/change-password', data);
+    const response = await api.post<ApiResponse<null>>('/nguoi-dung/doi-mat-khau', data);
     return response.data;
   },
 };

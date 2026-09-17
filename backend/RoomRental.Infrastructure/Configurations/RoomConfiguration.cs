@@ -12,55 +12,111 @@ public class RoomConfiguration : IEntityTypeConfiguration<Room>
 {
     public void Configure(EntityTypeBuilder<Room> builder)
     {
-        // Tên bảng
-        builder.ToTable("Rooms");
+        builder.ToTable("PhongTro");
 
-        // Primary Key
         builder.HasKey(r => r.Id);
 
-        // Properties
+        builder.Property(r => r.LandlordId)
+            .HasColumnName("ChuTroId")
+            .IsRequired();
+
+        builder.Property(r => r.CategoryId)
+            .HasColumnName("DanhMucId")
+            .IsRequired();
+
+        builder.Property(r => r.RoomName)
+            .HasColumnName("TenPhong")
+            .IsRequired()
+            .HasMaxLength(200);
+
+        builder.Property(r => r.Description)
+            .HasColumnName("MoTa");
+
+        builder.Property(r => r.Price)
+            .HasColumnName("GiaThue")
+            .IsRequired()
+            .HasColumnType("decimal(18,2)");
+
         builder.Property(r => r.Area)
+            .HasColumnName("DienTich")
             .IsRequired()
             .HasColumnType("decimal(10,2)");
 
         builder.Property(r => r.MaxOccupants)
+            .HasColumnName("SoNguoiToiDa")
             .IsRequired();
 
-        builder.Property(r => r.Status)
-            .IsRequired()
-            .HasDefaultValue(RoomStatus.Available)
-            .HasConversion<int>(); // Lưu Enum dưới dạng int
+        builder.Property(r => r.CurrentOccupants)
+            .HasColumnName("SoNguoiHienTai")
+            .IsRequired();
 
-        builder.Property(r => r.Province)
+        builder.Property(r => r.Bedrooms).HasColumnName("SoPhongNgu");
+        builder.Property(r => r.Bathrooms).HasColumnName("SoPhongTam");
+        builder.Property(r => r.Floor).HasColumnName("Tang");
+
+        builder.Property(r => r.Address)
+            .HasColumnName("DiaChi")
             .IsRequired()
+            .HasMaxLength(300);
+
+        builder.Property(r => r.Ward)
+            .HasColumnName("PhuongXa")
             .HasMaxLength(100);
 
         builder.Property(r => r.District)
-            .IsRequired()
+            .HasColumnName("QuanHuyen")
             .HasMaxLength(100);
 
-        builder.Property(r => r.Ward)
-            .IsRequired()
+        builder.Property(r => r.Province)
+            .HasColumnName("TinhThanh")
             .HasMaxLength(100);
 
-        builder.Property(r => r.Address)
+        builder.Property(r => r.Latitude)
+            .HasColumnName("ViDo")
+            .HasColumnType("decimal(10,7)");
+
+        builder.Property(r => r.Longitude)
+            .HasColumnName("KinhDo")
+            .HasColumnType("decimal(10,7)");
+
+        builder.Property(r => r.ElectricityPrice)
+            .HasColumnName("TienDien")
+            .HasColumnType("decimal(18,2)");
+
+        builder.Property(r => r.WaterPrice)
+            .HasColumnName("TienNuoc")
+            .HasColumnType("decimal(18,2)");
+
+        builder.Property(r => r.ServiceFee)
+            .HasColumnName("PhiDichVu")
+            .HasColumnType("decimal(18,2)");
+
+        builder.Property(r => r.Status)
+            .HasColumnName("TrangThai")
             .IsRequired()
-            .HasMaxLength(255);
+            .HasDefaultValue(RoomStatus.Available)
+            .HasConversion<int>();
 
         builder.Property(r => r.CreatedAt)
+            .HasColumnName("NgayTao")
             .IsRequired()
-            .HasDefaultValueSql("GETUTCDATE()");
+            .HasDefaultValueSql("SYSDATETIME()");
 
-        // Index cho tìm kiếm theo địa điểm
+        builder.Property(r => r.UpdatedAt)
+            .HasColumnName("NgayCapNhat");
+
         builder.HasIndex(r => r.Province);
         builder.HasIndex(r => r.District);
         builder.HasIndex(r => r.Status);
 
-        // Relationships
-        // Room -> Post (1-1)
-        builder.HasOne(r => r.Post)
-            .WithOne(p => p.Room)
-            .HasForeignKey<Room>(r => r.PostId)
-            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(r => r.Landlord)
+            .WithMany(l => l.Rooms)
+            .HasForeignKey(r => r.LandlordId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(r => r.Category)
+            .WithMany(c => c.Rooms)
+            .HasForeignKey(r => r.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
