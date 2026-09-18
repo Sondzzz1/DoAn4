@@ -1,53 +1,65 @@
 namespace RoomRental.Application.DTOs.Post;
 
+using System.Text.Json.Serialization;
+
 /// <summary>
 /// DTO để cập nhật Post (Landlord sửa tin)
 /// Hỗ trợ cả property tiếng Anh và tiếng Việt
 /// </summary>
 public class UpdatePostDto
 {
-    public string? Title { get; set; }
+    [JsonIgnore] public string? Title { get; set; }
     public string? TieuDe { get; set; }
 
-    public string? Description { get; set; }
+    [JsonIgnore] public string? Description { get; set; }
     public string? MoTa { get; set; }
 
-    public decimal? Price { get; set; }
+    [JsonIgnore] public decimal? Price { get; set; }
     public decimal? Gia { get; set; }
 
-    public int? CategoryId { get; set; }
+    [JsonIgnore] public int? CategoryId { get; set; }
     public int? LoaiPhongId { get; set; }
 
-    public decimal? Area { get; set; }
+    [JsonIgnore] public decimal? Area { get; set; }
     public decimal? DienTich { get; set; }
 
-    public int? MaxOccupants { get; set; }
+    [JsonIgnore] public int? MaxOccupants { get; set; }
     public int? SoNguoiToiDa { get; set; }
 
-    public string? Province { get; set; }
+    [JsonIgnore] public string? Province { get; set; }
     public string? ThanhPho { get; set; }
 
-    public string? District { get; set; }
+    [JsonIgnore] public string? District { get; set; }
     public string? Quan { get; set; }
 
-    public string? Ward { get; set; }
+    [JsonIgnore] public string? Ward { get; set; }
     public string? Phuong { get; set; }
 
-    public string? Address { get; set; }
+    [JsonIgnore] public string? Address { get; set; }
     public string? DiaChi { get; set; }
 
-    public decimal? Latitude { get; set; }
+    [JsonIgnore] public decimal? Latitude { get; set; }
     public decimal? ViDo { get; set; }
 
-    public decimal? Longitude { get; set; }
+    [JsonIgnore] public decimal? Longitude { get; set; }
     public decimal? KinhDo { get; set; }
 
-    public decimal? ElectricityPrice { get; set; }
-    public decimal? WaterPrice { get; set; }
-    public decimal? ServiceFee { get; set; }
+    [JsonIgnore] public decimal? ElectricityPrice { get; set; }
+    [JsonIgnore] public decimal? WaterPrice { get; set; }
+    [JsonIgnore] public decimal? ServiceFee { get; set; }
 
-    public List<int>? AmenityIds { get; set; }
-    public List<string>? ImageUrls { get; set; }
+    [JsonIgnore] public List<int>? AmenityIds { get; set; }
+    [JsonIgnore] public List<string>? ImageUrls { get; set; }
+    public List<int>? TienIchIds
+    {
+        get => AmenityIds;
+        set => AmenityIds = value;
+    }
+    public List<string>? DanhSachAnh
+    {
+        get => ImageUrls;
+        set => ImageUrls = value;
+    }
 
     public string? GetTitle() => !string.IsNullOrWhiteSpace(Title) ? Title : TieuDe;
     public string? GetDescription() => !string.IsNullOrWhiteSpace(Description) ? Description : MoTa;

@@ -1,9 +1,12 @@
 namespace RoomRental.Application.DTOs.Room;
 
+using System.Text.Json.Serialization;
+
 public class UpdateRoomStatusDto
 {
-    public string? Status { get; set; }
-    public RoomRental.Domain.Enums.RoomStatus? DesiredStatus { get; set; }
+    [JsonIgnore] public string? Status { get; set; }
+    [JsonIgnore] public RoomRental.Domain.Enums.RoomStatus? DesiredStatus { get; set; }
+    public string? TrangThai { get => Status; set => Status = value; }
 
     public RoomRental.Domain.Enums.RoomStatus GetResolvedStatus()
     {

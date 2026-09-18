@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace RoomRental.Application.DTOs.Blog;
 
 public class BlogPostDto
@@ -20,11 +22,21 @@ public class BlogPostDto
 
 public class CreateBlogPostDto
 {
+    [JsonIgnore]
     public string Title { get; set; } = string.Empty;
+    public string TieuDe { get => Title; set => Title = value; }
+    [JsonIgnore]
     public string? Summary { get; set; }
+    public string? TomTat { get => Summary; set => Summary = value; }
+    [JsonIgnore]
     public string Content { get; set; } = string.Empty;
+    public string NoiDung { get => Content; set => Content = value; }
+    [JsonIgnore]
     public string? ImageUrl { get; set; }
+    public string? DuongDanAnh { get => ImageUrl; set => ImageUrl = value; }
+    [JsonIgnore]
     public int Status { get; set; } = 1; // Published by default
+    public int TrangThai { get => Status; set => Status = value; }
 }
 
 public class UpdateBlogPostDto : CreateBlogPostDto
@@ -44,5 +56,7 @@ public class BlogCommentDto
 
 public class CreateBlogCommentDto
 {
+    [JsonIgnore]
     public string Content { get; set; } = string.Empty;
+    public string NoiDung { get => Content; set => Content = value; }
 }

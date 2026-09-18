@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace RoomRental.Application.DTOs.Auth;
 
@@ -8,6 +9,7 @@ namespace RoomRental.Application.DTOs.Auth;
 public class RegisterDto
 {
     [StringLength(100, ErrorMessage = "Họ tên không được vượt quá 100 ký tự")]
+    [JsonIgnore]
     public string? FullName { get; set; }
 
     [StringLength(100, ErrorMessage = "Họ tên không được vượt quá 100 ký tự")]
@@ -15,10 +17,12 @@ public class RegisterDto
 
     [EmailAddress(ErrorMessage = "Email không hợp lệ")]
     [StringLength(100, ErrorMessage = "Email không được vượt quá 100 ký tự")]
+    [JsonIgnore]
     public string? Email { get; set; }
 
     [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
     [StringLength(20, ErrorMessage = "Số điện thoại không được vượt quá 20 ký tự")]
+    [JsonIgnore]
     public string? Phone { get; set; }
 
     [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
@@ -26,14 +30,18 @@ public class RegisterDto
     public string? SoDienThoai { get; set; }
 
     [StringLength(100, MinimumLength = 6, ErrorMessage = "Mật khẩu phải từ 6 đến 100 ký tự")]
+    [JsonIgnore]
     public string? Password { get; set; }
 
     [StringLength(100, MinimumLength = 6, ErrorMessage = "Mật khẩu phải từ 6 đến 100 ký tự")]
     public string? MatKhau { get; set; }
 
     [Compare("Password", ErrorMessage = "Mật khẩu xác nhận không khớp")]
+    [JsonIgnore]
     public string? ConfirmPassword { get; set; }
+    public string? XacNhanMatKhau { get => ConfirmPassword; set => ConfirmPassword = value; }
 
+    [JsonIgnore]
     public string? RoleName { get; set; } = "Tenant";
     public string? VaiTro { get; set; }
 

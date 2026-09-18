@@ -32,6 +32,11 @@ builder.Services.AddScoped<IAmenityService, AmenityService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<IBlogService, BlogService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<IRentalRequestService, RentalRequestService>();
+builder.Services.AddScoped<IDepositService, DepositService>();
+builder.Services.AddScoped<IRentalContractService, RentalContractService>();
+builder.Services.AddScoped<IIncidentService, IncidentService>();
+builder.Services.AddScoped<IRoomReviewService, RoomReviewService>();
 
 // Cấu hình JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");

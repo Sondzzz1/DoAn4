@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using RoomRental.Domain.Enums;
 
 namespace RoomRental.Application.DTOs.Post;
@@ -9,5 +10,6 @@ namespace RoomRental.Application.DTOs.Post;
 public class UpdatePostStatusDto
 {
     [Required]
-    public PostStatus Status { get; set; }
+    [JsonIgnore] public PostStatus Status { get; set; }
+    public PostStatus TrangThai { get => Status; set => Status = value; }
 }

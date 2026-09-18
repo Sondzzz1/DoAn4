@@ -30,6 +30,11 @@ public class ApplicationDbContext : DbContext
     public DbSet<BlogPost> BlogPosts { get; set; } = null!;
     public DbSet<BlogComment> BlogComments { get; set; } = null!;
     public DbSet<Notification> Notifications { get; set; } = null!;
+    public DbSet<RentalRequest> RentalRequests { get; set; } = null!;
+    public DbSet<Deposit> Deposits { get; set; } = null!;
+    public DbSet<RentalContract> RentalContracts { get; set; } = null!;
+    public DbSet<Incident> Incidents { get; set; } = null!;
+    public DbSet<RoomReview> RoomReviews { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -13,14 +13,39 @@ public static class DbInitializer
     /// </summary>
     public static async Task SeedAdminAsync(ApplicationDbContext context)
     {
-        var adminExists = await context.Users.AnyAsync(u => u.RoleId == 0);
-        if (adminExists) return;
+        const string adminEmail = "admin@roomrental.com";
+        var adminUser = await context.Users
+            .FirstOrDefaultAsync(u => u.Email == adminEmail || u.UserName == adminEmail);
 
-        var adminUser = new User
+        if (adminUser != null)
         {
-            UserName = "admin@roomrental.com",
+            var changed = false;
+
+            if (adminUser.RoleId != 0)
+            {
+                adminUser.RoleId = 0;
+                changed = true;
+            }
+
+            if (!adminUser.IsActive)
+            {
+                adminUser.IsActive = true;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                await context.SaveChangesAsync();
+            }
+
+            return;
+        }
+
+        adminUser = new User
+        {
+            UserName = adminEmail,
             FullName = "Administrator",
-            Email = "admin@roomrental.com",
+            Email = adminEmail,
             Phone = "0123456789",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
             RoleId = 0,

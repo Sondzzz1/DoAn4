@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace RoomRental.Application.DTOs.Auth;
 
@@ -11,8 +12,10 @@ public class LoginDto
     /// Email
     /// </summary>
     [EmailAddress(ErrorMessage = "Email không hợp lệ")]
+    [JsonIgnore]
     public string? Email { get; set; }
 
+    [JsonIgnore]
     public string? Password { get; set; }
     public string? MatKhau { get; set; }
 
