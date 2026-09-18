@@ -12,6 +12,7 @@ import RoomDetailPage from '../pages/public/RoomDetailPage';
 import BlogPage from '../pages/public/BlogPage';
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
+import DashboardPage from '../pages/dashboard/DashboardPage';
 
 // Protected Route
 import ProtectedRoute from './ProtectedRoute';
@@ -79,7 +80,7 @@ const AppRoutes: React.FC = () => {
           path="/landlord/dashboard"
           element={
             <ProtectedRoute allowedRoles={['Landlord']}>
-              <PlaceholderPage title="Dashboard Chủ nhà" />
+              <DashboardPage />
             </ProtectedRoute>
           }
         />
@@ -121,7 +122,7 @@ const AppRoutes: React.FC = () => {
           path="/admin/dashboard"
           element={
             <ProtectedRoute allowedRoles={['Admin']}>
-              <PlaceholderPage title="Dashboard Admin" />
+              <DashboardPage />
             </ProtectedRoute>
           }
         />

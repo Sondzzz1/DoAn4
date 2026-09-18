@@ -12,7 +12,6 @@ public class LoginDto
     /// Email
     /// </summary>
     [EmailAddress(ErrorMessage = "Email không hợp lệ")]
-    [JsonIgnore]
     public string? Email { get; set; }
 
     [JsonIgnore]

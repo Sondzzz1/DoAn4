@@ -18,7 +18,10 @@ export const authService = {
    * Đăng nhập
    */
   login: async (data: LoginRequest): Promise<ApiResponse<AuthResponse>> => {
-    const response = await api.post<ApiResponse<AuthResponse>>('/xac-thuc/dang-nhap', data);
+    const response = await api.post<ApiResponse<AuthResponse>>('/xac-thuc/dang-nhap', {
+      email: data.email,
+      matKhau: data.password,
+    });
     return response.data;
   },
 };
