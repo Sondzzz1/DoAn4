@@ -11,7 +11,7 @@ import {
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
-import { ROUTES } from '../../utils/constants';
+import { ROUTES, STORAGE_KEYS } from '../../utils/constants';
 import './Auth.css';
 
 const RegisterPage: React.FC = () => {
@@ -93,7 +93,8 @@ const RegisterPage: React.FC = () => {
       toast.success('Đăng ký tài khoản thành công!');
 
       setTimeout(() => {
-        navigate(ROUTES.HOME);
+        const storedUser = JSON.parse(localStorage.getItem(STORAGE_KEYS.USER) || 'null');
+        navigate(storedUser?.role === 'Landlord' ? ROUTES.LANDLORD_DASHBOARD : ROUTES.HOME);
       }, 300);
     } catch (error: any) {
       const errorMessage =

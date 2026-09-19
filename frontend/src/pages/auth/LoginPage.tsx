@@ -3,12 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FiEye, FiEyeOff, FiMail, FiLock, FiArrowLeft } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
-import { ROUTES } from '../../utils/constants';
+import { ROUTES, STORAGE_KEYS } from '../../utils/constants';
 import './Auth.css';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login, isLandlord, isTenant, isAdmin } = useAuth();
+  const { login } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -52,9 +52,11 @@ const LoginPage: React.FC = () => {
 
       // Điều hướng dựa vào vai trò người dùng
       setTimeout(() => {
-        if (isLandlord) {
+        const storedUser = JSON.parse(localStorage.getItem(STORAGE_KEYS.USER) || 'null');
+        const role = storedUser?.role;
+        if (role === 'Landlord') {
           navigate(ROUTES.LANDLORD_DASHBOARD);
-        } else if (isAdmin) {
+        } else if (role === 'Admin') {
           navigate(ROUTES.ADMIN_DASHBOARD);
         } else {
           navigate(ROUTES.HOME);

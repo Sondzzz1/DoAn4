@@ -40,14 +40,14 @@ public class RegisterDto
     public string? XacNhanMatKhau { get => ConfirmPassword; set => ConfirmPassword = value; }
 
     [JsonIgnore]
-    public string? RoleName { get; set; } = "Tenant";
+    public string? RoleName { get; set; }
     public string? VaiTro { get; set; }
 
     public string GetFullName() => FirstNonEmpty(FullName, HoTen);
     public string GetPhone() => FirstNonEmpty(Phone, SoDienThoai);
     public string GetPassword() => FirstNonEmpty(Password, MatKhau);
     public string GetConfirmPassword() => FirstNonEmpty(ConfirmPassword, XacNhanMatKhau);
-    public string GetRoleName() => FirstNonEmpty(RoleName, VaiTro, "Tenant");
+    public string GetRoleName() => FirstNonEmpty(VaiTro, RoleName, "Tenant");
 
     private static string FirstNonEmpty(params string?[] values)
     {
