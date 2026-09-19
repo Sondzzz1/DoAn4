@@ -1,0 +1,278 @@
+.landlord-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 20px 60px;
+}
+
+.landlord-shell {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
+}
+
+.landlord-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.landlord-header h1 {
+  font-size: clamp(1.7rem, 3vw, 2.4rem);
+  color: #0f172a;
+  margin: 0;
+}
+
+.landlord-header p {
+  margin: 6px 0 0;
+  color: #64748b;
+}
+
+.landlord-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.landlord-btn,
+.landlord-btn-secondary,
+.landlord-btn-danger,
+.landlord-btn-ghost {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.landlord-btn {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
+}
+
+.landlord-btn:hover { transform: translateY(-1px); }
+
+.landlord-btn-secondary {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.landlord-btn-ghost {
+  background: white;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+}
+
+.landlord-btn-danger {
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.landlord-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.landlord-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.landlord-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.landlord-card h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.08rem;
+}
+
+.landlord-price {
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.landlord-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.meta-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.meta-item small {
+  display: block;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.meta-item strong {
+  color: #0f172a;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 99px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-0 { background: #fef3c7; color: #92400e; }
+.status-1 { background: #dcfce7; color: #166534; }
+.status-2 { background: #fee2e2; color: #991b1b; }
+.status-3 { background: #e2e8f0; color: #334155; }
+.status-4 { background: #f3e8ff; color: #6b21a8; }
+
+.status-5 { background: #dbeafe; color: #1d4ed8; }
+.status-6 { background: #fee2e2; color: #9f1239; }
+.status-7 { background: #dcfce7; color: #166534; }
+.status-8 { background: #fef2f2; color: #b91c1c; }
+
+.landlord-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.landlord-form {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.04);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group.full {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: white;
+  color: #0f172a;
+  font: inherit;
+}
+
+.form-group textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.amenity-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.amenity-chip {
+  background: #f8fafc;
+  border: 1px solid #dbeafe;
+  color: #1d4ed8;
+  border-radius: 999px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.amenity-chip.active {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.empty-state {
+  background: white;
+  border: 1px dashed #cbd5e1;
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  border-radius: 18px;
+  color: #64748b;
+  padding: 20px;
+}
+
+.summary-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.summary-box {
+  background: linear-gradient(135deg, #ffffff, #f8fafc);
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 18px 20px;
+}
+
+.summary-box span {
+  display: block;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.summary-box strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 1.7rem;
+  color: #0f172a;
+}
+
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .landlord-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

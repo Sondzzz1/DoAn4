@@ -14,6 +14,12 @@ import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
 import DashboardPage from '../pages/dashboard/DashboardPage';
 import AdminManagementPage from '../pages/admin/AdminManagementPage';
+import LandlordPostsPage from '../pages/landlord/LandlordPostsPage';
+import LandlordPostFormPage from '../pages/landlord/LandlordPostFormPage';
+import LandlordAppointmentsPage from '../pages/landlord/LandlordAppointmentsPage';
+import LandlordRentalPage from '../pages/landlord/LandlordRentalPage';
+import LandlordContractsPage from '../pages/landlord/LandlordContractsPage';
+import LandlordRoomsPage from '../pages/landlord/LandlordRoomsPage';
 
 // Protected Route
 import ProtectedRoute from './ProtectedRoute';
@@ -89,7 +95,7 @@ const AppRoutes: React.FC = () => {
           path="/landlord/posts"
           element={
             <ProtectedRoute allowedRoles={['Landlord']}>
-              <PlaceholderPage title="Quản lý tin đăng" />
+              <LandlordPostsPage />
             </ProtectedRoute>
           }
         />
@@ -97,7 +103,7 @@ const AppRoutes: React.FC = () => {
           path="/landlord/posts/create"
           element={
             <ProtectedRoute allowedRoles={['Landlord']}>
-              <PlaceholderPage title="Đăng tin mới" />
+              <LandlordPostFormPage />
             </ProtectedRoute>
           }
         />
@@ -105,7 +111,7 @@ const AppRoutes: React.FC = () => {
           path="/landlord/posts/:id/edit"
           element={
             <ProtectedRoute allowedRoles={['Landlord']}>
-              <PlaceholderPage title="Chỉnh sửa tin đăng" />
+              <LandlordPostFormPage />
             </ProtectedRoute>
           }
         />
@@ -113,7 +119,31 @@ const AppRoutes: React.FC = () => {
           path="/landlord/appointments"
           element={
             <ProtectedRoute allowedRoles={['Landlord']}>
-              <PlaceholderPage title="Quản lý lịch hẹn" />
+              <LandlordAppointmentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/landlord/rooms"
+          element={
+            <ProtectedRoute allowedRoles={['Landlord']}>
+              <LandlordRoomsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/landlord/rental-requests"
+          element={
+            <ProtectedRoute allowedRoles={['Landlord']}>
+              <LandlordRentalPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/landlord/contracts"
+          element={
+            <ProtectedRoute allowedRoles={['Landlord']}>
+              <LandlordContractsPage />
             </ProtectedRoute>
           }
         />
