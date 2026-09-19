@@ -42,7 +42,10 @@ export interface PostListItem {
   province: string;
   district: string;
   ward: string;
+  address?: string;
   thumbnailUrl: string | null;
+  landlordName?: string;
+  landlordPhone?: string | null;
   createdAt: string;
   updatedAt: string;
 }

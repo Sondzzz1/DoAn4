@@ -88,4 +88,7 @@ export const ROUTES = {
   ADMIN_POSTS: '/admin/posts',
   ADMIN_POST_APPROVAL: '/admin/posts/approval',
   ADMIN_AMENITIES: '/admin/amenities',
+  ADMIN_ROOMS: '/admin/rooms',
+  ADMIN_CATEGORIES: '/admin/categories',
+  ADMIN_REPORTS: '/admin/reports',
 } as const;

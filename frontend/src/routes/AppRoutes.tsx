@@ -13,6 +13,7 @@ import BlogPage from '../pages/public/BlogPage';
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
 import DashboardPage from '../pages/dashboard/DashboardPage';
+import AdminManagementPage from '../pages/admin/AdminManagementPage';
 
 // Protected Route
 import ProtectedRoute from './ProtectedRoute';
@@ -130,7 +131,7 @@ const AppRoutes: React.FC = () => {
           path="/admin/users"
           element={
             <ProtectedRoute allowedRoles={['Admin']}>
-              <PlaceholderPage title="Quản lý người dùng" />
+              <AdminManagementPage module="users" />
             </ProtectedRoute>
           }
         />
@@ -138,7 +139,7 @@ const AppRoutes: React.FC = () => {
           path="/admin/posts"
           element={
             <ProtectedRoute allowedRoles={['Admin']}>
-              <PlaceholderPage title="Quản lý tin đăng" />
+              <AdminManagementPage module="posts" />
             </ProtectedRoute>
           }
         />
@@ -146,7 +147,7 @@ const AppRoutes: React.FC = () => {
           path="/admin/posts/approval"
           element={
             <ProtectedRoute allowedRoles={['Admin']}>
-              <PlaceholderPage title="Duyệt tin đăng" />
+              <AdminManagementPage module="approval" />
             </ProtectedRoute>
           }
         />
@@ -154,10 +155,13 @@ const AppRoutes: React.FC = () => {
           path="/admin/amenities"
           element={
             <ProtectedRoute allowedRoles={['Admin']}>
-              <PlaceholderPage title="Quản lý tiện ích" />
+              <AdminManagementPage module="amenities" />
             </ProtectedRoute>
           }
         />
+        <Route path="/admin/rooms" element={<ProtectedRoute allowedRoles={['Admin']}><AdminManagementPage module="rooms" /></ProtectedRoute>} />
+        <Route path="/admin/categories" element={<ProtectedRoute allowedRoles={['Admin']}><AdminManagementPage module="categories" /></ProtectedRoute>} />
+        <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={['Admin']}><AdminManagementPage module="reports" /></ProtectedRoute>} />
 
         {/* 404 */}
         <Route path="*" element={<PlaceholderPage title="404 - Không tìm thấy trang" />} />
