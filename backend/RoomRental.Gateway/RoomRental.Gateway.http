@@ -1,0 +1,6 @@
+@RoomRental.Gateway_HostAddress = http://localhost:5197
+
+GET {{RoomRental.Gateway_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

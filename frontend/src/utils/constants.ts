@@ -1,5 +1,5 @@
-// API Base URL
-export const API_BASE_URL = 'http://localhost:5000/api';
+// API Base URL - frontend gọi qua API Gateway, gateway sẽ forward sang backend chính
+export const API_BASE_URL = 'http://localhost:5197/api';
 
 // Role Names
 export const ROLES = {

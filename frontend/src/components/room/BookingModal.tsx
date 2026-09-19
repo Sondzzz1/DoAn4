@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Post } from '../../types/post.types';
-import { FiX, FiCalendar, FiClock, FiUser, FiPhone, FiMessageSquare, FiCheck } from 'react-icons/fi';
+import { FiX, FiCalendar, FiClock, FiPhone, FiMessageSquare, FiCheck } from 'react-icons/fi';
 import { toast } from 'react-toastify';
+import { appointmentService } from '../../services/appointmentService';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -13,7 +14,6 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, post }) =>
   const [formData, setFormData] = useState({
     date: '',
     time: '',
-    name: '',
     phone: '',
     message: '',
   });
@@ -30,7 +30,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, post }) =>
     e.preventDefault();
 
     // Validation
-    if (!formData.date || !formData.time || !formData.name || !formData.phone) {
+    if (!formData.date || !formData.time || !formData.phone) {
       toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
       return;
     }
@@ -38,22 +38,32 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, post }) =>
     setIsSubmitting(true);
 
     try {
-      // TODO: Call API to create appointment
-      await new Promise((resolve) => setTimeout(resolve, 1500)); // Mock API call
+      const payload = {
+        baiDangId: post.id,
+        chuTroId: post.landlordId,
+        ngayXem: formData.date,
+        gioXem: formData.time,
+        ghiChu: formData.message || '',
+      };
 
-      toast.success('Đặt lịch xem phòng thành công! Chủ nhà sẽ liên hệ với bạn sớm.');
+      const response = await appointmentService.createAppointment(payload);
+
+      if (!response?.success) {
+        throw new Error(response?.message || 'Không thể đặt lịch xem phòng');
+      }
+
+      toast.success(response.message || 'Đặt lịch xem phòng thành công! Chủ nhà sẽ liên hệ với bạn sớm.');
       onClose();
-      
-      // Reset form
+
       setFormData({
         date: '',
         time: '',
-        name: '',
         phone: '',
         message: '',
       });
-    } catch (error) {
-      toast.error('Có lỗi xảy ra. Vui lòng thử lại sau.');
+    } catch (error: any) {
+      const message = error?.response?.data?.message || error?.message || 'Có lỗi xảy ra. Vui lòng thử lại sau.';
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -131,23 +141,6 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, post }) =>
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#0084ff] focus:border-transparent transition-all"
                 />
               </div>
-            </div>
-
-            {/* Name */}
-            <div>
-              <label className="flex items-center gap-2 text-[14px] font-semibold text-gray-700 mb-2">
-                <FiUser className="w-4 h-4 text-[#0084ff]" />
-                Họ và tên <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="Nhập họ và tên của bạn"
-                required
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-[15px] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0084ff] focus:border-transparent transition-all"
-              />
             </div>
 
             {/* Phone */}
