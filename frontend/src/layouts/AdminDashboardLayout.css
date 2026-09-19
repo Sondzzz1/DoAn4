@@ -1,0 +1,324 @@
+/* =============================================
+   ADMIN DASHBOARD LAYOUT
+   Shared layout cho tất cả trang admin/landlord
+============================================== */
+
+.admin-dashboard-shell {
+  --ink: #172033;
+  --muted: #7d8798;
+  --line: #e8edf3;
+  --paper: #f7f9fc;
+
+  min-height: 100vh;
+  display: flex;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Avenir Next', 'Segoe UI', sans-serif;
+}
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+.admin-dashboard-sidebar {
+  width: 256px;
+  background: #172033;
+  color: #dbe4f3;
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  padding: 26px 16px 18px;
+  min-height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 100;
+  transition: transform 0.3s ease;
+}
+
+.admin-dashboard-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  font-size: 19px;
+  padding: 0 12px 34px;
+  color: #fff;
+}
+
+.admin-dashboard-brand > span:last-child span {
+  color: #7de2c4;
+}
+
+.admin-dashboard-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: #7de2c4;
+  color: #172033;
+  font-family: Georgia, serif;
+  font-size: 20px;
+}
+
+.admin-dashboard-close {
+  display: none;
+  margin-left: auto;
+  color: #fff;
+  background: transparent;
+  border: 0;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.admin-dashboard-role {
+  font-size: 10px;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  color: #8794aa;
+  padding: 0 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-dashboard-role-dot {
+  width: 6px;
+  height: 6px;
+  background: #7de2c4;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(125, 226, 196, 0.12);
+}
+
+.admin-dashboard-nav-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #65738b;
+  padding: 0 12px 9px;
+}
+
+.admin-dashboard-nav {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-dashboard-nav a,
+.admin-dashboard-sidebar-bottom a,
+.admin-dashboard-sidebar-bottom button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #aebbd0;
+  text-decoration: none;
+  border: 0;
+  background: transparent;
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.admin-dashboard-nav a svg,
+.admin-dashboard-sidebar-bottom svg {
+  font-size: 17px;
+  flex: none;
+}
+
+.admin-dashboard-nav a:hover,
+.admin-dashboard-sidebar-bottom a:hover,
+.admin-dashboard-sidebar-bottom button:hover {
+  color: #fff;
+  background: #22304a;
+}
+
+.admin-dashboard-nav a:hover {
+  transform: translateX(2px);
+}
+
+.admin-dashboard-nav a.is-active {
+  background: #7de2c4;
+  color: #172033;
+  font-weight: 700;
+}
+
+.admin-dashboard-nav-arrow {
+  margin-left: auto;
+  font-size: 14px !important;
+}
+
+.admin-dashboard-sidebar-bottom {
+  margin-top: auto;
+  border-top: 1px solid #2b3850;
+  padding-top: 14px;
+  display: grid;
+  gap: 2px;
+}
+
+/* =========================================================
+   MAIN CONTENT
+========================================================= */
+
+.admin-dashboard-main {
+  min-width: 0;
+  flex: 1;
+  margin-left: 256px;
+}
+
+/* =========================================================
+   TOPBAR
+========================================================= */
+
+.admin-dashboard-topbar {
+  height: 82px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  padding: 0 40px;
+  gap: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.admin-dashboard-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  color: #9aa4b4;
+}
+
+.admin-dashboard-breadcrumb svg {
+  font-size: 13px;
+}
+
+.admin-dashboard-breadcrumb strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.admin-dashboard-menu-button {
+  display: none;
+  border: 0;
+  background: transparent;
+  color: #6f7a8d;
+  font-size: 19px;
+  cursor: pointer;
+}
+
+.admin-dashboard-user {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-left: 1px solid var(--line);
+  padding-left: 18px;
+}
+
+.admin-dashboard-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #d9f6ec;
+  color: #217a68;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.admin-dashboard-user > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-dashboard-user strong {
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.admin-dashboard-user span {
+  font-size: 11px;
+  color: #9aa4b4;
+}
+
+/* =========================================================
+   CONTENT AREA
+========================================================= */
+
+.admin-dashboard-content {
+  padding: 40px;
+  min-height: calc(100vh - 82px);
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1024px) {
+  .admin-dashboard-sidebar {
+    transform: translateX(-100%);
+  }
+
+  .admin-dashboard-sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .admin-dashboard-close {
+    display: block;
+  }
+
+  .admin-dashboard-main {
+    margin-left: 0;
+  }
+
+  .admin-dashboard-menu-button {
+    display: block;
+  }
+
+  .admin-dashboard-topbar {
+    padding: 0 20px;
+  }
+
+  .admin-dashboard-content {
+    padding: 24px 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-dashboard-topbar {
+    height: 68px;
+  }
+
+  .admin-dashboard-breadcrumb span:first-child {
+    display: none;
+  }
+
+  .admin-dashboard-breadcrumb svg {
+    display: none;
+  }
+
+  .admin-dashboard-user {
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .admin-dashboard-user > div:last-child {
+    display: none;
+  }
+
+  .admin-dashboard-content {
+    padding: 20px 16px;
+    min-height: calc(100vh - 68px);
+  }
+}

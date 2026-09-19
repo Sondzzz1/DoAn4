@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 
 // Layouts
 import PublicLayout from '../layouts/PublicLayout';
+import AdminDashboardLayout from '../layouts/AdminDashboardLayout';
 
 // Public Pages
 import HomePage from '../pages/public/HomePage';
@@ -14,12 +15,6 @@ import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
 import DashboardPage from '../pages/dashboard/DashboardPage';
 import AdminManagementPage from '../pages/admin/AdminManagementPage';
-import LandlordPostsPage from '../pages/landlord/LandlordPostsPage';
-import LandlordPostFormPage from '../pages/landlord/LandlordPostFormPage';
-import LandlordAppointmentsPage from '../pages/landlord/LandlordAppointmentsPage';
-import LandlordRentalPage from '../pages/landlord/LandlordRentalPage';
-import LandlordContractsPage from '../pages/landlord/LandlordContractsPage';
-import LandlordRoomsPage from '../pages/landlord/LandlordRoomsPage';
 
 // Protected Route
 import ProtectedRoute from './ProtectedRoute';
@@ -39,7 +34,7 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
-      {/* Public Routes */}
+      {/* Public Routes with Header + Footer */}
       <Route element={<PublicLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/rooms" element={<RoomListPage />} />
@@ -82,6 +77,12 @@ const AppRoutes: React.FC = () => {
           }
         />
 
+        {/* 404 */}
+        <Route path="*" element={<PlaceholderPage title="404 - Không tìm thấy trang" />} />
+      </Route>
+
+      {/* Dashboard Routes - Shared Sidebar Layout */}
+      <Route element={<AdminDashboardLayout />}>
         {/* Landlord Routes */}
         <Route
           path="/landlord/dashboard"
@@ -95,7 +96,7 @@ const AppRoutes: React.FC = () => {
           path="/landlord/posts"
           element={
             <ProtectedRoute allowedRoles={['Landlord']}>
-              <LandlordPostsPage />
+              <AdminManagementPage module="posts" />
             </ProtectedRoute>
           }
         />
@@ -103,7 +104,7 @@ const AppRoutes: React.FC = () => {
           path="/landlord/posts/create"
           element={
             <ProtectedRoute allowedRoles={['Landlord']}>
-              <LandlordPostFormPage />
+              <AdminManagementPage module="posts" />
             </ProtectedRoute>
           }
         />
@@ -111,7 +112,7 @@ const AppRoutes: React.FC = () => {
           path="/landlord/posts/:id/edit"
           element={
             <ProtectedRoute allowedRoles={['Landlord']}>
-              <LandlordPostFormPage />
+              <AdminManagementPage module="posts" />
             </ProtectedRoute>
           }
         />
@@ -119,7 +120,7 @@ const AppRoutes: React.FC = () => {
           path="/landlord/appointments"
           element={
             <ProtectedRoute allowedRoles={['Landlord']}>
-              <LandlordAppointmentsPage />
+              <AdminManagementPage module="posts" />
             </ProtectedRoute>
           }
         />
@@ -127,7 +128,7 @@ const AppRoutes: React.FC = () => {
           path="/landlord/rooms"
           element={
             <ProtectedRoute allowedRoles={['Landlord']}>
-              <LandlordRoomsPage />
+              <AdminManagementPage module="rooms" />
             </ProtectedRoute>
           }
         />
@@ -135,7 +136,7 @@ const AppRoutes: React.FC = () => {
           path="/landlord/rental-requests"
           element={
             <ProtectedRoute allowedRoles={['Landlord']}>
-              <LandlordRentalPage />
+              <DashboardPage />
             </ProtectedRoute>
           }
         />
@@ -143,7 +144,7 @@ const AppRoutes: React.FC = () => {
           path="/landlord/contracts"
           element={
             <ProtectedRoute allowedRoles={['Landlord']}>
-              <LandlordContractsPage />
+              <DashboardPage />
             </ProtectedRoute>
           }
         />
@@ -189,12 +190,30 @@ const AppRoutes: React.FC = () => {
             </ProtectedRoute>
           }
         />
-        <Route path="/admin/rooms" element={<ProtectedRoute allowedRoles={['Admin']}><AdminManagementPage module="rooms" /></ProtectedRoute>} />
-        <Route path="/admin/categories" element={<ProtectedRoute allowedRoles={['Admin']}><AdminManagementPage module="categories" /></ProtectedRoute>} />
-        <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={['Admin']}><AdminManagementPage module="reports" /></ProtectedRoute>} />
-
-        {/* 404 */}
-        <Route path="*" element={<PlaceholderPage title="404 - Không tìm thấy trang" />} />
+        <Route 
+          path="/admin/rooms" 
+          element={
+            <ProtectedRoute allowedRoles={['Admin']}>
+              <AdminManagementPage module="rooms" />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/categories" 
+          element={
+            <ProtectedRoute allowedRoles={['Admin']}>
+              <AdminManagementPage module="categories" />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/reports" 
+          element={
+            <ProtectedRoute allowedRoles={['Admin']}>
+              <AdminManagementPage module="reports" />
+            </ProtectedRoute>
+          } 
+        />
       </Route>
     </Routes>
   );

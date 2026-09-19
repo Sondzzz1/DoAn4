@@ -1,0 +1,11 @@
+/* =============================================
+   DASHBOARD LAYOUT
+   Layout wrapper cho trang admin/landlord
+   KHÔNG có Header/Footer
+============================================== */
+
+.dashboard-layout {
+  width: 100%;
+  min-height: 100vh;
+  background: #f8f9fb;
+}
