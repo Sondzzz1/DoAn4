@@ -10,7 +10,14 @@ export const authService = {
    * Đăng ký
    */
   register: async (data: RegisterRequest): Promise<ApiResponse<AuthResponse>> => {
-    const response = await api.post<ApiResponse<AuthResponse>>('/xac-thuc/dang-ky', data);
+    const response = await api.post<ApiResponse<AuthResponse>>('/xac-thuc/dang-ky', {
+      hoTen: data.fullName,
+      email: data.email,
+      soDienThoai: data.phone,
+      matKhau: data.password,
+      xacNhanMatKhau: data.confirmPassword || data.password,
+      vaiTro: data.roleName,
+    });
     return response.data;
   },
 

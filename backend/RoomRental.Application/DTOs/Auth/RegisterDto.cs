@@ -17,7 +17,6 @@ public class RegisterDto
 
     [EmailAddress(ErrorMessage = "Email không hợp lệ")]
     [StringLength(100, ErrorMessage = "Email không được vượt quá 100 ký tự")]
-    [JsonIgnore]
     public string? Email { get; set; }
 
     [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
@@ -36,7 +35,6 @@ public class RegisterDto
     [StringLength(100, MinimumLength = 6, ErrorMessage = "Mật khẩu phải từ 6 đến 100 ký tự")]
     public string? MatKhau { get; set; }
 
-    [Compare("Password", ErrorMessage = "Mật khẩu xác nhận không khớp")]
     [JsonIgnore]
     public string? ConfirmPassword { get; set; }
     public string? XacNhanMatKhau { get => ConfirmPassword; set => ConfirmPassword = value; }
@@ -48,6 +46,7 @@ public class RegisterDto
     public string GetFullName() => FirstNonEmpty(FullName, HoTen);
     public string GetPhone() => FirstNonEmpty(Phone, SoDienThoai);
     public string GetPassword() => FirstNonEmpty(Password, MatKhau);
+    public string GetConfirmPassword() => FirstNonEmpty(ConfirmPassword, XacNhanMatKhau);
     public string GetRoleName() => FirstNonEmpty(RoleName, VaiTro, "Tenant");
 
     private static string FirstNonEmpty(params string?[] values)

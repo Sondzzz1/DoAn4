@@ -86,6 +86,7 @@ const RegisterPage: React.FC = () => {
         email: formData.email.trim(),
         phone: formData.phone.trim(),
         password: formData.password,
+        confirmPassword: formData.confirmPassword,
         roleName: 'Tenant',
       });
 

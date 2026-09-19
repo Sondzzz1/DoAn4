@@ -6,6 +6,7 @@ export interface RegisterRequest {
   email: string;
   phone: string;
   password: string;
+  confirmPassword?: string;
   roleName?: 'Tenant' | 'Landlord';
 }
 

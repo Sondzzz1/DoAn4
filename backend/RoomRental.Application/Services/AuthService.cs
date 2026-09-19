@@ -35,6 +35,7 @@ public class AuthService : IAuthService
         var email = registerDto.Email?.Trim();
         var phone = registerDto.GetPhone();
         var password = registerDto.GetPassword();
+        var confirmPassword = registerDto.GetConfirmPassword();
         var roleId = ResolveRegisterRole(registerDto.GetRoleName());
 
         if (string.IsNullOrWhiteSpace(fullName))
@@ -55,6 +56,11 @@ public class AuthService : IAuthService
         if (string.IsNullOrWhiteSpace(password) || password.Length < 6)
         {
             throw new Exception("Mật khẩu phải có ít nhất 6 ký tự");
+        }
+
+        if (password != confirmPassword)
+        {
+            throw new Exception("Mật khẩu xác nhận không khớp");
         }
 
         var existingUser = await _context.Users
