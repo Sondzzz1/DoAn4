@@ -1,0 +1,334 @@
+=============================================
+ROOM RENTAL SYSTEM - ENTITY RELATIONSHIP DIAGRAM
+=============================================
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         DATABASE STRUCTURE                               │
+└─────────────────────────────────────────────────────────────────────────┘
+
+
+┌──────────────┐
+│    Roles     │
+├──────────────┤
+│ Id (PK)      │──┐
+│ Name         │  │
+│ Description  │  │
+└──────────────┘  │
+                  │
+                  │ 1:N
+                  │
+┌─────────────────┼──────────────────────────────────────────────┐
+│                 │                                              │
+│                 ▼                                              │
+│  ┌──────────────────────┐                                     │
+│  │       Users          │                                     │
+│  ├──────────────────────┤                                     │
+│  │ Id (PK)              │──┐                                  │
+│  │ FullName             │  │                                  │
+│  │ Email                │  │                                  │
+│  │ Phone                │  │                                  │
+│  │ PasswordHash         │  │                                  │
+│  │ AvatarUrl            │  │                                  │
+│  │ RoleId (FK)          │──┘                                  │
+│  │ IsBlocked            │                                     │
+│  │ CreatedAt            │                                     │
+│  │ UpdatedAt            │                                     │
+│  └──────────────────────┘                                     │
+│           │                                                    │
+│           │ 1:N (Landlord → Posts)                            │
+│           ▼                                                    │
+│  ┌──────────────────────┐                                     │
+│  │       Posts          │                                     │
+│  ├──────────────────────┤                                     │
+│  │ Id (PK)              │──┐                                  │
+│  │ Title                │  │                                  │
+│  │ Description          │  │                                  │
+│  │ Price                │  │                                  │
+│  │ LandlordId (FK)      │──┘                                  │
+│  │ Status               │  (0:Pending, 1:Approved,            │
+│  │ RejectionReason      │   2:Rejected, 3:Hidden, 4:Expired) │
+│  │ CreatedAt            │                                     │
+│  │ UpdatedAt            │                                     │
+│  └──────────────────────┘                                     │
+│           │                                                    │
+│           │ 1:1                                                │
+│           ├──────────────────────────────────┐                │
+│           │                                  │                │
+│           ▼                                  │                │
+│  ┌──────────────────────┐                   │                │
+│  │       Rooms          │                   │                │
+│  ├──────────────────────┤                   │                │
+│  │ Id (PK)              │                   │                │
+│  │ PostId (FK, UNIQUE)  │───────────────────┘                │
+│  │ Area                 │                                     │
+│  │ MaxOccupants         │                                     │
+│  │ Status               │ (0:Available, 1:Rented,             │
+│  │ Province             │  2:TemporarilyUnavailable)          │
+│  │ District             │                                     │
+│  │ Ward                 │                                     │
+│  │ Address              │                                     │
+│  │ CreatedAt            │                                     │
+│  │ UpdatedAt            │                                     │
+│  └──────────────────────┘                                     │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
+
+
+┌──────────────────────────────────────────────────────────────┐
+│                  POST RELATIONSHIPS                           │
+└──────────────────────────────────────────────────────────────┘
+
+         ┌──────────────────────┐
+         │       Posts          │
+         │ Id (PK)              │
+         └──────────────────────┘
+                  │
+                  │ 1:N
+      ┌───────────┼───────────┬───────────────┐
+      │           │           │               │
+      ▼           ▼           ▼               ▼
+┌─────────┐ ┌──────────┐ ┌──────────┐ ┌─────────────┐
+│PostImages│ │Favorites │ │Viewing   │ │PostAmenities│
+│          │ │          │ │Appoint-  │ │(M:N)        │
+│Id (PK)   │ │Id (PK)   │ │ments     │ │             │
+│PostId(FK)│ │UserId(FK)│ │Id (PK)   │ │PostId (FK)  │
+│ImageUrl  │ │PostId(FK)│ │TenantId  │ │AmenityId(FK)│
+│Display   │ │CreatedAt │ │  (FK)    │ │CreatedAt    │
+│Order     │ └──────────┘ │PostId(FK)│ └─────────────┘
+│CreatedAt │              │Scheduled │        │
+└─────────┘              │  At      │        │
+                          │Status    │        │ N:M
+                          │TenantNote│        │
+                          │Landlord  │        ▼
+                          │Response  │  ┌──────────────┐
+                          │CreatedAt │  │  Amenities   │
+                          │UpdatedAt │  ├──────────────┤
+                          └──────────┘  │ Id (PK)      │
+                                        │ Name         │
+                                        │ Icon         │
+                                        │ Description  │
+                                        │ CreatedAt    │
+                                        │ UpdatedAt    │
+                                        └──────────────┘
+
+
+┌──────────────────────────────────────────────────────────────┐
+│                  RELATIONSHIP SUMMARY                         │
+└──────────────────────────────────────────────────────────────┘
+
+1. Roles → Users (1:N)
+   ├─ 1 Role có nhiều Users
+   └─ 1 User thuộc 1 Role
+
+2. Users (Landlord) → Posts (1:N)
+   ├─ 1 Landlord có nhiều Posts
+   └─ 1 Post thuộc 1 Landlord
+
+3. Posts → Rooms (1:1)
+   ├─ 1 Post có 1 Room
+   └─ 1 Room thuộc 1 Post (UNIQUE constraint)
+
+4. Posts → PostImages (1:N)
+   ├─ 1 Post có nhiều Images
+   └─ 1 Image thuộc 1 Post
+
+5. Users (Tenant) → Favorites (1:N)
+   ├─ 1 Tenant có nhiều Favorites
+   └─ 1 Favorite thuộc 1 Tenant
+
+6. Posts → Favorites (1:N)
+   ├─ 1 Post có nhiều Favorites
+   └─ 1 Favorite thuộc 1 Post
+
+7. Users (Tenant) → ViewingAppointments (1:N)
+   ├─ 1 Tenant có nhiều Appointments
+   └─ 1 Appointment thuộc 1 Tenant
+
+8. Posts → ViewingAppointments (1:N)
+   ├─ 1 Post có nhiều Appointments
+   └─ 1 Appointment thuộc 1 Post
+
+9. Posts ↔ Amenities (M:N via PostAmenities)
+   ├─ 1 Post có nhiều Amenities
+   ├─ 1 Amenity thuộc nhiều Posts
+   └─ Bảng trung gian: PostAmenities
+
+
+┌──────────────────────────────────────────────────────────────┐
+│                    INDEXES SUMMARY                            │
+└──────────────────────────────────────────────────────────────┘
+
+Users:
+  ✓ IX_Users_Email (Email)
+  ✓ IX_Users_RoleId (RoleId)
+
+Posts:
+  ✓ IX_Posts_LandlordId (LandlordId)
+  ✓ IX_Posts_Status (Status)
+  ✓ IX_Posts_CreatedAt (CreatedAt DESC)
+
+Rooms:
+  ✓ IX_Rooms_PostId (PostId)
+  ✓ IX_Rooms_Province (Province)
+  ✓ IX_Rooms_District (District)
+
+PostImages:
+  ✓ IX_PostImages_PostId (PostId)
+
+Favorites:
+  ✓ IX_Favorites_UserId (UserId)
+  ✓ IX_Favorites_PostId (PostId)
+  ✓ UQ_Favorites_UserPost (UNIQUE: UserId + PostId)
+
+ViewingAppointments:
+  ✓ IX_ViewingAppointments_TenantId (TenantId)
+  ✓ IX_ViewingAppointments_PostId (PostId)
+
+
+┌──────────────────────────────────────────────────────────────┐
+│                   CASCADE DELETE RULES                        │
+└──────────────────────────────────────────────────────────────┘
+
+✓ Delete User → Cascade delete Favorites
+✓ Delete User → Cascade delete ViewingAppointments
+✓ Delete Post → Cascade delete Room (1:1)
+✓ Delete Post → Cascade delete PostImages
+✓ Delete Post → Cascade delete PostAmenities
+✓ Delete Post → NO ACTION on Favorites
+✓ Delete Post → NO ACTION on ViewingAppointments
+✓ Delete Amenity → Cascade delete PostAmenities
+
+
+┌──────────────────────────────────────────────────────────────┐
+│                   ENUM VALUES REFERENCE                       │
+└──────────────────────────────────────────────────────────────┘
+
+PostStatus (Posts.Status):
+  0 = Pending (Chờ duyệt)
+  1 = Approved (Đã duyệt)
+  2 = Rejected (Bị từ chối)
+  3 = Hidden (Đã ẩn)
+  4 = Expired (Hết hạn)
+
+RoomStatus (Rooms.Status):
+  0 = Available (Còn trống)
+  1 = Rented (Đã cho thuê)
+  2 = TemporarilyUnavailable (Tạm không khả dụng)
+
+AppointmentStatus (ViewingAppointments.Status):
+  0 = Pending (Chờ xác nhận)
+  1 = Approved (Đã chấp nhận)
+  2 = Rejected (Bị từ chối)
+  3 = Cancelled (Đã hủy)
+  4 = Completed (Đã hoàn thành)
+
+
+┌──────────────────────────────────────────────────────────────┐
+│                   BUSINESS RULES                              │
+└──────────────────────────────────────────────────────────────┘
+
+1. Role Rules:
+   ✓ Chỉ có 3 Roles: Tenant, Landlord, Admin
+   ✓ Tenant: Tìm phòng, yêu thích, đặt lịch hẹn
+   ✓ Landlord: Đăng tin, quản lý tin đăng
+   ✓ Admin: Duyệt tin, quản lý user, quản lý tiện ích
+
+2. Post Rules:
+   ✓ Mỗi Post phải có đúng 1 Room (1:1)
+   ✓ Post mới tạo có Status = Pending
+   ✓ Chỉ Post Approved mới hiển thị công khai
+   ✓ Landlord có thể ẩn tin (Status = Hidden)
+
+3. Room Rules:
+   ✓ Room không thể tồn tại độc lập (phụ thuộc Post)
+   ✓ Địa chỉ đầy đủ: Province + District + Ward + Address
+
+4. Favorite Rules:
+   ✓ 1 User không thể favorite cùng 1 Post 2 lần
+   ✓ UNIQUE constraint: (UserId, PostId)
+
+5. Appointment Rules:
+   ✓ Tenant tạo lịch hẹn → Status = Pending
+   ✓ Landlord approve/reject → Status thay đổi
+   ✓ ScheduledAt phải > CreatedAt
+
+6. Image Rules:
+   ✓ Ảnh có DisplayOrder thấp nhất = Thumbnail
+   ✓ DisplayOrder = 0 → Ảnh đại diện chính
+
+7. Amenity Rules:
+   ✓ Admin quản lý danh sách Amenities
+   ✓ Landlord chọn Amenities khi đăng tin
+   ✓ M:N relationship qua PostAmenities
+
+
+┌──────────────────────────────────────────────────────────────┐
+│                   SECURITY NOTES                              │
+└──────────────────────────────────────────────────────────────┘
+
+⚠ Password Security:
+  - PasswordHash được tạo bằng BCrypt.Net-Next
+  - Không lưu plaintext password
+  - Cost factor khuyến nghị: 11-12
+
+⚠ SQL Injection Prevention:
+  - Sử dụng Parameterized Queries
+  - Không concat string trong SQL
+  - EF Core tự động handle
+
+⚠ Data Privacy:
+  - Email là UNIQUE (không trùng)
+  - Phone number có thể trùng (optional)
+  - Avatar URL có thể NULL
+
+⚠ Soft Delete:
+  - Hiện tại: Hard delete
+  - Có thể thêm IsDeleted column nếu cần
+
+
+┌──────────────────────────────────────────────────────────────┐
+│                   PERFORMANCE TIPS                            │
+└──────────────────────────────────────────────────────────────┘
+
+1. Index Usage:
+   ✓ Search by Province/District → Indexed
+   ✓ Filter by Status → Indexed
+   ✓ Order by CreatedAt → Indexed DESC
+
+2. Query Optimization:
+   ✓ Sử dụng Views cho queries phức tạp
+   ✓ Stored Procedures cho business logic
+   ✓ Pagination required cho large dataset
+
+3. Caching Strategy:
+   ✓ Cache Amenities (ít thay đổi)
+   ✓ Cache Roles (static data)
+   ✓ Cache Popular Posts
+
+4. Full-text Search:
+   ✓ Có thể thêm Full-Text Index cho Post.Title, Description
+   ✓ Cải thiện search performance
+
+
+┌──────────────────────────────────────────────────────────────┐
+│                   FILE LOCATIONS                              │
+└──────────────────────────────────────────────────────────────┘
+
+📁 database/
+  ├── RoomRentalDb_Schema_And_Data.sql   (Main script)
+  ├── QuickTest_Queries.sql              (Test queries)
+  ├── README.md                          (Documentation)
+  └── ERD_Diagram.txt                    (This file)
+
+📁 backend/RoomRental.Domain/
+  ├── Entities/                          (9 entity files)
+  └── Enums/                             (3 enum files)
+
+📁 backend/RoomRental.Infrastructure/
+  └── Data/ApplicationDbContext.cs       (EF Core DbContext)
+
+
+═══════════════════════════════════════════════════════════════
+END OF ENTITY RELATIONSHIP DIAGRAM
+Version: 1.0 | Last Updated: 2026-09-16
+═══════════════════════════════════════════════════════════════

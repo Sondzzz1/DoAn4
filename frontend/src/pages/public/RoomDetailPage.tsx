@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { postService } from '../../services/postService';
+import { favoriteService } from '../../services/favoriteService';
 import { Post, RoomStatus, PostStatus } from '../../types/post.types';
 import { ROUTES, ROLES } from '../../utils/constants';
 import { toast } from 'react-toastify';
@@ -14,6 +15,8 @@ import RoomAmenities from '../../components/room/RoomAmenities';
 import RoomLocation from '../../components/room/RoomLocation';
 import LandlordContactCard from '../../components/room/LandlordContactCard';
 import BookingModal from '../../components/room/BookingModal';
+import RentalRequestModal from '../../components/room/RentalRequestModal';
+import RoomReviews from '../../components/room/RoomReviews';
 import SimilarRooms from '../../components/room/SimilarRooms';
 
 // Import CSS
@@ -75,12 +78,26 @@ const RoomDetailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isFavorite, setIsFavorite] = useState<boolean>(false);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState<boolean>(false);
+  const [isRentalModalOpen, setIsRentalModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (id) {
-      fetchPostDetail(parseInt(id, 10));
+      const postId = parseInt(id, 10);
+      void fetchPostDetail(postId);
+      if (isAuthenticated && user?.role === ROLES.TENANT) {
+        void checkFavoriteStatus(postId);
+      }
     }
-  }, [id]);
+  }, [id, isAuthenticated, user]);
+
+  const checkFavoriteStatus = async (postId: number) => {
+    try {
+      const res = await favoriteService.checkFavorite(postId);
+      setIsFavorite(!!res.data);
+    } catch {
+      // Ignore if offline
+    }
+  };
 
   const fetchPostDetail = async (postId: number) => {
     if (isNaN(postId)) {
@@ -97,7 +114,6 @@ const RoomDetailPage: React.FC = () => {
       if (response && response.data) {
         setPost(response.data);
       } else {
-        // Use fallback if exists
         if (FALLBACK_POSTS[postId] || FALLBACK_POSTS[1]) {
           setPost(FALLBACK_POSTS[postId] || { ...FALLBACK_POSTS[1], id: postId });
         } else {
@@ -105,8 +121,6 @@ const RoomDetailPage: React.FC = () => {
         }
       }
     } catch (err: unknown) {
-      console.warn('Backend API connection offline, using fallback room preview data:', err);
-      // Gracefully load demo fallback room data
       if (FALLBACK_POSTS[postId] || FALLBACK_POSTS[1]) {
         setPost(FALLBACK_POSTS[postId] || { ...FALLBACK_POSTS[1], id: postId });
       } else {
@@ -117,8 +131,8 @@ const RoomDetailPage: React.FC = () => {
     }
   };
 
-  // Toggle favorite handler
-  const handleToggleFavorite = () => {
+  // Toggle favorite handler with Real API
+  const handleToggleFavorite = async () => {
     if (!isAuthenticated) {
       toast.info('Vui lòng đăng nhập để lưu tin phòng trọ.');
       navigate(ROUTES.LOGIN);
@@ -130,15 +144,21 @@ const RoomDetailPage: React.FC = () => {
       return;
     }
 
-    setIsFavorite((prev) => {
-      const nextState = !prev;
-      if (nextState) {
-        toast.success('Đã lưu tin vào danh sách yêu thích!');
-      } else {
+    if (!post?.id) return;
+
+    try {
+      if (isFavorite) {
+        await favoriteService.removeFavorite(post.id);
+        setIsFavorite(false);
         toast.info('Đã bỏ lưu tin phòng trọ.');
+      } else {
+        await favoriteService.addFavorite(post.id);
+        setIsFavorite(true);
+        toast.success('Đã lưu tin vào danh sách yêu thích!');
       }
-      return nextState;
-    });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Thao tác yêu thích thất bại.');
+    }
   };
 
   // Share handler
@@ -154,8 +174,8 @@ const RoomDetailPage: React.FC = () => {
       try {
         await navigator.share(shareData);
         return;
-      } catch (err) {
-        // Fallback to clipboard if share was cancelled or failed
+      } catch {
+        // Fallback to clipboard
       }
     }
 
@@ -183,32 +203,42 @@ const RoomDetailPage: React.FC = () => {
     setIsBookingModalOpen(true);
   };
 
-  // Send message handler (mock / prepare)
+  // Request rental handler
+  const handleRequestRental = () => {
+    if (!isAuthenticated) {
+      toast.info('Vui lòng đăng nhập để gửi yêu cầu thuê phòng.');
+      navigate(ROUTES.LOGIN);
+      return;
+    }
+
+    if (user?.role !== ROLES.TENANT) {
+      toast.warning('Chỉ tài khoản Người thuê (Tenant) mới có thể gửi yêu cầu thuê phòng.');
+      return;
+    }
+
+    setIsRentalModalOpen(true);
+  };
+
   const handleSendMessage = () => {
     if (!isAuthenticated) {
       toast.info('Vui lòng đăng nhập để nhắn tin với chủ trọ.');
       navigate(ROUTES.LOGIN);
       return;
     }
-    toast.info('Chức năng nhắn tin trực tiếp đang được cập nhật.');
+    toast.info('Chức năng nhắn tin trực tiếp đang được kết nối.');
   };
 
-  // =========================================================================
-  // 1. SKELETON LOADING STATE
-  // =========================================================================
   if (loading) {
     return (
       <div className="room-skeleton-container">
         <div className="room-skeleton-wrapper">
           <div className="room-skeleton-breadcrumb" />
-
           <div className="room-skeleton-layout">
             <div className="room-skeleton-main">
               <div className="room-skeleton-box room-skeleton-gallery" />
               <div className="room-skeleton-box room-skeleton-info" />
               <div className="room-skeleton-box room-skeleton-amenities" />
             </div>
-
             <div>
               <div className="room-skeleton-sidebar-box" />
             </div>
@@ -218,9 +248,6 @@ const RoomDetailPage: React.FC = () => {
     );
   }
 
-  // =========================================================================
-  // 2. ERROR STATE
-  // =========================================================================
   if (error || !post) {
     return (
       <div className="room-error-container">
@@ -228,32 +255,26 @@ const RoomDetailPage: React.FC = () => {
           <div className="room-error-icon">
             <FiAlertCircle />
           </div>
-
           <h2 className="room-error-title">
             {error === 'Không tìm thấy phòng trọ' ? 'Không tìm thấy phòng trọ' : 'Có lỗi xảy ra'}
           </h2>
-
           <p className="room-error-message">
             {error || 'Không thể tải thông tin chi tiết phòng trọ. Vui lòng kiểm tra lại liên kết.'}
           </p>
-
           <div className="room-error-actions">
             <button
               type="button"
               onClick={() => id && fetchPostDetail(parseInt(id, 10))}
               className="room-error-button room-error-button-retry"
             >
-              <FiRefreshCw />
-              Thử lại
+              <FiRefreshCw /> Thử lại
             </button>
-
             <button
               type="button"
               onClick={() => navigate(ROUTES.ROOM_LIST || '/rooms')}
               className="room-error-button room-error-button-back"
             >
-              <FiArrowLeft />
-              Quay lại danh sách phòng
+              <FiArrowLeft /> Quay lại danh sách phòng
             </button>
           </div>
         </div>
@@ -261,169 +282,121 @@ const RoomDetailPage: React.FC = () => {
     );
   }
 
-  // =========================================================================
-  // 3. MAIN DETAIL PAGE LAYOUT
-  // =========================================================================
-return (
-  <div className="room-detail-page">
-
-    {/* =====================================================
-        BREADCRUMB
-    ====================================================== */}
-    <div className="room-breadcrumb">
-      <div className="room-breadcrumb-inner">
-
-        <Link to={ROUTES.HOME}>
-          Trang chủ
-        </Link>
-
-        <FiChevronRight className="room-breadcrumb-separator" />
-
-        <Link to={ROUTES.ROOM_LIST || '/rooms'}>
-          Phòng trọ
-        </Link>
-
-        {post.province && (
-          <>
-            <FiChevronRight className="room-breadcrumb-separator" />
-            <span>{post.province}</span>
-          </>
-        )}
-
-        {post.district && (
-          <>
-            <FiChevronRight className="room-breadcrumb-separator" />
-            <span>{post.district}</span>
-          </>
-        )}
-
-        <FiChevronRight className="room-breadcrumb-separator" />
-
-        <span className="room-breadcrumb-current">
-          {post.title}
-        </span>
-
+  return (
+    <div className="room-detail-page">
+      {/* BREADCRUMB */}
+      <div className="room-breadcrumb">
+        <div className="room-breadcrumb-inner">
+          <Link to={ROUTES.HOME}>Trang chủ</Link>
+          <FiChevronRight className="room-breadcrumb-separator" />
+          <Link to={ROUTES.ROOM_LIST || '/rooms'}>Phòng trọ</Link>
+          {post.province && (
+            <>
+              <FiChevronRight className="room-breadcrumb-separator" />
+              <span>{post.province}</span>
+            </>
+          )}
+          {post.district && (
+            <>
+              <FiChevronRight className="room-breadcrumb-separator" />
+              <span>{post.district}</span>
+            </>
+          )}
+          <FiChevronRight className="room-breadcrumb-separator" />
+          <span className="room-breadcrumb-current">{post.title}</span>
+        </div>
       </div>
-    </div>
 
-
-    {/* =====================================================
-        MAIN
-    ====================================================== */}
-    <main className="room-detail-container">
-
-      {/* ===================================================
-          TOP CONTENT
-      ==================================================== */}
-      <div className="room-detail-layout">
-
-        {/* =================================================
-            LEFT
-        ================================================== */}
-        <section className="room-detail-main">
-
-          {/* Gallery */}
-          <div className="room-gallery-wrapper">
-            <RoomImageGallery
-              images={post.imageUrls || []}
-              title={post.title}
-              isFavorite={isFavorite}
-              onToggleFavorite={handleToggleFavorite}
-              onShare={handleShare}
-            />
-          </div>
-
-
-          {/* Room information */}
-          <section className="room-content-section">
-            <RoomInformation post={post} />
-          </section>
-
-
-          {/* Amenities */}
-          <section className="room-content-section">
-            <RoomAmenities amenities={post.amenities || []} />
-          </section>
-
-
-          {/* Location */}
-          <section className="room-content-section room-location-section">
-            <RoomLocation
-              address={post.address}
-              ward={post.ward}
-              district={post.district}
-              province={post.province}
-            />
-          </section>
-
-        </section>
-
-
-        {/* =================================================
-            RIGHT SIDEBAR
-        ================================================== */}
-        <aside className="room-detail-sidebar">
-
-          <div className="room-sidebar-sticky">
-
-            <div className="room-contact-wrapper">
-
-              <LandlordContactCard
-                post={post}
-                onBookViewing={handleBookViewing}
-                onSendMessage={handleSendMessage}
+      {/* MAIN */}
+      <main className="room-detail-container">
+        <div className="room-detail-layout">
+          {/* LEFT */}
+          <section className="room-detail-main">
+            {/* Gallery */}
+            <div className="room-gallery-wrapper">
+              <RoomImageGallery
+                images={post.imageUrls || []}
+                title={post.title}
+                isFavorite={isFavorite}
+                onToggleFavorite={handleToggleFavorite}
+                onShare={handleShare}
               />
-
             </div>
 
-          </div>
+            {/* Room information */}
+            <section className="room-content-section">
+              <RoomInformation post={post} />
+            </section>
 
-        </aside>
+            {/* Amenities */}
+            <section className="room-content-section">
+              <RoomAmenities amenities={post.amenities || []} />
+            </section>
 
-      </div>
+            {/* Location */}
+            <section className="room-content-section room-location-section">
+              <RoomLocation
+                address={post.address}
+                ward={post.ward}
+                district={post.district}
+                province={post.province}
+              />
+            </section>
 
+            {/* Reviews */}
+            <RoomReviews postId={post.id} />
+          </section>
 
-      {/* ===================================================
-          SIMILAR ROOMS
-      ==================================================== */}
-      <section className="room-similar-section">
-
-        <div className="room-section-heading">
-
-          <div>
-            <h2>Phòng trọ tương tự</h2>
-            <p>
-              Một số phòng trọ khác có thể phù hợp với bạn
-            </p>
-          </div>
-
-          <Link to={ROUTES.ROOM_LIST || '/rooms'}>
-            Xem tất cả
-            <FiChevronRight />
-          </Link>
-
+          {/* RIGHT SIDEBAR */}
+          <aside className="room-detail-sidebar">
+            <div className="room-sidebar-sticky">
+              <div className="room-contact-wrapper">
+                <LandlordContactCard
+                  post={post}
+                  isFavorite={isFavorite}
+                  onBookViewing={handleBookViewing}
+                  onSendMessage={handleSendMessage}
+                  onRequestRental={handleRequestRental}
+                  onToggleFavorite={handleToggleFavorite}
+                />
+              </div>
+            </div>
+          </aside>
         </div>
 
-        <SimilarRooms currentPostId={post.id} />
+        {/* SIMILAR ROOMS */}
+        <section className="room-similar-section">
+          <div className="room-section-heading">
+            <div>
+              <h2>Phòng trọ tương tự</h2>
+              <p>Một số phòng trọ khác có thể phù hợp với bạn</p>
+            </div>
+            <Link to={ROUTES.ROOM_LIST || '/rooms'}>
+              Xem tất cả <FiChevronRight />
+            </Link>
+          </div>
+          <SimilarRooms currentPostId={post.id} />
+        </section>
+      </main>
 
-      </section>
+      {/* BOOKING MODAL */}
+      <BookingModal
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+        post={post}
+      />
 
-    </main>
-
-
-    {/* =====================================================
-        BOOKING MODAL
-    ====================================================== */}
-    <BookingModal
-      isOpen={isBookingModalOpen}
-      onClose={() => setIsBookingModalOpen(false)}
-      post={post}
-    />
-
-  </div>
-);
-
-
+      {/* RENTAL REQUEST MODAL */}
+      <RentalRequestModal
+        isOpen={isRentalModalOpen}
+        onClose={() => setIsRentalModalOpen(false)}
+        postId={post.id}
+        postTitle={post.title}
+        price={post.price}
+        address={`${post.address}, ${post.ward || ''}, ${post.district || ''}, ${post.province || ''}`}
+      />
+    </div>
+  );
 };
 
 export default RoomDetailPage;

@@ -1,5 +1,5 @@
-// API Base URL - frontend gọi qua API Gateway, gateway sẽ forward sang backend chính
-export const API_BASE_URL = 'http://localhost:5197/api';
+// API Base URL - frontend gọi trực tiếp backend (port 5000)
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // Role Names
 export const ROLES = {
@@ -27,10 +27,11 @@ export const ROOM_STATUS = {
 // Appointment Status
 export const APPOINTMENT_STATUS = {
   PENDING: 0,
+  CONFIRMED: 1,
   APPROVED: 1,
   REJECTED: 2,
-  CANCELLED: 3,
-  COMPLETED: 4,
+  COMPLETED: 3,
+  CANCELLED: 4,
 } as const;
 
 // Status Labels (Vietnamese)
@@ -50,10 +51,10 @@ export const ROOM_STATUS_LABELS = {
 
 export const APPOINTMENT_STATUS_LABELS = {
   [APPOINTMENT_STATUS.PENDING]: 'Chờ xác nhận',
-  [APPOINTMENT_STATUS.APPROVED]: 'Đã xác nhận',
+  [APPOINTMENT_STATUS.CONFIRMED]: 'Đã xác nhận',
   [APPOINTMENT_STATUS.REJECTED]: 'Đã từ chối',
-  [APPOINTMENT_STATUS.CANCELLED]: 'Đã hủy',
   [APPOINTMENT_STATUS.COMPLETED]: 'Đã hoàn thành',
+  [APPOINTMENT_STATUS.CANCELLED]: 'Đã hủy',
 } as const;
 
 // Local Storage Keys
@@ -74,6 +75,7 @@ export const ROUTES = {
   TENANT_PROFILE: '/tenant/profile',
   TENANT_FAVORITES: '/tenant/favorites',
   TENANT_APPOINTMENTS: '/tenant/appointments',
+  TENANT_RENTALS: '/tenant/rentals',
   
   // Landlord
   LANDLORD_DASHBOARD: '/landlord/dashboard',

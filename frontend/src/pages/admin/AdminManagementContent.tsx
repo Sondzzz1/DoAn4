@@ -51,9 +51,16 @@ const AdminManagementContent: React.FC<{ module: AdminModule }> = ({ module }) =
 
   useEffect(() => { void load(); }, [load]);
 
-  const handlePost = async (id: number, action: 'approve' | 'hide') => {
-    if (action === 'approve') await adminService.approvePost(id);
-    else await adminService.hidePost(id);
+  const handlePost = async (id: number, action: 'approve' | 'reject' | 'hide') => {
+    if (action === 'approve') {
+      await adminService.approvePost(id);
+    } else if (action === 'reject') {
+      const reason = window.prompt('Nhập lý do từ chối bài đăng:', 'Thông tin bài đăng không hợp lệ');
+      if (!reason) return;
+      await adminService.rejectPost(id, reason);
+    } else {
+      await adminService.hidePost(id);
+    }
     load();
   };
   const handleUser = async (item: AdminUser) => {
@@ -140,7 +147,7 @@ const AdminManagementContent: React.FC<{ module: AdminModule }> = ({ module }) =
                 {filteredRows.map(item => (
                   <tr key={item.id}>
                     {module === 'users' && <><td><div className="cell-person"><span><FiUser /></span><div><b>{(item as AdminUser).fullName}</b><small>{(item as AdminUser).email}</small></div></div></td><td>{(item as AdminUser).roleName}</td><td>{(item as AdminUser).postCount} tin</td><td><em className={(item as AdminUser).isActive ? 'green' : 'red'}>{(item as AdminUser).isActive ? 'Đang hoạt động' : 'Đã khóa'}</em></td><td><button className="table-action" onClick={() => handleUser(item as AdminUser)}>{(item as AdminUser).isActive ? <FiX /> : <FiUnlock />}</button></td></>}
-                    {(module === 'posts' || module === 'approval') && <><td><b>{(item as PostListItem).title}</b><small className="table-sub">{(item as PostListItem).address || `${(item as PostListItem).province}, ${(item as PostListItem).district}`}</small></td><td>{(item as PostListItem).landlordName || 'Chưa cập nhật'}</td><td>{formatMoney((item as PostListItem).price)}</td><td><em className={`status-${(item as PostListItem).status}`}>{postStatus((item as PostListItem).status)}</em></td><td className="table-actions">{(item as PostListItem).status === 0 && <button className="table-action approve" onClick={() => handlePost(item.id, 'approve')}><FiCheck /></button>}{module === 'posts' && <button className="table-action" onClick={() => handlePost(item.id, 'hide')}><FiX /></button>}</td></>}
+                    {(module === 'posts' || module === 'approval') && <><td><b>{(item as PostListItem).title}</b><small className="table-sub">{(item as PostListItem).address || `${(item as PostListItem).province}, ${(item as PostListItem).district}`}</small></td><td>{(item as PostListItem).landlordName || 'Chưa cập nhật'}</td><td>{formatMoney((item as PostListItem).price)}</td><td><em className={`status-${(item as PostListItem).status}`}>{postStatus((item as PostListItem).status)}</em></td><td className="table-actions">{(item as PostListItem).status === 0 && <><button className="table-action approve" onClick={() => handlePost(item.id, 'approve')}><FiCheck /></button><button className="table-action danger" onClick={() => handlePost(item.id, 'reject')}><FiX /></button></>}{module === 'posts' && <button className="table-action" onClick={() => handlePost(item.id, 'hide')}><FiX /></button>}</td></>}
                     {module === 'rooms' && <><td><b>{(item as AdminRoom).roomName}</b><small className="table-sub">{(item as AdminRoom).address}</small></td><td>{(item as AdminRoom).landlordName}</td><td>{formatMoney((item as AdminRoom).price)}</td><td><em className={`status-${(item as AdminRoom).status}`}>{roomStatus((item as AdminRoom).status)}</em></td><td /></>}
                     {(module === 'categories' || module === 'amenities') && <><td><b>{(item as AdminCatalogItem).icon} {(item as AdminCatalogItem).name}</b></td><td>{(item as AdminCatalogItem).description || 'Chưa có mô tả'}</td><td><em className="green">{(item as AdminCatalogItem).isActive === false ? 'Đã ẩn' : 'Đang dùng'}</em></td><td className="table-actions"><button className="table-action" onClick={() => editCatalog(item as AdminCatalogItem)}><FiEdit2 /></button><button className="table-action danger" onClick={() => deleteCatalog(item.id)}><FiTrash2 /></button></td></>}
                     {module === 'reports' && <><td><b>{(item as AdminReport).postTitle || 'Báo cáo nội dung'}</b><small className="table-sub">{(item as AdminReport).reason || (item as AdminReport).description || 'Không có mô tả'}</small></td><td>{(item as AdminReport).reporterName || 'Ẩn danh'}</td><td>{formatDate((item as AdminReport).createdAt)}</td><td><em className={`status-${(item as AdminReport).status || 0}`}>{(item as AdminReport).statusText || 'Mới tiếp nhận'}</em></td><td><select className="inline-select" value={(item as AdminReport).status || 0} onChange={async e => { await adminService.updateReportStatus(item.id, Number(e.target.value)); load(); }}><option value="0">Mới</option><option value="1">Đang xử lý</option><option value="2">Đã xử lý</option></select></td></>}

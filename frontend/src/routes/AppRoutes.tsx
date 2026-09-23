@@ -15,6 +15,12 @@ import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
 import DashboardPage from '../pages/dashboard/DashboardPage';
 import AdminManagementPage from '../pages/admin/AdminManagementPage';
+import LandlordRoomManagementPage from '../pages/landlord/LandlordRoomManagementPage';
+import TenantAppointmentsPage from '../pages/tenant/TenantAppointmentsPage';
+import TenantProfilePage from '../pages/tenant/TenantProfilePage';
+import TenantFavoritesPage from '../pages/tenant/TenantFavoritesPage';
+import TenantRentalsPage from '../pages/tenant/TenantRentalsPage';
+import LandlordAppointmentsPage from '../pages/landlord/LandlordAppointmentsPage';
 
 // Protected Route
 import ProtectedRoute from './ProtectedRoute';
@@ -56,7 +62,7 @@ const AppRoutes: React.FC = () => {
           path="/tenant/profile"
           element={
             <ProtectedRoute allowedRoles={['Tenant']}>
-              <PlaceholderPage title="Tài khoản của tôi" />
+              <TenantProfilePage />
             </ProtectedRoute>
           }
         />
@@ -64,7 +70,7 @@ const AppRoutes: React.FC = () => {
           path="/tenant/favorites"
           element={
             <ProtectedRoute allowedRoles={['Tenant']}>
-              <PlaceholderPage title="Phòng yêu thích" />
+              <TenantFavoritesPage />
             </ProtectedRoute>
           }
         />
@@ -72,7 +78,15 @@ const AppRoutes: React.FC = () => {
           path="/tenant/appointments"
           element={
             <ProtectedRoute allowedRoles={['Tenant']}>
-              <PlaceholderPage title="Lịch hẹn của tôi" />
+              <TenantAppointmentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tenant/rentals"
+          element={
+            <ProtectedRoute allowedRoles={['Tenant']}>
+              <TenantRentalsPage />
             </ProtectedRoute>
           }
         />
@@ -120,7 +134,7 @@ const AppRoutes: React.FC = () => {
           path="/landlord/appointments"
           element={
             <ProtectedRoute allowedRoles={['Landlord']}>
-              <AdminManagementPage module="posts" />
+              <LandlordAppointmentsPage />
             </ProtectedRoute>
           }
         />
@@ -128,7 +142,7 @@ const AppRoutes: React.FC = () => {
           path="/landlord/rooms"
           element={
             <ProtectedRoute allowedRoles={['Landlord']}>
-              <AdminManagementPage module="rooms" />
+              <LandlordRoomManagementPage />
             </ProtectedRoute>
           }
         />

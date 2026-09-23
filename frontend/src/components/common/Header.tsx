@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { ROUTES } from '../../utils/constants';
-import { FiHeart, FiChevronDown, FiLogOut, FiUser, FiCalendar, FiHome, FiPlusCircle } from 'react-icons/fi';
+import { FiHeart, FiChevronDown, FiLogOut, FiUser, FiCalendar, FiHome, FiPlusCircle, FiFileText } from 'react-icons/fi';
 
 const Header: React.FC = () => {
   const { user, isAuthenticated, isLandlord, isTenant, isAdmin, logout } = useAuth();
@@ -63,9 +63,17 @@ const Header: React.FC = () => {
                         <FiUser />
                         Thông tin cá nhân
                       </Link>
+                      <Link to={ROUTES.TENANT_FAVORITES} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0084ff]">
+                        <FiHeart />
+                        Phòng yêu thích
+                      </Link>
                       <Link to={ROUTES.TENANT_APPOINTMENTS} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0084ff]">
                         <FiCalendar />
                         Lịch hẹn của tôi
+                      </Link>
+                      <Link to={ROUTES.TENANT_RENTALS} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0084ff]">
+                        <FiFileText />
+                        Thuê phòng & Hợp đồng
                       </Link>
                     </>
                   )}

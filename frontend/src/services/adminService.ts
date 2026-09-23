@@ -58,7 +58,7 @@ export const adminService = {
   approvePost: async (id: number): Promise<ApiResponse<PostListItem>> =>
     (await api.put(`/quan-tri/bai-dang/${id}/duyet`)).data,
   rejectPost: async (id: number, reason: string): Promise<ApiResponse<PostListItem>> =>
-    (await api.put(`/quan-tri/bai-dang/${id}/tu-choi`, { lyDo: reason })).data,
+    (await api.put(`/quan-tri/bai-dang/${id}/tu-choi`, { lyDo: reason, reason })).data,
   hidePost: async (id: number): Promise<ApiResponse<PostListItem>> =>
     (await api.put(`/quan-tri/bai-dang/${id}/an`)).data,
   getRooms: async (keyword?: string, status?: number): Promise<ApiResponse<AdminRoom[]>> =>
