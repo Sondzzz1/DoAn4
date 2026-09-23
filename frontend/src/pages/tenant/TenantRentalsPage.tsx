@@ -136,6 +136,21 @@ const TenantRentalsPage: React.FC = () => {
     }
   };
 
+  const handlePayDepositVnPay = async (depositId: number) => {
+    try {
+      const res = await paymentService.createVnPayUrl({
+        depositId: depositId,
+        orderInfo: `Thanh toan tien coc phong dat coc ID ${depositId}`,
+      });
+      if (res.data?.paymentUrl) {
+        toast.info('Đang chuyển hướng sang cổng thanh toán VNPay Sandbox...');
+        window.location.href = res.data.paymentUrl;
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Không thể tạo liên kết thanh toán VNPay.');
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
@@ -260,94 +275,137 @@ const TenantRentalsPage: React.FC = () => {
         )
       ) : activeTab === 'contracts' ? (
         /* TAB 2: CONTRACTS & DEPOSITS */
-        contracts.length === 0 ? (
-          <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center text-slate-500 shadow-sm">
-            Chưa có hợp đồng thuê phòng nào được tạo.
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {contracts.map((item) => (
-              <div key={item.id} className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm">
-                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-bold uppercase tracking-wider text-[#0084ff]">Hợp đồng #{item.id}</span>
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                          item.trangThai === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                        }`}
-                      >
-                        {item.trangThai === 1 ? 'Đang hiệu lực' : 'Chờ 2 bên xác nhận'}
+        <div className="space-y-8">
+          {/* DEPOSITS LIST */}
+          {deposits.length > 0 && (
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <FiDollarSign className="text-[#0084ff]" /> Các khoản tiền đặt cọc ({deposits.length})
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {deposits.map((dep) => (
+                  <div key={dep.id} className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm flex items-center justify-between gap-4">
+                    <div>
+                      <span className="text-xs text-slate-400 font-semibold block">Tiền đặt cọc #{dep.id}</span>
+                      <div className="text-xl font-black text-slate-900 mt-0.5">{formatPrice(dep.soTien)}</div>
+                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold mt-2 ${dep.trangThai === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {dep.trangThai === 1 ? 'Đã thanh toán cọc' : 'Chờ thanh toán'}
                       </span>
                     </div>
-                    <div className="text-2xl font-black text-slate-900">{formatPrice(item.tienThueHangThang)}/tháng</div>
-                  </div>
 
-                  <div className="flex items-center gap-2">
-                    {!item.nguoiThueDaXacNhan ? (
+                    {dep.trangThai === 0 ? (
                       <button
-                        onClick={() => handleConfirmContract(item.id)}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md cursor-pointer transition-all"
+                        onClick={() => handlePayDepositVnPay(dep.id)}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-md cursor-pointer transition-all border-none"
                       >
-                        <FiCheck /> Xác nhận hợp đồng
+                        <FiCreditCard /> Thanh toán VNPay
                       </button>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 font-bold bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">
-                        <FiCheckCircle /> Bạn đã xác nhận
-                      </span>
-                    )}
-
-                    {item.trangThai === 1 && (
-                      <>
-                        <button
-                          onClick={() => {
-                            setSelectedContractId(item.id);
-                            setIncidentModalOpen(true);
-                          }}
-                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-bold rounded-xl border border-amber-200 cursor-pointer transition-all"
-                        >
-                          <FiAlertTriangle /> Báo sự cố
-                        </button>
-                        <button
-                          onClick={() => {
-                            setReviewContractId(item.id);
-                            setReviewModalOpen(true);
-                          }}
-                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-[#0084ff] text-xs font-bold rounded-xl border border-blue-200 cursor-pointer transition-all"
-                        >
-                          <FiStar /> Đánh giá phòng
-                        </button>
-                      </>
+                      <div className="text-right text-xs text-emerald-600 font-semibold flex items-center gap-1">
+                        <FiCheckCircle /> Đã thanh toán
+                      </div>
                     )}
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-slate-600">
-                  <div>
-                    <span className="text-slate-400 block mb-0.5">Ngày bắt đầu</span>
-                    <span className="font-bold text-slate-800">{new Date(item.ngayBatDau).toLocaleDateString('vi-VN')}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block mb-0.5">Ngày kết thúc</span>
-                    <span className="font-bold text-slate-800">{new Date(item.ngayKetThuc).toLocaleDateString('vi-VN')}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block mb-0.5">Chủ trọ xác nhận</span>
-                    <span className={`font-bold ${item.chuTroDaXacNhan ? 'text-emerald-600' : 'text-amber-600'}`}>
-                      {item.chuTroDaXacNhan ? 'Đã xác nhận' : 'Chưa xác nhận'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block mb-0.5">Người thuê xác nhận</span>
-                    <span className={`font-bold ${item.nguoiThueDaXacNhan ? 'text-emerald-600' : 'text-amber-600'}`}>
-                      {item.nguoiThueDaXacNhan ? 'Đã xác nhận' : 'Chưa xác nhận'}
-                    </span>
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
+            </div>
+          )}
+
+          {/* CONTRACTS LIST */}
+          <div>
+            <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <FiFileText className="text-emerald-600" /> Hợp đồng thuê phòng ({contracts.length})
+            </h3>
+            {contracts.length === 0 ? (
+              <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center text-slate-500 shadow-sm">
+                Chưa có hợp đồng thuê phòng nào được tạo.
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {contracts.map((item) => (
+                  <div key={item.id} className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm">
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold uppercase tracking-wider text-[#0084ff]">Hợp đồng #{item.id}</span>
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                              item.trangThai === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                            }`}
+                          >
+                            {item.trangThai === 1 ? 'Đang hiệu lực' : 'Chờ 2 bên xác nhận'}
+                          </span>
+                        </div>
+                        <div className="text-2xl font-black text-slate-900">{formatPrice(item.tienThueHangThang)}/tháng</div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {!item.nguoiThueDaXacNhan ? (
+                          <button
+                            onClick={() => handleConfirmContract(item.id)}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md cursor-pointer transition-all border-none"
+                          >
+                            <FiCheck /> Xác nhận hợp đồng
+                          </button>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 font-bold bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">
+                            <FiCheckCircle /> Bạn đã xác nhận
+                          </span>
+                        )}
+
+                        {item.trangThai === 1 && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setSelectedContractId(item.id);
+                                setIncidentModalOpen(true);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-bold rounded-xl border border-amber-200 cursor-pointer transition-all"
+                            >
+                              <FiAlertTriangle /> Báo sự cố
+                            </button>
+                            <button
+                              onClick={() => {
+                                setReviewContractId(item.id);
+                                setReviewModalOpen(true);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-[#0084ff] text-xs font-bold rounded-xl border border-blue-200 cursor-pointer transition-all"
+                            >
+                              <FiStar /> Đánh giá phòng
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-slate-600">
+                      <div>
+                        <span className="text-slate-400 block mb-0.5">Ngày bắt đầu</span>
+                        <span className="font-bold text-slate-800">{new Date(item.ngayBatDau).toLocaleDateString('vi-VN')}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block mb-0.5">Ngày kết thúc</span>
+                        <span className="font-bold text-slate-800">{new Date(item.ngayKetThuc).toLocaleDateString('vi-VN')}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block mb-0.5">Chủ trọ xác nhận</span>
+                        <span className={`font-bold ${item.chuTroDaXacNhan ? 'text-emerald-600' : 'text-amber-600'}`}>
+                          {item.chuTroDaXacNhan ? 'Đã xác nhận' : 'Chưa xác nhận'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block mb-0.5">Người thuê xác nhận</span>
+                        <span className={`font-bold ${item.nguoiThueDaXacNhan ? 'text-emerald-600' : 'text-amber-600'}`}>
+                          {item.nguoiThueDaXacNhan ? 'Đã xác nhận' : 'Chưa xác nhận'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )
+        </div>
       ) : activeTab === 'incidents' ? (
         /* TAB 3: INCIDENTS */
         incidents.length === 0 ? (

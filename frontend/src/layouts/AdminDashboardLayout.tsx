@@ -20,6 +20,8 @@ import {
 } from 'react-icons/fi';
 import { useAuth } from '../hooks/useAuth';
 import { ROUTES } from '../utils/constants';
+import NotificationBell from '../components/common/NotificationBell';
+import ChatDrawer from '../components/chat/ChatDrawer';
 import './AdminDashboardLayout.css';
 
 /* =========================================================
@@ -147,13 +149,16 @@ const AdminDashboardLayout: React.FC = () => {
             </strong>
           </div>
 
-          <div className="admin-dashboard-user">
-            <div className="admin-dashboard-avatar">
-              {user?.fullName?.charAt(0) || 'U'}
-            </div>
-            <div>
-              <strong>{user?.fullName || 'Người dùng'}</strong>
-              <span>{isAdmin ? 'Quản trị viên' : 'Chủ trọ'}</span>
+          <div className="flex items-center gap-3">
+            <NotificationBell />
+            <div className="admin-dashboard-user">
+              <div className="admin-dashboard-avatar">
+                {user?.fullName?.charAt(0) || 'U'}
+              </div>
+              <div>
+                <strong>{user?.fullName || 'Người dùng'}</strong>
+                <span>{isAdmin ? 'Quản trị viên' : 'Chủ trọ'}</span>
+              </div>
             </div>
           </div>
         </header>
@@ -162,6 +167,9 @@ const AdminDashboardLayout: React.FC = () => {
         <div className="admin-dashboard-content">
           <Outlet />
         </div>
+
+        {/* Global Realtime Chat */}
+        <ChatDrawer />
       </main>
     </div>
   );

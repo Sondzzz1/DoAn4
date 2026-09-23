@@ -54,6 +54,15 @@ const LandlordContactCard: React.FC<LandlordContactCardProps> = ({
             {post.landlordPhone || 'Liên hệ chủ trọ'}
           </button>
 
+          {/* Chat with Landlord Button */}
+          <button
+            onClick={onSendMessage}
+            className="w-full flex items-center justify-center gap-2 px-5 h-[46px] rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md shadow-indigo-500/20 cursor-pointer border-none"
+          >
+            <FiMessageSquare className="w-4 h-4" />
+            Nhắn tin trực tiếp
+          </button>
+
           {/* Book Viewing Button */}
           <button
             onClick={onBookViewing}

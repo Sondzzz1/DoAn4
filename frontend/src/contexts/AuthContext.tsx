@@ -53,6 +53,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Lưu user info
     const userData: User = {
       userId: authData.userId,
+      id: authData.userId,
       fullName: authData.fullName,
       email: authData.email,
       role: authData.role,
@@ -76,6 +77,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Lưu user info
     const userData: User = {
       userId: authData.userId,
+      id: authData.userId,
       fullName: authData.fullName,
       email: authData.email,
       role: authData.role,

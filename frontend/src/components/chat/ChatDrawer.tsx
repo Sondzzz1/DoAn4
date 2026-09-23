@@ -5,15 +5,21 @@ import { chatService, ChatMessage, Conversation } from '../../services/chatServi
 import { useAuth } from '../../hooks/useAuth';
 import { formatPrice } from '../../utils/helpers';
 
+export interface DirectChatPayload {
+  partnerId: number;
+  partnerName: string;
+  postId?: number;
+  postTitle?: string;
+  postPrice?: number;
+  postImage?: string;
+}
+
+export const openDirectChat = (payload: DirectChatPayload) => {
+  window.dispatchEvent(new CustomEvent('open-direct-chat', { detail: payload }));
+};
+
 interface ChatDrawerProps {
-  directChatPartner?: {
-    partnerId: number;
-    partnerName: string;
-    postId?: number;
-    postTitle?: string;
-    postPrice?: number;
-    postImage?: string;
-  } | null;
+  directChatPartner?: DirectChatPayload | null;
   onCloseDirectChat?: () => void;
 }
 
@@ -71,7 +77,35 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({
     };
   }, [isAuthenticated, activePartner]);
 
-  // Xử lý khi có directChatPartner từ RoomDetailPage
+  // Xử lý khi nhận sự kiện open-direct-chat từ bất kỳ đâu trên ứng dụng
+  useEffect(() => {
+    const handleOpenDirectChatEvent = (e: Event) => {
+      const detail = (e as CustomEvent<DirectChatPayload>).detail;
+      if (!detail) return;
+
+      setIsOpen(true);
+      setActivePartner({
+        id: detail.partnerId,
+        name: detail.partnerName,
+      });
+      if (detail.postId) {
+        setActivePost({
+          id: detail.postId,
+          title: detail.postTitle,
+          price: detail.postPrice,
+          image: detail.postImage,
+        });
+      }
+      void loadMessages(detail.partnerId);
+    };
+
+    window.addEventListener('open-direct-chat', handleOpenDirectChatEvent);
+    return () => {
+      window.removeEventListener('open-direct-chat', handleOpenDirectChatEvent);
+    };
+  }, []);
+
+  // Xử lý khi có directChatPartner từ props
   useEffect(() => {
     if (directChatPartner) {
       setIsOpen(true);

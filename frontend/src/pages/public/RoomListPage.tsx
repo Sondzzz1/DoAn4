@@ -393,7 +393,7 @@ const RoomListPage: React.FC = () => {
                 price: p.price,
                 area: p.area,
                 imageUrl: p.thumbnailUrl || '',
-                address: p.address,
+                address: p.address || '',
                 district: p.district,
                 province: p.province,
                 createdAt: p.createdAt ? String(p.createdAt) : '',

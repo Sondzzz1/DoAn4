@@ -43,6 +43,9 @@ export interface PostListItem {
   district: string;
   ward: string;
   address?: string;
+  latitude?: number;
+  longitude?: number;
+  distanceInKm?: number;
   thumbnailUrl: string | null;
   landlordName?: string;
   landlordPhone?: string | null;
@@ -63,6 +66,7 @@ export interface Post {
   
   // Landlord Info
   landlordId: number;
+  landlordAccountId?: number;
   landlordName: string;
   landlordPhone: string;
   
@@ -75,6 +79,9 @@ export interface Post {
   district: string;
   ward: string;
   address: string;
+  latitude?: number;
+  longitude?: number;
+  distanceInKm?: number;
   
   // Amenities & Images
   amenities: Amenity[];
@@ -122,10 +129,21 @@ export interface UpdatePostRequest {
  * Search/Filter Params
  */
 export interface PostSearchParams {
+  keyword?: string;
   province?: string;
   district?: string;
+  ward?: string;
   minPrice?: number;
   maxPrice?: number;
   minArea?: number;
   maxArea?: number;
+  latitude?: number;
+  longitude?: number;
+  radiusInKm?: number;
+  sortBy?: string;
+  isDescending?: boolean;
+  pageIndex?: number;
+  pageSize?: number;
 }
+
+export type PostQueryParams = PostSearchParams;

@@ -21,6 +21,7 @@ import TenantProfilePage from '../pages/tenant/TenantProfilePage';
 import TenantFavoritesPage from '../pages/tenant/TenantFavoritesPage';
 import TenantRentalsPage from '../pages/tenant/TenantRentalsPage';
 import LandlordAppointmentsPage from '../pages/landlord/LandlordAppointmentsPage';
+import PaymentResultPage from '../pages/payment/PaymentResultPage';
 
 // Protected Route
 import ProtectedRoute from './ProtectedRoute';
@@ -46,6 +47,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/rooms" element={<RoomListPage />} />
         <Route path="/rooms/:id" element={<RoomDetailPage />} />
         <Route path="/blog" element={<BlogPage />} />
+        <Route path="/payment/result" element={<PaymentResultPage />} />
         
         {/* Auth Routes - redirect if already logged in */}
         <Route 

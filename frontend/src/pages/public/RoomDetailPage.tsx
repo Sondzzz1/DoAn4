@@ -18,6 +18,7 @@ import BookingModal from '../../components/room/BookingModal';
 import RentalRequestModal from '../../components/room/RentalRequestModal';
 import RoomReviews from '../../components/room/RoomReviews';
 import SimilarRooms from '../../components/room/SimilarRooms';
+import { openDirectChat } from '../../components/chat/ChatDrawer';
 
 // Import CSS
 import './RoomDetailPage.css';
@@ -225,7 +226,23 @@ const RoomDetailPage: React.FC = () => {
       navigate(ROUTES.LOGIN);
       return;
     }
-    toast.info('Chức năng nhắn tin trực tiếp đang được kết nối.');
+    
+    if (!post) return;
+
+    const partnerAccountId = post.landlordAccountId || post.landlordId;
+    if (!partnerAccountId) {
+      toast.error('Không tìm thấy thông tin liên hệ của chủ trọ.');
+      return;
+    }
+
+    openDirectChat({
+      partnerId: partnerAccountId,
+      partnerName: post.landlordName || 'Chủ trọ',
+      postId: post.id,
+      postTitle: post.title,
+      postPrice: post.price,
+      postImage: post.imageUrls && post.imageUrls.length > 0 ? post.imageUrls[0] : undefined,
+    });
   };
 
   if (loading) {

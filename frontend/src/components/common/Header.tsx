@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { ROUTES } from '../../utils/constants';
 import { FiHeart, FiChevronDown, FiLogOut, FiUser, FiCalendar, FiHome, FiPlusCircle, FiFileText } from 'react-icons/fi';
+import NotificationBell from './NotificationBell';
 
 const Header: React.FC = () => {
   const { user, isAuthenticated, isLandlord, isTenant, isAdmin, logout } = useAuth();
@@ -44,6 +45,8 @@ const Header: React.FC = () => {
               <Link to={isLandlord ? ROUTES.LANDLORD_CREATE_POST : '#'} className="header-action">
                 Đăng tin
               </Link>
+
+              <NotificationBell />
 
               <div className="relative group">
                 <button className="flex items-center gap-2 cursor-pointer bg-transparent border-none">

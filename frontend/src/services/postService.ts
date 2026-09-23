@@ -1,6 +1,8 @@
 import api from './api';
 import { ApiResponse } from '../types/common.types';
-import { Post, PostListItem, CreatePostRequest, UpdatePostRequest, PostSearchParams } from '../types/post.types';
+import { Post, PostListItem, CreatePostRequest, UpdatePostRequest, PostSearchParams, PostQueryParams } from '../types/post.types';
+
+export type { PostSearchParams, PostQueryParams };
 
 /**
  * Post Service

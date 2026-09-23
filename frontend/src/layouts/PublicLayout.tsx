@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from '../components/common/Header';
 import Footer from '../components/common/Footer';
+import ChatDrawer from '../components/chat/ChatDrawer';
 
 const PublicLayout: React.FC = () => {
   return (
@@ -11,6 +12,7 @@ const PublicLayout: React.FC = () => {
         <Outlet />
       </main>
       <Footer />
+      <ChatDrawer />
     </div>
   );
 };
