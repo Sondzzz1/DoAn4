@@ -17,6 +17,7 @@ import {
   FiTag,
   FiUsers,
   FiX,
+  FiZap,
 } from 'react-icons/fi';
 import { useAuth } from '../hooks/useAuth';
 import { ROUTES } from '../utils/constants';
@@ -33,8 +34,8 @@ const landlordMenu = [
   { label: 'Tin đăng', icon: FiFileText, href: ROUTES.LANDLORD_POSTS },
   { label: 'Phòng trọ', icon: FiHome, href: '/landlord/rooms' },
   { label: 'Lịch hẹn xem phòng', icon: FiCalendar, href: ROUTES.LANDLORD_APPOINTMENTS },
-  { label: 'Yêu cầu thuê', icon: FiClipboard, href: '/landlord/rental-requests' },
-  { label: 'Hợp đồng & đặt cọc', icon: FiShield, href: '/landlord/contracts' },
+  { label: 'Hóa đơn điện nước (PMS)', icon: FiZap, href: '/landlord/contracts' },
+  { label: 'Hợp đồng & Đặt cọc', icon: FiShield, href: '/landlord/contracts' },
 ];
 
 const adminMenu = [

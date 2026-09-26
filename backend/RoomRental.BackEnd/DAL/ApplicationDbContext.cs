@@ -33,6 +33,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<RentalRequest> RentalRequests { get; set; } = null!;
     public DbSet<Deposit> Deposits { get; set; } = null!;
     public DbSet<RentalContract> RentalContracts { get; set; } = null!;
+    public DbSet<MonthlyBill> MonthlyBills { get; set; } = null!;
     public DbSet<Incident> Incidents { get; set; } = null!;
     public DbSet<RoomReview> RoomReviews { get; set; } = null!;
     public DbSet<ChatMessage> ChatMessages { get; set; } = null!;

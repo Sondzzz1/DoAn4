@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { FiChevronRight, FiMapPin, FiNavigation, FiSliders, FiList, FiMap, FiSearch } from 'react-icons/fi';
+import { FiChevronRight, FiMapPin, FiNavigation, FiList, FiMap, FiSearch } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { postService, PostQueryParams } from '../../services/postService';
 import { PostListItem } from '../../types/post.types';
-import RoomListCard from '../../components/room/RoomListCard';
 import RoomSidebar from '../../components/room/RoomSidebar';
 import LeafletMap from '../../components/map/LeafletMap';
 import { formatPrice } from '../../utils/helpers';
@@ -21,7 +20,7 @@ const PRESET_LOCATIONS = [
 ];
 
 const RoomListPage: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
   const [posts, setPosts] = useState<PostListItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -91,7 +90,7 @@ const RoomListPage: React.FC = () => {
         setEnableRadiusSearch(true);
         toast.success('Đã lấy tọa độ vị trí hiện tại của bạn!');
       },
-      (err) => {
+      () => {
         toast.error('Không thể lấy vị trí. Vui lòng cho phép quyền truy cập vị trí trên trình duyệt.');
       }
     );
@@ -138,7 +137,7 @@ const RoomListPage: React.FC = () => {
             <span className="font-semibold text-slate-800">Danh sách phòng trọ</span>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {/* Radius search toggle button */}
             <button
               type="button"
@@ -309,77 +308,82 @@ const RoomListPage: React.FC = () => {
               </div>
 
               {loading ? (
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="bg-white rounded-3xl border border-slate-200 p-4 animate-pulse flex gap-4">
-                      <div className="w-48 h-32 bg-slate-100 rounded-2xl" />
-                      <div className="flex-1 space-y-2 py-2">
-                        <div className="h-5 bg-slate-100 rounded w-3/4" />
+                    <div key={i} className="bg-white rounded-3xl border border-slate-200 p-5 animate-pulse flex gap-5">
+                      <div className="w-72 h-44 bg-slate-100 rounded-2xl shrink-0" />
+                      <div className="flex-1 space-y-3 py-2">
+                        <div className="h-6 bg-slate-100 rounded w-3/4" />
                         <div className="h-4 bg-slate-100 rounded w-1/2" />
-                        <div className="h-6 bg-slate-100 rounded w-1/3 mt-4" />
+                        <div className="h-10 bg-slate-100 rounded w-1/3 mt-auto" />
                       </div>
                     </div>
                   ))}
                 </div>
               ) : posts.length === 0 ? (
                 <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center text-slate-500 shadow-sm">
-                  <FiMapPin className="mx-auto text-4xl text-slate-300 mb-2" />
-                  <h3 className="text-base font-bold text-slate-800 mb-1">Không tìm thấy phòng trọ phù hợp</h3>
-                  <p className="text-xs text-slate-400">Hãy thử mở rộng bán kính tìm kiếm hoặc thay đổi từ khóa.</p>
+                  <FiMapPin className="mx-auto text-5xl text-slate-300 mb-3" />
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">Không tìm thấy phòng trọ phù hợp</h3>
+                  <p className="text-sm text-slate-400">Hãy thử mở rộng bán kính tìm kiếm hoặc thay đổi từ khóa.</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {posts.map((post) => (
-                    <div
+                    <Link
                       key={post.id}
-                      className="bg-white rounded-3xl border border-slate-200/80 p-4 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row gap-4 group"
+                      to={`/rooms/${post.id}`}
+                      className="block bg-white rounded-3xl border border-slate-200 p-5 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all flex flex-col sm:flex-row gap-5 group no-underline"
                     >
                       {/* Image */}
-                      <div className="sm:w-56 h-40 rounded-2xl bg-slate-100 overflow-hidden relative shrink-0">
+                      <div className="sm:w-72 h-52 sm:h-44 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 overflow-hidden relative shrink-0">
                         {post.thumbnailUrl ? (
                           <img
                             src={post.thumbnailUrl}
                             alt={post.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-400">🏠</div>
+                          <div className="w-full h-full flex items-center justify-center text-slate-300 text-5xl">🏠</div>
                         )}
-                        <div className="absolute top-2 left-2 bg-[#0084ff] text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow">
+                        <div className="absolute top-3 left-3 bg-gradient-to-r from-[#0084ff] to-[#0066cc] text-white text-xs font-extrabold px-4 py-2 rounded-full shadow-lg backdrop-blur-sm">
                           {formatPrice(post.price)}/tháng
                         </div>
+                        {post.distanceInKm && (
+                          <div className="absolute bottom-3 right-3 bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md flex items-center gap-1">
+                            <FiMapPin size={12} /> {post.distanceInKm} km
+                          </div>
+                        )}
                       </div>
 
                       {/* Content */}
                       <div className="flex-1 flex flex-col justify-between py-1">
                         <div>
-                          <h3 className="font-bold text-slate-900 text-base mb-1.5 line-clamp-2 hover:text-[#0084ff] transition-colors">
-                            <Link to={`/rooms/${post.id}`}>{post.title}</Link>
+                          <h3 className="font-extrabold text-slate-900 text-lg mb-2.5 line-clamp-2 group-hover:text-[#0084ff] transition-colors leading-tight">
+                            {post.title}
                           </h3>
 
-                          <p className="text-xs text-slate-500 flex items-center gap-1.5 mb-2 line-clamp-1">
-                            <FiMapPin className="text-slate-400 shrink-0" />
-                            <span>{post.address}, {post.ward}, {post.district}, {post.province}</span>
+                          <p className="text-sm text-slate-600 flex items-start gap-2 mb-3 leading-relaxed">
+                            <FiMapPin className="text-[#0084ff] shrink-0 mt-0.5" size={16} />
+                            <span className="line-clamp-2">{post.address}, {post.ward}, {post.district}, {post.province}</span>
                           </p>
-
-                          {post.distanceInKm && (
-                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100 mb-2">
-                              📍 Cách tâm điểm: {post.distanceInKm} km
-                            </span>
-                          )}
                         </div>
 
-                        <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs text-slate-600">
-                          <span>📐 {post.area} m² · 👥 {post.maxOccupants} người</span>
-                          <Link
-                            to={`/rooms/${post.id}`}
-                            className="text-[#0084ff] font-bold hover:underline"
-                          >
-                            Xem chi tiết →
-                          </Link>
+                        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                          <div className="flex items-center gap-4 text-sm text-slate-600">
+                            <span className="flex items-center gap-1.5 font-semibold">
+                              <span className="text-lg">📐</span> {post.area} m²
+                            </span>
+                            <span className="text-slate-300">•</span>
+                            <span className="flex items-center gap-1.5 font-semibold">
+                              <span className="text-lg">👥</span> {post.maxOccupants} người
+                            </span>
+                          </div>
+                          <span className="inline-flex items-center gap-1.5 text-[#0084ff] font-bold text-sm group-hover:gap-2.5 transition-all">
+                            Xem chi tiết <FiChevronRight className="group-hover:translate-x-1 transition-transform" />
+                          </span>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               )}

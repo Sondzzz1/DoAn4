@@ -1,4 +1,4 @@
-﻿namespace RoomRental.BackEnd.Models;
+namespace RoomRental.BackEnd.Models;
 
 public class RentalRequest
 {
@@ -41,6 +41,8 @@ public class RentalContract
     public bool LandlordConfirmed { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
     public DateTime? UpdatedAt { get; set; }
+    public virtual Post? Post { get; set; }
+    public virtual ICollection<MonthlyBill> MonthlyBills { get; set; } = new List<MonthlyBill>();
 }
 
 public class Incident

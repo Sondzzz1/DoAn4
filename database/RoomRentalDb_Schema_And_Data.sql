@@ -145,6 +145,106 @@ CREATE TABLE ViewingAppointments (
 );
 GO
 
+-- Table: YeuCauThuePhong
+CREATE TABLE YeuCauThuePhong (
+    Id INT PRIMARY KEY IDENTITY(1,1),
+    PostId INT NOT NULL,
+    TenantAccountId INT NOT NULL,
+    LandlordAccountId INT NOT NULL,
+    GhiChu NVARCHAR(1000) NULL,
+    TrangThai INT NOT NULL DEFAULT 0, -- 0: Pending, 1: Approved, 2: Rejected
+    NgayTao DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+    NgayCapNhat DATETIME2 NULL,
+    CONSTRAINT FK_YeuCauThuePhong_Posts FOREIGN KEY (PostId) REFERENCES Posts(Id) ON DELETE NO ACTION
+);
+GO
+
+-- Table: DatCoc
+CREATE TABLE DatCoc (
+    Id INT PRIMARY KEY IDENTITY(1,1),
+    RentalRequestId INT NOT NULL,
+    TenantAccountId INT NOT NULL,
+    LandlordAccountId INT NOT NULL,
+    SoTien DECIMAL(18,2) NOT NULL,
+    TrangThai INT NOT NULL DEFAULT 0, -- 0: Pending, 1: Paid, 2: Refunded/Cancelled
+    NgayThanhToan DATETIME2 NULL,
+    NgayTao DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+    NgayCapNhat DATETIME2 NULL
+);
+GO
+
+-- Table: HopDongThue
+CREATE TABLE HopDongThue (
+    Id INT PRIMARY KEY IDENTITY(1,1),
+    RentalRequestId INT NOT NULL,
+    PostId INT NOT NULL,
+    TenantAccountId INT NOT NULL,
+    LandlordAccountId INT NOT NULL,
+    StartDate DATETIME2 NOT NULL,
+    EndDate DATETIME2 NOT NULL,
+    TienThueHangThang DECIMAL(18,2) NOT NULL,
+    TrangThai INT NOT NULL DEFAULT 0, -- 0: Pending, 1: Active, 2: Ended
+    NguoiThueDaXacNhan BIT NOT NULL DEFAULT 0,
+    ChuTroDaXacNhan BIT NOT NULL DEFAULT 0,
+    NgayTao DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+    NgayCapNhat DATETIME2 NULL,
+    CONSTRAINT FK_HopDongThue_Posts FOREIGN KEY (PostId) REFERENCES Posts(Id) ON DELETE NO ACTION
+);
+GO
+
+-- Table: HoaDonHangThang (Quản lý chỉ số điện nước & hóa đơn hàng tháng PMS)
+CREATE TABLE HoaDonHangThang (
+    Id INT PRIMARY KEY IDENTITY(1,1),
+    HopDongId INT NOT NULL,
+    Thang INT NOT NULL,
+    Nam INT NOT NULL,
+    SoDienCu DECIMAL(18,2) NOT NULL DEFAULT 0,
+    SoDienMoi DECIMAL(18,2) NOT NULL DEFAULT 0,
+    GiaDien DECIMAL(18,2) NOT NULL DEFAULT 0,
+    SoNuocCu DECIMAL(18,2) NOT NULL DEFAULT 0,
+    SoNuocMoi DECIMAL(18,2) NOT NULL DEFAULT 0,
+    GiaNuoc DECIMAL(18,2) NOT NULL DEFAULT 0,
+    TienPhong DECIMAL(18,2) NOT NULL DEFAULT 0,
+    ChiPhiKhac DECIMAL(18,2) NOT NULL DEFAULT 0,
+    GhiChuChiPhiKhac NVARCHAR(500) NULL,
+    TongTien DECIMAL(18,2) NOT NULL,
+    TrangThai INT NOT NULL DEFAULT 0, -- 0: Pending, 1: Paid, 2: Cancelled
+    HanThanhToan DATETIME2 NULL,
+    NgayThanhToan DATETIME2 NULL,
+    PhuongThucThanhToan NVARCHAR(100) NULL,
+    GhiChu NVARCHAR(1000) NULL,
+    NgayTao DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+    NgayCapNhat DATETIME2 NULL,
+    CONSTRAINT FK_HoaDonHangThang_HopDong FOREIGN KEY (HopDongId) REFERENCES HopDongThue(Id) ON DELETE CASCADE
+);
+GO
+
+-- Table: SuCo
+CREATE TABLE SuCo (
+    Id INT PRIMARY KEY IDENTITY(1,1),
+    ContractId INT NOT NULL,
+    ReporterAccountId INT NOT NULL,
+    TieuDe NVARCHAR(200) NOT NULL,
+    MoTa NVARCHAR(2000) NOT NULL,
+    TrangThai INT NOT NULL DEFAULT 0, -- 0: Pending, 1: InProgress, 2: Resolved
+    HuongXuLy NVARCHAR(2000) NULL,
+    NgayTao DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+    NgayCapNhat DATETIME2 NULL
+);
+GO
+
+-- Table: DanhGiaPhong
+CREATE TABLE DanhGiaPhong (
+    Id INT PRIMARY KEY IDENTITY(1,1),
+    ContractId INT NOT NULL,
+    PostId INT NOT NULL,
+    TenantAccountId INT NOT NULL,
+    SoSao INT NOT NULL,
+    NhanXet NVARCHAR(2000) NULL,
+    NgayTao DATETIME2 NOT NULL DEFAULT GETUTCDATE()
+);
+GO
+
 -- =============================================
 -- CREATE INDEXES
 -- =============================================

@@ -38,10 +38,12 @@ builder.Services.AddScoped<IRentalContractService, RentalContractBLL>();
 builder.Services.AddScoped<IIncidentService, IncidentBLL>();
 builder.Services.AddScoped<IRoomReviewService, RoomReviewBLL>();
 
-// Đăng ký Nhóm tính năng mới: Chat, Thông báo, Thanh toán VNPay
+// Đăng ký Nhóm tính năng mới: Chat, Thông báo, Thanh toán VNPay, Quản lý hóa đơn & Xuất báo cáo
 builder.Services.AddScoped<IChatService, ChatBLL>();
 builder.Services.AddScoped<INotificationService, NotificationBLL>();
 builder.Services.AddScoped<IPaymentService, PaymentBLL>();
+builder.Services.AddScoped<IMonthlyBillService, MonthlyBillBLL>();
+builder.Services.AddScoped<IExportService, ExportBLL>();
 
 // Thêm SignalR hỗ trợ Real-time Chat & Notifications
 builder.Services.AddSignalR();
