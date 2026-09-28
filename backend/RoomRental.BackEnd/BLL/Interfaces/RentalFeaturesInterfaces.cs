@@ -1,4 +1,4 @@
-﻿using RoomRental.BackEnd.DTO.Rental;
+using RoomRental.BackEnd.DTO.Rental;
 
 namespace RoomRental.BackEnd.BLL.Interfaces;
 
@@ -20,7 +20,9 @@ public interface IRentalContractService
 {
     Task<HopDongDto> TaoAsync(int chuTroId, TaoHopDongDto dto);
     Task<List<HopDongDto>> LayCuaToiAsync(int taiKhoanId);
+    Task<HopDongDto> LayChiTietAsync(int taiKhoanId, int id);
     Task<HopDongDto> XacNhanAsync(int taiKhoanId, int id);
+    Task<HopDongDto> ChamDutAsync(int taiKhoanId, int id, string? lyDo = null);
 }
 
 public interface IIncidentService

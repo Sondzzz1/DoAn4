@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RoomRental.BackEnd.DTO.Report;
 using RoomRental.BackEnd.BLL.Interfaces;
 using RoomRental.BackEnd.Models;
@@ -17,7 +17,8 @@ public class ReportBLL : IReportService
 
     public async Task<ReportDto> CreateReportAsync(int reporterAccountId, CreateReportDto createDto)
     {
-        var post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == createDto.PostId);
+        var postId = createDto.GetPostId();
+        var post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == postId);
         if (post == null)
         {
             throw new Exception("Tin đăng không tồn tại");
@@ -25,7 +26,7 @@ public class ReportBLL : IReportService
 
         var report = new Report
         {
-            PostId = createDto.PostId,
+            PostId = postId,
             ReporterAccountId = reporterAccountId,
             Reason = createDto.GetReason(),
             Description = createDto.GetDescription(),

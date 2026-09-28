@@ -152,23 +152,7 @@ const AppRoutes: React.FC = () => {
           }
         />
         <Route
-          path="/landlord/rental-requests"
-          element={
-            <ProtectedRoute allowedRoles={['Landlord']}>
-              <LandlordContractsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/landlord/contracts"
-          element={
-            <ProtectedRoute allowedRoles={['Landlord']}>
-              <LandlordContractsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/landlord/bills"
           element={
             <ProtectedRoute allowedRoles={['Landlord']}>
               <LandlordContractsPage />

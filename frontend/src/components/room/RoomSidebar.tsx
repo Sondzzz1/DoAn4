@@ -27,86 +27,88 @@ const areaRanges = [
   'Trên 90m²',
 ];
 
-const RoomSidebar: React.FC<RoomSidebarProps> = ({
-  latestRooms,
-}) => {
+const RoomSidebar: React.FC<RoomSidebarProps> = ({ latestRooms }) => {
   const formatPrice = (price: number) => {
-    return `${(price / 1000000).toFixed(2)} Triệu/tháng`;
+    return `${(price / 1000000).toFixed(1)} tr/tháng`;
   };
 
   return (
-    <aside className="room-sidebar">
-      {/* PRICE */}
-      <div className="room-sidebar-box">
-        <h3>Xem theo khoảng giá</h3>
-
-        <div className="room-sidebar-grid">
-          {priceRanges.map((item) => (
+    <aside className="space-y-6">
+      {/* Price & Area Filters */}
+      <div className="bg-white rounded-2xl border-2 border-slate-200 p-6 shadow-md">
+        <h3 className="text-lg font-bold text-slate-900 mb-5 pb-3 border-b-2 border-slate-100">
+          Lọc theo khoảng giá
+        </h3>
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          {priceRanges.map((range) => (
             <Link
-              key={item}
+              key={range}
               to="#"
-              className="room-sidebar-link"
+              className="flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-slate-700 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 rounded-xl border-2 border-slate-100 hover:border-blue-200 transition-all"
             >
-              <FiChevronRight />
-              <span>{item}</span>
+              <FiChevronRight className="text-blue-500 flex-shrink-0" size={16} />
+              <span className="truncate">{range}</span>
             </Link>
           ))}
         </div>
 
-        <h3 className="room-sidebar-subtitle">
-          Xem theo diện tích
+        <h3 className="text-lg font-bold text-slate-900 mb-5 pb-3 border-b-2 border-slate-100 mt-6">
+          Lọc theo diện tích
         </h3>
-
-        <div className="room-sidebar-grid">
-          {areaRanges.map((item) => (
+        <div className="grid grid-cols-2 gap-3">
+          {areaRanges.map((range) => (
             <Link
-              key={item}
+              key={range}
               to="#"
-              className="room-sidebar-link"
+              className="flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-slate-700 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 rounded-xl border-2 border-slate-100 hover:border-blue-200 transition-all"
             >
-              <FiChevronRight />
-              <span>{item}</span>
+              <FiChevronRight className="text-blue-500 flex-shrink-0" size={16} />
+              <span className="truncate">{range}</span>
             </Link>
           ))}
         </div>
       </div>
 
-      {/* LATEST */}
-      <div className="room-sidebar-box">
-        <h3 className="room-sidebar-latest-title">
+      {/* Latest Rooms */}
+      <div className="bg-white rounded-2xl border-2 border-slate-200 p-6 shadow-md">
+        <h3 className="text-lg font-bold text-slate-900 mb-5 pb-3 border-b-2 border-slate-100">
           Tin mới đăng
         </h3>
-
-        <div className="room-sidebar-latest">
-          {latestRooms.slice(0, 4).map((room) => (
+        <div className="space-y-4">
+          {latestRooms.slice(0, 5).map((room) => (
             <Link
               key={room.id}
               to={`/rooms/${room.id}`}
-              className="room-sidebar-latest-item"
+              className="flex gap-4 group hover:bg-slate-50 p-2 rounded-xl transition-all -mx-2"
             >
-              <img
-                src={room.imageUrl}
-                alt={room.title}
-              />
+              {/* Thumbnail */}
+              <div className="w-24 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100">
+                {room.imageUrl ? (
+                  <img
+                    src={room.imageUrl}
+                    alt={room.title}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-300 text-2xl">
+                    🏠
+                  </div>
+                )}
+              </div>
 
-              <div>
-                <h4>{room.title}</h4>
-
-                <div>
-                  <strong>
-                    {formatPrice(room.price)}
-                  </strong>
-
-                  <span>
-                    {room.area} m²
-                  </span>
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-bold text-slate-900 line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors leading-tight">
+                  {room.title}
+                </h4>
+                <div className="flex items-center gap-2 text-xs mb-1">
+                  <span className="font-bold text-blue-600">{formatPrice(room.price)}</span>
+                  <span className="text-slate-300">•</span>
+                  <span className="text-slate-600 font-semibold">{room.area} m²</span>
                 </div>
-
-                <small>
-                  {new Date(
-                    room.createdAt
-                  ).toLocaleDateString('vi-VN')}
-                </small>
+                <p className="text-xs text-slate-500">
+                  {new Date(room.createdAt).toLocaleDateString('vi-VN')}
+                </p>
               </div>
             </Link>
           ))}

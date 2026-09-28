@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RoomRental.BackEnd.DTO.Blog;
 using RoomRental.BackEnd.BLL.Interfaces;
 using RoomRental.BackEnd.Models;
@@ -83,23 +83,24 @@ public class BlogBLL : IBlogService
 
     public async Task<BlogPostDto> CreateBlogPostAsync(int authorAccountId, CreateBlogPostDto createDto)
     {
-        if (string.IsNullOrWhiteSpace(createDto.Title))
+        var title = createDto.GetTitle();
+        if (string.IsNullOrWhiteSpace(title))
         {
             throw new Exception("Tiêu đề bài viết không được để trống");
         }
 
-        var slug = GenerateSlug(createDto.Title);
+        var slug = GenerateSlug(title);
 
         var blog = new BlogPost
         {
-            Title = createDto.Title.Trim(),
+            Title = title,
             Slug = slug,
-            Summary = createDto.Summary,
-            Content = createDto.Content,
-            ImageUrl = createDto.ImageUrl,
+            Summary = createDto.GetSummary(),
+            Content = createDto.GetContent(),
+            ImageUrl = createDto.GetImageUrl(),
             AuthorAccountId = authorAccountId,
-            Status = createDto.Status,
-            PublishedAt = createDto.Status == 1 ? DateTime.Now : null,
+            Status = createDto.GetStatus(),
+            PublishedAt = createDto.GetStatus() == 1 ? DateTime.Now : null,
             ViewCount = 0
         };
 
@@ -117,19 +118,35 @@ public class BlogBLL : IBlogService
             throw new Exception("Không tìm thấy bài viết");
         }
 
-        if (!string.IsNullOrWhiteSpace(updateDto.Title))
+        var title = updateDto.GetTitle();
+        if (!string.IsNullOrWhiteSpace(title))
         {
-            blog.Title = updateDto.Title.Trim();
-            blog.Slug = GenerateSlug(updateDto.Title);
+            blog.Title = title;
+            blog.Slug = GenerateSlug(title);
         }
 
-        blog.Summary = updateDto.Summary;
-        blog.Content = updateDto.Content;
-        blog.ImageUrl = updateDto.ImageUrl;
-        blog.Status = updateDto.Status;
-        if (blog.Status == 1 && blog.PublishedAt == null)
+        if (updateDto.Summary != null || updateDto.TomTat != null)
         {
-            blog.PublishedAt = DateTime.Now;
+            blog.Summary = updateDto.GetSummary();
+        }
+
+        if (updateDto.Content != null || updateDto.NoiDung != null)
+        {
+            blog.Content = updateDto.GetContent();
+        }
+
+        if (updateDto.ImageUrl != null || updateDto.DuongDanAnh != null)
+        {
+            blog.ImageUrl = updateDto.GetImageUrl();
+        }
+
+        if (updateDto.Status.HasValue || updateDto.TrangThai.HasValue)
+        {
+            blog.Status = updateDto.GetStatus();
+            if (blog.Status == 1 && blog.PublishedAt == null)
+            {
+                blog.PublishedAt = DateTime.Now;
+            }
         }
         blog.UpdatedAt = DateTime.Now;
 
@@ -162,6 +179,12 @@ public class BlogBLL : IBlogService
             throw new Exception("Không tìm thấy bài viết");
         }
 
+        var content = createDto.GetContent();
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            throw new Exception("Nội dung bình luận không được để trống");
+        }
+
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == accountId);
         if (user == null)
         {
@@ -172,7 +195,7 @@ public class BlogBLL : IBlogService
         {
             BlogPostId = blogPostId,
             AccountId = accountId,
-            Content = createDto.Content,
+            Content = content,
             CreatedAt = DateTime.Now
         };
 

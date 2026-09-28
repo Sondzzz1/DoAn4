@@ -1,0 +1,248 @@
+/* Google Map Picker Component */
+
+.google-map-picker {
+  width: 100%;
+}
+
+/* Search Bar */
+.google-map-search {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.search-input-wrapper {
+  flex: 1;
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6b7280;
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 14px 12px 44px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.search-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.location-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.location-button:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.location-button:active {
+  transform: translateY(0);
+}
+
+/* Map Container */
+.google-map-container {
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 2px solid #e5e7eb;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Selected Location Display */
+.selected-location {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 2px solid #93c5fd;
+  border-radius: 12px;
+}
+
+.location-icon {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  color: #3b82f6;
+  margin-top: 2px;
+}
+
+.location-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.location-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e40af;
+}
+
+.location-address {
+  font-size: 14px;
+  color: #1f2937;
+  line-height: 1.5;
+}
+
+/* Instructions */
+.map-instructions {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.map-instructions strong {
+  color: #1f2937;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.map-instructions ul {
+  margin: 0;
+  padding-left: 20px;
+  list-style: none;
+}
+
+.map-instructions li {
+  margin-bottom: 6px;
+  padding-left: 4px;
+}
+
+.map-instructions li:last-child {
+  margin-bottom: 0;
+}
+
+/* Loading State */
+.google-map-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f9fafb;
+  border: 2px dashed #d1d5db;
+  border-radius: 16px;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.google-map-loading p {
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Error State */
+.google-map-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  background: #fef2f2;
+  border: 2px solid #fecaca;
+  border-radius: 16px;
+  min-height: 300px;
+}
+
+.google-map-error svg {
+  color: #ef4444;
+  margin-bottom: 16px;
+}
+
+.google-map-error h3 {
+  margin: 0 0 8px;
+  color: #991b1b;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.google-map-error p {
+  margin: 0 0 8px;
+  color: #7f1d1d;
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 400px;
+}
+
+.google-map-error code {
+  background: #fee2e2;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: #991b1b;
+}
+
+.google-map-error .text-sm {
+  font-size: 12px;
+  color: #991b1b;
+  opacity: 0.8;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .google-map-search {
+    flex-direction: column;
+  }
+
+  .location-button {
+    justify-content: center;
+  }
+
+  .map-instructions {
+    font-size: 12px;
+  }
+
+  .map-instructions ul {
+    padding-left: 16px;
+  }
+}

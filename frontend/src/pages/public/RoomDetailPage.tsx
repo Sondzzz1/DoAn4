@@ -357,6 +357,9 @@ const RoomDetailPage: React.FC = () => {
                 ward={post.ward}
                 district={post.district}
                 province={post.province}
+                latitude={post.latitude}
+                longitude={post.longitude}
+                title={post.title}
               />
             </section>
 

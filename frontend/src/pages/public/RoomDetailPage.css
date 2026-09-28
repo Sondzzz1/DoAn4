@@ -1,50 +1,57 @@
-
 /* =========================================================
    ROOM DETAIL PAGE
-   Layout: Modern / Clean / Professional
-========================================================= */
+   Layout:
+   - Container tối đa 1280px
+   - Main content co giãn
+   - Sidebar cố định khoảng 340px
+   - Khoảng cách hợp lý
+   ========================================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   PAGE
+   ========================================================= */
 
 .room-detail-page {
+  width: 100%;
   min-height: 100vh;
   background: #f5f7fa;
   color: #111827;
-  padding-bottom: 72px;
-}
-
-
-/* =========================================================
-   CONTAINER
-========================================================= */
-
-.room-detail-container {
-  width: min(1200px, calc(100% - 32px));
-  margin: 0 auto;
-  padding: 28px 0 0;
+  padding-bottom: 70px;
 }
 
 
 /* =========================================================
    BREADCRUMB
-========================================================= */
+   ========================================================= */
 
 .room-breadcrumb {
+  width: 100%;
   background: #ffffff;
-  border-bottom: 1px solid #e8ebef;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .room-breadcrumb-inner {
-  width: min(1200px, calc(100% - 32px));
-  min-height: 50px;
+  width: calc(100% - 48px);
+  max-width: 1280px;
+  min-height: 52px;
+
   margin: 0 auto;
+  padding: 10px 0;
 
   display: flex;
   align-items: center;
   flex-wrap: wrap;
 
   gap: 7px;
-  padding: 10px 0;
 
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.4;
   color: #6b7280;
 }
 
@@ -67,13 +74,12 @@
 .room-breadcrumb-separator {
   width: 14px;
   height: 14px;
-
-  color: #a1a8b3;
   flex-shrink: 0;
+  color: #9ca3af;
 }
 
 .room-breadcrumb-current {
-  max-width: 380px;
+  max-width: 420px;
 
   color: #1f2937 !important;
   font-weight: 600 !important;
@@ -85,17 +91,36 @@
 
 
 /* =========================================================
-   MAIN GRID
-========================================================= */
+   MAIN CONTAINER
+   ========================================================= */
+
+.room-detail-container {
+  width: calc(100% - 48px);
+  max-width: 1280px;
+
+  margin: 0 auto;
+  padding: 30px 0 60px;
+}
+
+
+/* =========================================================
+   MAIN 2 COLUMN LAYOUT
+   Main: flexible
+   Sidebar: 340px
+   ========================================================= */
 
 .room-detail-layout {
+  width: 100%;
+
   display: grid;
 
-  grid-template-columns:
-    minmax(0, 2fr)
-    minmax(330px, 0.88fr);
+  /*
+    Cột trái tự động chiếm phần còn lại.
+    Cột phải luôn có ít nhất 340px.
+  */
+  grid-template-columns: minmax(0, 1fr) 340px;
 
-  gap: 28px;
+  gap: 32px;
 
   align-items: start;
 }
@@ -103,86 +128,88 @@
 
 /* =========================================================
    LEFT CONTENT
-========================================================= */
+   ========================================================= */
 
 .room-detail-main {
+  width: 100%;
   min-width: 0;
 
   display: flex;
   flex-direction: column;
 
-  gap: 22px;
+  gap: 24px;
 }
 
 
 /* =========================================================
    GALLERY
-========================================================= */
+   ========================================================= */
 
 .room-gallery-wrapper {
   width: 100%;
+  min-width: 0;
 
   background: #ffffff;
 
-  border-radius: 18px;
-  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
 
-  border: 1px solid #e6e9ee;
+  overflow: hidden;
 
   box-shadow:
     0 2px 6px rgba(15, 23, 42, 0.04),
-    0 12px 30px rgba(15, 23, 42, 0.05);
+    0 10px 25px rgba(15, 23, 42, 0.05);
 }
-
-
-/*
-   Đảm bảo ảnh Gallery không phá layout
-*/
 
 .room-gallery-wrapper img {
   display: block;
+
+  width: 100%;
   max-width: 100%;
+  height: auto;
+
+  object-fit: cover;
 }
 
 
 /* =========================================================
-   CONTENT SECTIONS
-========================================================= */
+   CONTENT SECTION
+   ========================================================= */
 
 .room-content-section {
   width: 100%;
+  min-width: 0;
 
   background: #ffffff;
 
-  border: 1px solid #e6e9ee;
-  border-radius: 18px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
 
   overflow: hidden;
 
   box-shadow:
-    0 1px 3px rgba(15, 23, 42, 0.025),
+    0 1px 3px rgba(15, 23, 42, 0.03),
     0 8px 24px rgba(15, 23, 42, 0.035);
 }
 
-
-/* =========================================================
-   LOCATION
-========================================================= */
-
 .room-location-section {
+  width: 100%;
   overflow: hidden;
 }
 
 
 /* =========================================================
    RIGHT SIDEBAR
-========================================================= */
+   ========================================================= */
 
 .room-detail-sidebar {
+  width: 340px;
   min-width: 0;
 }
 
 .room-sidebar-sticky {
+  width: 100%;
+
   position: sticky;
   top: 24px;
 
@@ -194,53 +221,47 @@
 
 
 /* =========================================================
-   CONTACT CARD
-========================================================= */
+   LANDLORD CONTACT CARD
+   ========================================================= */
 
 .room-contact-wrapper {
   width: 100%;
+  min-width: 0;
 
   background: #ffffff;
 
   border: 1px solid #e1e5ea;
-
-  border-radius: 18px;
+  border-radius: 16px;
 
   overflow: hidden;
 
   box-shadow:
     0 3px 8px rgba(15, 23, 42, 0.05),
-    0 14px 35px rgba(15, 23, 42, 0.07);
+    0 12px 30px rgba(15, 23, 42, 0.06);
 }
-
-
-/*
-   Một chút khoảng cách cho component liên hệ
-*/
 
 .room-contact-wrapper > * {
   width: 100%;
+  max-width: 100%;
 }
 
 
 /* =========================================================
    SIMILAR ROOMS
-========================================================= */
+   ========================================================= */
 
 .room-similar-section {
-  margin-top: 48px;
+  width: 100%;
 
+  margin-top: 48px;
   padding-top: 32px;
 
   border-top: 1px solid #e5e7eb;
 }
 
-
-/* =========================================================
-   SIMILAR SECTION HEADER
-========================================================= */
-
 .room-section-heading {
+  width: 100%;
+
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -253,10 +274,9 @@
 .room-section-heading h2 {
   margin: 0;
 
-  font-size: 23px;
+  font-size: 24px;
   line-height: 1.3;
-
-  font-weight: 750;
+  font-weight: 700;
 
   color: #111827;
 }
@@ -273,6 +293,7 @@
 .room-section-heading a {
   display: inline-flex;
   align-items: center;
+
   gap: 5px;
 
   flex-shrink: 0;
@@ -302,25 +323,27 @@
 
 /* =========================================================
    SKELETON
-========================================================= */
+   ========================================================= */
 
 .room-skeleton-container {
+  width: 100%;
   min-height: 100vh;
 
   background: #f5f7fa;
 
-  padding: 28px 0 60px;
+  padding: 30px 0 60px;
 }
 
 .room-skeleton-wrapper {
-  width: min(1200px, calc(100% - 32px));
+  width: calc(100% - 48px);
+  max-width: 1280px;
 
   margin: 0 auto;
 }
 
 .room-skeleton-breadcrumb {
   width: 320px;
-  height: 16px;
+  height: 18px;
 
   margin-bottom: 28px;
 
@@ -332,22 +355,25 @@
 }
 
 .room-skeleton-layout {
+  width: 100%;
+
   display: grid;
 
-  grid-template-columns:
-    minmax(0, 2fr)
-    minmax(330px, 0.88fr);
+  grid-template-columns: minmax(0, 1fr) 340px;
 
-  gap: 28px;
+  gap: 32px;
 
   align-items: start;
 }
 
 .room-skeleton-main {
+  width: 100%;
+  min-width: 0;
+
   display: flex;
   flex-direction: column;
 
-  gap: 22px;
+  gap: 24px;
 }
 
 .room-skeleton-box {
@@ -356,8 +382,7 @@
   background: #ffffff;
 
   border: 1px solid #e5e7eb;
-
-  border-radius: 18px;
+  border-radius: 16px;
 
   animation: skeleton-pulse 1.5s ease-in-out infinite;
 }
@@ -376,13 +401,12 @@
 
 .room-skeleton-sidebar-box {
   width: 100%;
-  height: 360px;
+  height: 380px;
 
   background: #ffffff;
 
   border: 1px solid #e5e7eb;
-
-  border-radius: 18px;
+  border-radius: 16px;
 
   animation: skeleton-pulse 1.5s ease-in-out infinite;
 }
@@ -400,10 +424,11 @@
 
 
 /* =========================================================
-   ERROR STATE
-========================================================= */
+   ERROR
+   ========================================================= */
 
 .room-error-container {
+  width: 100%;
   min-height: 70vh;
 
   display: flex;
@@ -426,8 +451,7 @@
   background: #ffffff;
 
   border: 1px solid #e5e7eb;
-
-  border-radius: 20px;
+  border-radius: 18px;
 
   box-shadow:
     0 4px 10px rgba(15, 23, 42, 0.04),
@@ -447,7 +471,6 @@
   border-radius: 50%;
 
   background: #fee2e2;
-
   color: #dc2626;
 }
 
@@ -461,7 +484,6 @@
 
   font-size: 21px;
   line-height: 1.3;
-
   font-weight: 700;
 
   color: #111827;
@@ -495,7 +517,7 @@
 
   padding: 10px 20px;
 
-  border-radius: 11px;
+  border-radius: 10px;
 
   font-size: 14px;
   font-weight: 700;
@@ -533,69 +555,68 @@
 
   border: 1px solid #0084ff;
 
-  box-shadow:
-    0 4px 10px rgba(0, 132, 255, 0.2);
+  box-shadow: 0 4px 10px rgba(0, 132, 255, 0.2);
 }
 
 .room-error-button-back:hover {
   background: #0073df;
   border-color: #0073df;
 
-  box-shadow:
-    0 6px 14px rgba(0, 132, 255, 0.25);
+  box-shadow: 0 6px 14px rgba(0, 132, 255, 0.25);
 }
 
 
 /* =========================================================
    LARGE TABLET / SMALL LAPTOP
-========================================================= */
+   <= 1100px
+   ========================================================= */
 
 @media (max-width: 1100px) {
+  .room-detail-container,
+  .room-skeleton-wrapper,
+  .room-breadcrumb-inner {
+    width: calc(100% - 36px);
+  }
 
   .room-detail-layout,
   .room-skeleton-layout {
-    grid-template-columns:
-      minmax(0, 1.7fr)
-      minmax(300px, 0.9fr);
+    grid-template-columns: minmax(0, 1fr) 310px;
+    gap: 24px;
+  }
 
-    gap: 20px;
+  .room-detail-sidebar {
+    width: 310px;
   }
 
   .room-sidebar-sticky {
-    top: 18px;
+    top: 20px;
   }
 }
 
 
 /* =========================================================
    TABLET
-========================================================= */
+   <= 900px
+   ========================================================= */
 
-@media (max-width: 992px) {
-
+@media (max-width: 900px) {
   .room-detail-container {
-    padding-top: 22px;
+    padding-top: 24px;
   }
 
   .room-detail-layout,
   .room-skeleton-layout {
     grid-template-columns: 1fr;
-
     gap: 20px;
-  }
-
-  /*
-     Trên tablet/mobile:
-     Nội dung chính nằm trước,
-     liên hệ nằm phía sau.
-  */
-
-  .room-detail-sidebar {
-    order: 2;
   }
 
   .room-detail-main {
     order: 1;
+  }
+
+  .room-detail-sidebar {
+    width: 100%;
+    order: 2;
   }
 
   .room-sidebar-sticky {
@@ -605,39 +626,28 @@
   .room-contact-wrapper {
     border-radius: 16px;
   }
-
-  .room-similar-section {
-    margin-top: 36px;
-  }
 }
 
 
 /* =========================================================
    MOBILE
-========================================================= */
+   <= 640px
+   ========================================================= */
 
 @media (max-width: 640px) {
-
   .room-detail-page {
-    padding-bottom: 48px;
+    padding-bottom: 45px;
   }
-
-
-  /* Container */
 
   .room-detail-container {
     width: calc(100% - 20px);
-
-    padding-top: 14px;
+    padding-top: 16px;
   }
-
-
-  /* Breadcrumb */
 
   .room-breadcrumb-inner {
     width: calc(100% - 20px);
 
-    min-height: 44px;
+    min-height: 46px;
 
     gap: 5px;
 
@@ -653,28 +663,19 @@
     height: 12px;
   }
 
-
-  /* Layout */
-
   .room-detail-layout,
   .room-skeleton-layout {
-    gap: 14px;
+    gap: 16px;
   }
 
   .room-detail-main,
   .room-skeleton-main {
-    gap: 14px;
+    gap: 16px;
   }
-
-
-  /* Gallery */
 
   .room-gallery-wrapper {
     border-radius: 14px;
   }
-
-
-  /* Content */
 
   .room-content-section {
     border-radius: 14px;
@@ -684,25 +685,17 @@
       0 5px 16px rgba(15, 23, 42, 0.035);
   }
 
-
-  /* Sidebar */
-
   .room-contact-wrapper {
     border-radius: 14px;
   }
 
-
-  /* Similar */
-
   .room-similar-section {
     margin-top: 32px;
-
     padding-top: 24px;
   }
 
   .room-section-heading {
     align-items: flex-start;
-
     flex-direction: column;
 
     gap: 10px;
@@ -721,9 +714,6 @@
   .room-section-heading a {
     font-size: 13px;
   }
-
-
-  /* Skeleton */
 
   .room-skeleton-container {
     padding: 16px 0 40px;
@@ -755,18 +745,13 @@
     height: 300px;
   }
 
-
-  /* Error */
-
   .room-error-container {
     min-height: 75vh;
-
     padding: 16px;
   }
 
   .room-error-card {
     padding: 28px 20px;
-
     border-radius: 16px;
   }
 
@@ -785,7 +770,6 @@
 
   .room-error-actions {
     flex-direction: column;
-
     width: 100%;
   }
 
@@ -797,10 +781,10 @@
 
 /* =========================================================
    VERY SMALL MOBILE
-========================================================= */
+   <= 380px
+   ========================================================= */
 
 @media (max-width: 380px) {
-
   .room-detail-container,
   .room-skeleton-wrapper {
     width: calc(100% - 16px);
@@ -818,4 +802,3 @@
     font-size: 19px;
   }
 }
-

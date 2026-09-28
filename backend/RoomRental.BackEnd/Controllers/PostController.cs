@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RoomRental.BackEnd.DTO.Common;
 using RoomRental.BackEnd.DTO.Post;
@@ -165,7 +165,7 @@ public class PostController : ControllerBase
         try
         {
             var accountId = GetCurrentUserId();
-            var post = await _postService.UpdatePostStatusAsync(accountId, id, statusDto.Status);
+            var post = await _postService.UpdatePostStatusAsync(accountId, id, statusDto.GetStatus());
 
             return Ok(ApiResponse<PostDto>.SuccessResponse(post, "Cập nhật trạng thái tin thành công"));
         }

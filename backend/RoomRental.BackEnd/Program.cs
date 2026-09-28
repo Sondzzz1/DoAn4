@@ -48,6 +48,9 @@ builder.Services.AddScoped<IExportService, ExportBLL>();
 // Thêm SignalR hỗ trợ Real-time Chat & Notifications
 builder.Services.AddSignalR();
 
+// Thêm HttpClient để gọi external APIs (Nominatim)
+builder.Services.AddHttpClient();
+
 // Cấu hình JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"] ?? "RoomRentalSecretKeyForJwtAuthentication2026123456";

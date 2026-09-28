@@ -34,7 +34,6 @@ const landlordMenu = [
   { label: 'Tin đăng', icon: FiFileText, href: ROUTES.LANDLORD_POSTS },
   { label: 'Phòng trọ', icon: FiHome, href: '/landlord/rooms' },
   { label: 'Lịch hẹn xem phòng', icon: FiCalendar, href: ROUTES.LANDLORD_APPOINTMENTS },
-  { label: 'Hóa đơn điện nước (PMS)', icon: FiZap, href: '/landlord/contracts' },
   { label: 'Hợp đồng & Đặt cọc', icon: FiShield, href: '/landlord/contracts' },
 ];
 
@@ -102,7 +101,7 @@ const AdminDashboardLayout: React.FC = () => {
 
             return (
               <Link
-                key={item.href}
+                key={`${item.href}-${item.label}`}
                 to={item.href}
                 className={isActive ? 'is-active' : ''}
                 onClick={() => setMenuOpen(false)}

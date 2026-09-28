@@ -389,12 +389,18 @@ const TenantRentalsPage: React.FC = () => {
                       <span className="text-xs font-bold uppercase tracking-wider text-[#0084ff]">Hợp đồng HD-{String(item.id).padStart(4, '0')}</span>
                       <span
                         className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                          item.trangThai === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                          item.trangThai === 1 ? 'bg-emerald-100 text-emerald-700' : (item.trangThai === 2 ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700')
                         }`}
                       >
-                        {item.trangThai === 1 ? 'Đang hiệu lực' : 'Chờ 2 bên xác nhận'}
+                        {item.trangThai === 1 ? 'Đang hiệu lực' : (item.trangThai === 2 ? 'Đã chấm dứt' : 'Chờ 2 bên xác nhận')}
                       </span>
                     </div>
+                    <h3 className="text-lg font-bold text-slate-900 mt-1 mb-0.5">
+                      {item.tenPhong || `Phòng hợp đồng #${item.id}`}
+                    </h3>
+                    {item.diaChiPhong && (
+                      <p className="text-xs text-slate-500 mb-1">{item.diaChiPhong}</p>
+                    )}
                     <div className="text-2xl font-black text-slate-900">{formatPrice(item.tienThueHangThang)}/tháng</div>
                   </div>
 

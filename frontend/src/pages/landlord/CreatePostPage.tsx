@@ -16,11 +16,12 @@ import {
 import { postService } from '../../services/postService';
 import { adminService } from '../../services/adminService';
 import { CreatePostRequest } from '../../types/post.types';
+import LeafletMapPicker from '../../components/map/LeafletMapPicker';
 
 interface Amenity {
   id: number;
   name: string;
-  icon?: string;
+  icon?: string | null;
 }
 
 const CreatePostPage: React.FC = () => {
@@ -43,6 +44,8 @@ const CreatePostPage: React.FC = () => {
     district: '',
     ward: '',
     address: '',
+    latitude: undefined,
+    longitude: undefined,
     amenityIds: [],
     imageUrls: [],
   });
@@ -79,6 +82,8 @@ const CreatePostPage: React.FC = () => {
             district: post.district,
             ward: post.ward,
             address: post.address,
+            latitude: post.latitude,
+            longitude: post.longitude,
             amenityIds: post.amenities.map((a) => a.id),
             imageUrls: post.imageUrls || [],
           });
@@ -388,6 +393,44 @@ const CreatePostPage: React.FC = () => {
                 />
               </div>
             </div>
+          </div>
+
+          {/* Vị trí trên bản đồ */}
+          <div className="rounded-3xl border-2 border-purple-100 bg-white shadow-xl p-8 hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-md">
+                <FiMapPin className="text-white text-xl" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-slate-800">Vị trí trên bản đồ</h2>
+                <p className="text-sm text-slate-600">Chọn vị trí chính xác để người thuê dễ tìm kiếm</p>
+              </div>
+            </div>
+
+            <LeafletMapPicker
+              latitude={formData.latitude ?? undefined}
+              longitude={formData.longitude ?? undefined}
+              address={formData.address}
+              ward={formData.ward}
+              district={formData.district}
+              province={formData.province}
+              onLocationChange={(lat, lng) => {
+                if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+                  setFormData(prev => ({
+                    ...prev,
+                    latitude: lat,
+                    longitude: lng,
+                  }));
+                }
+              }}
+            />
+
+            {formData.latitude && formData.longitude && (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
+                <FiCheckCircle className="inline mr-1" />
+                Tọa độ: {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
+              </div>
+            )}
           </div>
 
           {/* Tiện ích */}

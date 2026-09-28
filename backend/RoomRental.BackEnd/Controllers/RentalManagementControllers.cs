@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RoomRental.BackEnd.DTO.Common;
@@ -41,9 +41,80 @@ public class ContractController : ControllerBase
 {
     private readonly IRentalContractService _service;
     public ContractController(IRentalContractService service) => _service = service;
-    [HttpPost][Authorize(Roles="Landlord,Admin")] public async Task<IActionResult> Tao([FromBody] TaoHopDongDto dto) => Ok(ApiResponse<HopDongDto>.SuccessResponse(await _service.TaoAsync(Id(), dto), "Tạo hợp đồng thành công"));
-    [HttpGet("cua-toi")] public async Task<IActionResult> CuaToi() => Ok(ApiResponse<List<HopDongDto>>.SuccessResponse(await _service.LayCuaToiAsync(Id())));
-    [HttpPut("{id:int}/xac-nhan")] public async Task<IActionResult> XacNhan(int id) => Ok(ApiResponse<HopDongDto>.SuccessResponse(await _service.XacNhanAsync(Id(), id), "Xác nhận hợp đồng thành công"));
+
+    [HttpPost]
+    [Authorize(Roles="Landlord,Admin")]
+    public async Task<IActionResult> Tao([FromBody] TaoHopDongDto dto)
+    {
+        try
+        {
+            var result = await _service.TaoAsync(Id(), dto);
+            return Ok(ApiResponse<HopDongDto>.SuccessResponse(result, "Tạo hợp đồng thành công"));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse<HopDongDto>.ErrorResponse(ex.Message));
+        }
+    }
+
+    [HttpGet("cua-toi")]
+    public async Task<IActionResult> CuaToi()
+    {
+        try
+        {
+            var result = await _service.LayCuaToiAsync(Id());
+            return Ok(ApiResponse<List<HopDongDto>>.SuccessResponse(result));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse<List<HopDongDto>>.ErrorResponse(ex.Message));
+        }
+    }
+
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> LayChiTiet(int id)
+    {
+        try
+        {
+            var result = await _service.LayChiTietAsync(Id(), id);
+            return Ok(ApiResponse<HopDongDto>.SuccessResponse(result));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse<HopDongDto>.ErrorResponse(ex.Message));
+        }
+    }
+
+    [HttpPut("{id:int}/xac-nhan")]
+    public async Task<IActionResult> XacNhan(int id)
+    {
+        try
+        {
+            var result = await _service.XacNhanAsync(Id(), id);
+            return Ok(ApiResponse<HopDongDto>.SuccessResponse(result, "Xác nhận hợp đồng thành công"));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse<HopDongDto>.ErrorResponse(ex.Message));
+        }
+    }
+
+    [HttpPut("{id:int}/cham-dut")]
+    [HttpPost("{id:int}/terminate")]
+    [Authorize(Roles="Landlord,Admin")]
+    public async Task<IActionResult> ChamDut(int id, [FromBody] ChamDutHopDongDto? dto = null)
+    {
+        try
+        {
+            var result = await _service.ChamDutAsync(Id(), id, dto?.LyDo);
+            return Ok(ApiResponse<HopDongDto>.SuccessResponse(result, "Chấm dứt hợp đồng thuê phòng thành công"));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse<HopDongDto>.ErrorResponse(ex.Message));
+        }
+    }
+
     private int Id() => int.Parse(User.FindFirst("UserId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 }
 

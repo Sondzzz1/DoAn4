@@ -1,26 +1,29 @@
-﻿namespace RoomRental.BackEnd.DTO.Amenity;
-
-using System.Text.Json.Serialization;
+namespace RoomRental.BackEnd.DTO.Amenity;
 
 public class AmenityDto
 {
     public int Id { get; set; }
-    [JsonIgnore] public string Name { get; set; } = string.Empty;
-    [JsonIgnore] public string? Icon { get; set; }
-    [JsonIgnore] public string? Description { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? Icon { get; set; }
+    public string? Description { get; set; }
     public bool IsActive { get; set; }
 }
 
 public class CreateAmenityDto
 {
-    public string Name { get; set; } = string.Empty;
-    public string TenTienIch { get => Name; set => Name = value; }
+    public string? Name { get; set; }
+    public string? TenTienIch { get; set; }
     public string? Icon { get; set; }
-    public string? BieuTuong { get => Icon; set => Icon = value; }
+    public string? BieuTuong { get; set; }
     public string? Description { get; set; }
-    public string? MoTa { get => Description; set => Description = value; }
-    [JsonIgnore] public bool IsActive { get; set; } = true;
-    public bool DangHoatDong { get => IsActive; set => IsActive = value; }
+    public string? MoTa { get; set; }
+    public bool? IsActive { get; set; }
+    public bool? DangHoatDong { get; set; }
+
+    public string GetName() => !string.IsNullOrWhiteSpace(Name) ? Name : (TenTienIch ?? string.Empty);
+    public string? GetIcon() => !string.IsNullOrWhiteSpace(Icon) ? Icon : BieuTuong;
+    public string? GetDescription() => !string.IsNullOrWhiteSpace(Description) ? Description : MoTa;
+    public bool GetIsActive() => IsActive ?? DangHoatDong ?? true;
 }
 
 public class UpdateAmenityDto : CreateAmenityDto

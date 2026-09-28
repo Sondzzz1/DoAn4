@@ -1,5 +1,3 @@
-﻿using System.Text.Json.Serialization;
-
 namespace RoomRental.BackEnd.DTO.Blog;
 
 public class BlogPostDto
@@ -22,21 +20,22 @@ public class BlogPostDto
 
 public class CreateBlogPostDto
 {
-    [JsonIgnore]
-    public string Title { get; set; } = string.Empty;
-    public string TieuDe { get => Title; set => Title = value; }
-    [JsonIgnore]
+    public string? Title { get; set; }
+    public string? TieuDe { get; set; }
     public string? Summary { get; set; }
-    public string? TomTat { get => Summary; set => Summary = value; }
-    [JsonIgnore]
-    public string Content { get; set; } = string.Empty;
-    public string NoiDung { get => Content; set => Content = value; }
-    [JsonIgnore]
+    public string? TomTat { get; set; }
+    public string? Content { get; set; }
+    public string? NoiDung { get; set; }
     public string? ImageUrl { get; set; }
-    public string? DuongDanAnh { get => ImageUrl; set => ImageUrl = value; }
-    [JsonIgnore]
-    public int Status { get; set; } = 1; // Published by default
-    public int TrangThai { get => Status; set => Status = value; }
+    public string? DuongDanAnh { get; set; }
+    public int? Status { get; set; }
+    public int? TrangThai { get; set; }
+
+    public string GetTitle() => !string.IsNullOrWhiteSpace(Title) ? Title : (TieuDe ?? string.Empty);
+    public string? GetSummary() => !string.IsNullOrWhiteSpace(Summary) ? Summary : TomTat;
+    public string GetContent() => !string.IsNullOrWhiteSpace(Content) ? Content : (NoiDung ?? string.Empty);
+    public string? GetImageUrl() => !string.IsNullOrWhiteSpace(ImageUrl) ? ImageUrl : DuongDanAnh;
+    public int GetStatus() => Status ?? TrangThai ?? 1; // Published by default
 }
 
 public class UpdateBlogPostDto : CreateBlogPostDto
@@ -56,7 +55,8 @@ public class BlogCommentDto
 
 public class CreateBlogCommentDto
 {
-    [JsonIgnore]
-    public string Content { get; set; } = string.Empty;
-    public string NoiDung { get => Content; set => Content = value; }
+    public string? Content { get; set; }
+    public string? NoiDung { get; set; }
+
+    public string GetContent() => !string.IsNullOrWhiteSpace(Content) ? Content : (NoiDung ?? string.Empty);
 }

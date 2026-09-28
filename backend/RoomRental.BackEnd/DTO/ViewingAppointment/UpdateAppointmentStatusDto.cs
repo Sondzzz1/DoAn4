@@ -1,13 +1,18 @@
-﻿namespace RoomRental.BackEnd.DTO.ViewingAppointment;
-
-using System.Text.Json.Serialization;
+namespace RoomRental.BackEnd.DTO.ViewingAppointment;
 
 public class UpdateAppointmentStatusDto
 {
-    [JsonIgnore] public string? Reason { get; set; }
+    public string? Reason { get; set; }
     public string? LyDo { get; set; }
-    [JsonIgnore] public string? Response { get; set; }
-    public string? PhanHoi { get => Response; set => Response = value; }
+    public string? Response { get; set; }
+    public string? PhanHoi { get; set; }
 
-    public string? GetReason() => !string.IsNullOrWhiteSpace(Response) ? Response : (!string.IsNullOrWhiteSpace(LyDo) ? LyDo : Reason);
+    public string? GetReason()
+    {
+        if (!string.IsNullOrWhiteSpace(Response)) return Response;
+        if (!string.IsNullOrWhiteSpace(PhanHoi)) return PhanHoi;
+        if (!string.IsNullOrWhiteSpace(LyDo)) return LyDo;
+        if (!string.IsNullOrWhiteSpace(Reason)) return Reason;
+        return null;
+    }
 }

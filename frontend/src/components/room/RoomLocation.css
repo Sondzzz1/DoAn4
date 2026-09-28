@@ -129,6 +129,50 @@
   font-size: 14px;
 }
 
+/* Room Location Card - No Map State */
+.room-location-no-map {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  background: #f9fafb;
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  min-height: 300px;
+}
+
+.room-location-no-map svg {
+  color: #9ca3af;
+  margin-bottom: 16px;
+}
+
+.no-map-title {
+  margin: 0 0 8px;
+  color: #4b5563;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.no-map-subtitle {
+  margin: 0 0 16px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.no-map-address {
+  margin: 0;
+  padding: 12px 20px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 500;
+  max-width: 400px;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .room-location-header {

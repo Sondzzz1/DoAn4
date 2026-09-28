@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RoomRental.BackEnd.DTO.ViewingAppointment;
 using RoomRental.BackEnd.BLL.Interfaces;
 using RoomRental.BackEnd.Models;
@@ -23,9 +23,10 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
     {
         var tenant = await GetOrCreateTenantProfileAsync(tenantAccountId);
 
+        var postId = createDto.GetPostId();
         var post = await _context.Posts
             .Include(p => p.Landlord)
-            .FirstOrDefaultAsync(p => p.Id == createDto.PostId);
+            .FirstOrDefaultAsync(p => p.Id == postId);
 
         if (post == null)
         {
@@ -39,7 +40,7 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
             throw new Exception("Thời gian hẹn xem phòng phải ở tương lai");
         }
 
-        var landlordId = createDto.LandlordId ?? post.LandlordId;
+        var landlordId = createDto.GetLandlordId() ?? post.LandlordId;
 
         var appointment = new ViewingAppointment
         {

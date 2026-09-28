@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RoomRental.BackEnd.DTO.Amenity;
 using RoomRental.BackEnd.BLL.Interfaces;
 using RoomRental.BackEnd.Models;
@@ -57,12 +57,13 @@ public class AmenityBLL : IAmenityService
 
     public async Task<AmenityDto> CreateAmenityAsync(CreateAmenityDto createDto)
     {
-        if (string.IsNullOrWhiteSpace(createDto.Name))
+        var name = createDto.GetName();
+        if (string.IsNullOrWhiteSpace(name))
         {
             throw new Exception("Tên tiện ích không được để trống");
         }
 
-        var exists = await _context.Amenities.AnyAsync(a => a.Name == createDto.Name.Trim());
+        var exists = await _context.Amenities.AnyAsync(a => a.Name == name);
         if (exists)
         {
             throw new Exception("Tiện ích này đã tồn tại");
@@ -70,10 +71,10 @@ public class AmenityBLL : IAmenityService
 
         var amenity = new Amenity
         {
-            Name = createDto.Name.Trim(),
-            Icon = createDto.Icon,
-            Description = createDto.Description,
-            IsActive = createDto.IsActive
+            Name = name,
+            Icon = createDto.GetIcon(),
+            Description = createDto.GetDescription(),
+            IsActive = createDto.GetIsActive()
         };
 
         _context.Amenities.Add(amenity);
@@ -90,14 +91,26 @@ public class AmenityBLL : IAmenityService
             throw new Exception("Không tìm thấy tiện ích");
         }
 
-        if (!string.IsNullOrWhiteSpace(updateDto.Name))
+        var name = updateDto.GetName();
+        if (!string.IsNullOrWhiteSpace(name))
         {
-            amenity.Name = updateDto.Name.Trim();
+            amenity.Name = name;
         }
 
-        amenity.Icon = updateDto.Icon;
-        amenity.Description = updateDto.Description;
-        amenity.IsActive = updateDto.IsActive;
+        if (updateDto.Icon != null || updateDto.BieuTuong != null)
+        {
+            amenity.Icon = updateDto.GetIcon();
+        }
+
+        if (updateDto.Description != null || updateDto.MoTa != null)
+        {
+            amenity.Description = updateDto.GetDescription();
+        }
+
+        if (updateDto.IsActive.HasValue || updateDto.DangHoatDong.HasValue)
+        {
+            amenity.IsActive = updateDto.GetIsActive();
+        }
 
         await _context.SaveChangesAsync();
 

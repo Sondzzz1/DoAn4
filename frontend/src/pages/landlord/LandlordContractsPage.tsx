@@ -102,7 +102,7 @@ const LandlordContractsPage: React.FC = () => {
       const [billsRes, contractsRes, requestsRes, depositsRes] = await Promise.all([
         monthlyBillService.getMyBills(true),
         rentalService.getMyContracts(),
-        rentalService.getMyRentalRequests(),
+        rentalService.getMyRentalRequests(true),
         rentalService.getMyDeposits(),
       ]);
 
@@ -269,6 +269,28 @@ const LandlordContractsPage: React.FC = () => {
     }
   };
 
+  // Handle Rental Request Approval / Rejection
+  const handleApproveRequest = async (requestId: number) => {
+    try {
+      await rentalService.updateRentalRequestStatus(requestId, 1);
+      toast.success('Đã duyệt yêu cầu thuê phòng! Bạn có thể tạo hợp đồng ngay.');
+      await loadData();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Không thể duyệt yêu cầu.');
+    }
+  };
+
+  const handleRejectRequest = async (requestId: number) => {
+    if (!window.confirm('Bạn có chắc chắn muốn từ chối yêu cầu thuê phòng này?')) return;
+    try {
+      await rentalService.updateRentalRequestStatus(requestId, 2);
+      toast.info('Đã từ chối yêu cầu thuê phòng.');
+      await loadData();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Không thể từ chối yêu cầu.');
+    }
+  };
+
   // Handle Create Contract from Request
   const handleOpenCreateContract = (req: RentalRequestDto) => {
     setSelectedRequestId(req.id);
@@ -282,29 +304,34 @@ const LandlordContractsPage: React.FC = () => {
 
     setSubmittingContract(true);
     try {
-      const response = await fetch('/api/hop-dong', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          yeuCauThueId: selectedRequestId,
-          ngayBatDau: new Date(contractStartDate).toISOString(),
-          ngayKetThuc: new Date(contractEndDate).toISOString(),
-          tienThueHangThang: contractRent,
-        }),
+      await rentalService.createContract({
+        yeuCauThueId: selectedRequestId,
+        ngayBatDau: new Date(contractStartDate).toISOString(),
+        ngayKetThuc: new Date(contractEndDate).toISOString(),
+        tienThueHangThang: contractRent,
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data?.message || 'Lỗi khi tạo hợp đồng');
 
       toast.success('Tạo hợp đồng thuê phòng thành công!');
       setContractModalOpen(false);
       await loadData();
     } catch (error: any) {
-      toast.error(error.message || 'Không thể tạo hợp đồng.');
+      toast.error(error?.response?.data?.message || 'Không thể tạo hợp đồng.');
     } finally {
       setSubmittingContract(false);
+    }
+  };
+
+  // Handle Terminate Contract
+  const handleTerminateContract = async (contractId: number) => {
+    const reason = window.prompt('Nhập lý do chấm dứt hợp đồng (hoặc để trống):');
+    if (reason === null) return;
+
+    try {
+      await rentalService.terminateContract(contractId, reason || undefined);
+      toast.success('Đã chấm dứt hợp đồng thành công! Trạng thái phòng đã được chuyển về Còn trống.');
+      await loadData();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Không thể chấm dứt hợp đồng.');
     }
   };
 
@@ -599,7 +626,9 @@ const LandlordContractsPage: React.FC = () => {
         <div className="space-y-4">
           {contracts.length === 0 ? (
             <div className="empty-state">
-              Chưa có hợp đồng nào được tạo.
+              <FiFileText className="empty-state-icon" />
+              <h3>Chưa có hợp đồng nào được tạo.</h3>
+              <p>Chuyển qua tab "Yêu Cầu Thuê Phòng" để duyệt yêu cầu và tạo hợp đồng mới.</p>
             </div>
           ) : (
             <div className="contracts-grid">
@@ -612,44 +641,72 @@ const LandlordContractsPage: React.FC = () => {
                       </span>
                       <span
                         className={`bill-status-badge ${
-                          con.trangThai === 1 ? 'paid' : 'pending'
+                          con.trangThai === 1 ? 'paid' : (con.trangThai === 2 ? 'expired' : 'pending')
                         }`}
                       >
-                        {con.trangThai === 1 ? 'Đang hiệu lực' : 'Chờ xác nhận'}
+                        {con.trangThai === 1 ? 'Đang hiệu lực' : (con.trangThai === 2 ? 'Đã chấm dứt' : 'Chờ xác nhận')}
                       </span>
                     </div>
+
+                    <h3 className="text-base font-bold text-slate-900 mt-2 mb-1">
+                      {con.tenPhong || `Phòng hợp đồng #${con.id}`}
+                    </h3>
 
                     <div className="contract-rent">
                       {formatPrice(con.tienThueHangThang)} <span>/ tháng</span>
                     </div>
 
-                    <div className="contract-details">
+                    <div className="contract-details space-y-1 text-xs text-slate-600 mt-3 bg-slate-50 p-3 rounded-xl">
+                      <div>
+                        Khách thuê: <strong>{con.tenNguoiThue}</strong> {con.sdtNguoiThue ? `(${con.sdtNguoiThue})` : ''}
+                      </div>
+                      {con.diaChiPhong && (
+                        <div className="line-clamp-1">
+                          Địa chỉ: <span>{con.diaChiPhong}</span>
+                        </div>
+                      )}
                       <div>
                         Thời hạn: <strong>{new Date(con.ngayBatDau).toLocaleDateString('vi-VN')}</strong> đến{' '}
                         <strong>{new Date(con.ngayKetThuc).toLocaleDateString('vi-VN')}</strong>
                       </div>
-                      <div>
-                        Chủ trọ ký: {con.chuTroDaXacNhan ? '✅ Đã ký điện tử' : '⏳ Chưa xác nhận'}
-                      </div>
-                      <div>
-                        Khách thuê ký: {con.nguoiThueDaXacNhan ? '✅ Đã ký điện tử' : '⏳ Chưa xác nhận'}
+                      <div className="flex items-center gap-3 pt-1 border-t border-slate-200">
+                        <span>Chủ trọ: {con.chuTroDaXacNhan ? '✅ Đã ký' : '⏳ Chưa ký'}</span>
+                        <span>Khách thuê: {con.nguoiThueDaXacNhan ? '✅ Đã ký' : '⏳ Chưa ký'}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="contract-card-actions">
-                    <button onClick={() => exportService.downloadContractPdf(con.id)}>
-                      <FiDownload /> Tải Hợp Đồng PDF
-                    </button>
+                  <div className="contract-card-actions mt-4 flex items-center gap-2 flex-wrap">
                     <button
-                      onClick={() => {
-                        setSelectedContractId(con.id);
-                        setRoomPrice(con.tienThueHangThang);
-                        setBillModalOpen(true);
-                      }}
+                      type="button"
+                      onClick={() => exportService.downloadContractPdf(con.id)}
+                      className="btn-success"
                     >
-                      <FiZap /> Lập Hóa Đơn
+                      <FiDownload /> Tải HĐ (PDF)
                     </button>
+                    {con.trangThai === 1 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedContractId(con.id);
+                            setRoomPrice(con.tienThueHangThang);
+                            setBillModalOpen(true);
+                          }}
+                          className="btn-primary"
+                        >
+                          <FiZap /> Lập Hóa Đơn
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleTerminateContract(con.id)}
+                          className="btn-danger"
+                          title="Chấm dứt hợp đồng và trả phòng về còn trống"
+                        >
+                          <FiAlertCircle /> Chấm Dứt HĐ
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
@@ -663,13 +720,89 @@ const LandlordContractsPage: React.FC = () => {
         <div className="space-y-4">
           {requests.length === 0 ? (
             <div className="empty-state">
-              Chưa có yêu cầu thuê phòng nào.
+              <FiUsers className="empty-state-icon" />
+              <h3>Chưa có yêu cầu thuê phòng nào từ khách.</h3>
+              <p>Khi khách thuê gửi yêu cầu thuê phòng, danh sách sẽ hiển thị tại đây.</p>
             </div>
           ) : (
-            <div className="empty-state">
-              <FiUsers className="empty-state-icon" />
-              <h3>Tính năng đang được phát triển</h3>
-              <p>Quản lý yêu cầu thuê phòng sẽ có sớm.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {requests.map((req) => (
+                <div
+                  key={req.id}
+                  className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow transition-all space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
+                          Yêu cầu #{req.id}
+                        </span>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                            req.trangThai === 1
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : req.trangThai === 2
+                              ? 'bg-rose-100 text-rose-700'
+                              : 'bg-amber-100 text-amber-700'
+                          }`}
+                        >
+                          {req.trangThai === 1
+                            ? 'Đã duyệt'
+                            : req.trangThai === 2
+                            ? 'Đã từ chối'
+                            : 'Chờ duyệt'}
+                        </span>
+                      </div>
+                      <h4 className="font-bold text-slate-900 mt-1 text-base">
+                        {req.tieuDeBaiDang || `Bài đăng #${req.baiDangId}`}
+                      </h4>
+                    </div>
+                    <span className="text-xs text-slate-400">
+                      {new Date(req.ngayTao).toLocaleDateString('vi-VN')}
+                    </span>
+                  </div>
+
+                  <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl space-y-1">
+                    <div>
+                      Mã khách thuê: <strong>#{req.nguoiThueId}</strong>
+                    </div>
+                    <div>
+                      Ghi chú: <span className="italic text-slate-700">"{req.ghiChu || 'Không có ghi chú'}"</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2">
+                    {req.trangThai === 0 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleApproveRequest(req.id)}
+                          className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm cursor-pointer transition-all border-none flex items-center gap-1.5"
+                        >
+                          <FiCheck /> Duyệt Yêu Cầu
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRejectRequest(req.id)}
+                          className="px-3.5 py-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 font-bold text-xs rounded-xl cursor-pointer transition-all border border-slate-200"
+                        >
+                          Từ Chối
+                        </button>
+                      </>
+                    )}
+
+                    {req.trangThai === 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenCreateContract(req)}
+                        className="px-4 py-2 bg-[#0084ff] hover:bg-blue-600 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer transition-all border-none flex items-center gap-1.5"
+                      >
+                        <FiPlus /> Tạo Hợp Đồng Thuê
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

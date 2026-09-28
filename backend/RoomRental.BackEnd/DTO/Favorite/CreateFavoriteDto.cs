@@ -1,9 +1,9 @@
-﻿namespace RoomRental.BackEnd.DTO.Favorite;
-
-using System.Text.Json.Serialization;
+namespace RoomRental.BackEnd.DTO.Favorite;
 
 public class CreateFavoriteDto
 {
-    [JsonIgnore] public int PostId { get; set; }
+    public int PostId { get; set; }
     public int BaiDangId { get => PostId; set => PostId = value; }
+
+    public int GetPostId() => PostId > 0 ? PostId : BaiDangId;
 }

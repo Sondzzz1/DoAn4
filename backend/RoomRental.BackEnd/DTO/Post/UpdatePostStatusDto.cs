@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
+using System.ComponentModel.DataAnnotations;
 using RoomRental.BackEnd.Models.Enums;
 
 namespace RoomRental.BackEnd.DTO.Post;
@@ -9,7 +8,8 @@ namespace RoomRental.BackEnd.DTO.Post;
 /// </summary>
 public class UpdatePostStatusDto
 {
-    [Required]
-    [JsonIgnore] public PostStatus Status { get; set; }
-    public PostStatus TrangThai { get => Status; set => Status = value; }
+    public PostStatus? Status { get; set; }
+    public PostStatus? TrangThai { get; set; }
+
+    public PostStatus GetStatus() => Status ?? TrangThai ?? PostStatus.Approved;
 }

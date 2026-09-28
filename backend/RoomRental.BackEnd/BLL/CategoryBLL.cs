@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RoomRental.BackEnd.DTO.Category;
 using RoomRental.BackEnd.BLL.Interfaces;
 using RoomRental.BackEnd.Models;
@@ -62,12 +62,13 @@ public class CategoryBLL : ICategoryService
 
     public async Task<CategoryDto> CreateCategoryAsync(CreateCategoryDto createDto)
     {
-        if (string.IsNullOrWhiteSpace(createDto.Name))
+        var name = createDto.GetName();
+        if (string.IsNullOrWhiteSpace(name))
         {
             throw new Exception("Tên danh mục không được để trống");
         }
 
-        var exists = await _context.RoomCategories.AnyAsync(c => c.Name == createDto.Name.Trim());
+        var exists = await _context.RoomCategories.AnyAsync(c => c.Name == name);
         if (exists)
         {
             throw new Exception("Tên danh mục này đã tồn tại");
@@ -75,10 +76,10 @@ public class CategoryBLL : ICategoryService
 
         var category = new RoomCategory
         {
-            Name = createDto.Name.Trim(),
-            Description = createDto.Description,
-            ImageUrl = createDto.ImageUrl,
-            IsActive = createDto.IsActive
+            Name = name,
+            Description = createDto.GetDescription(),
+            ImageUrl = createDto.GetImageUrl(),
+            IsActive = createDto.GetIsActive()
         };
 
         _context.RoomCategories.Add(category);
@@ -95,14 +96,26 @@ public class CategoryBLL : ICategoryService
             throw new Exception("Không tìm thấy danh mục phòng");
         }
 
-        if (!string.IsNullOrWhiteSpace(updateDto.Name))
+        var name = updateDto.GetName();
+        if (!string.IsNullOrWhiteSpace(name))
         {
-            category.Name = updateDto.Name.Trim();
+            category.Name = name;
         }
 
-        category.Description = updateDto.Description;
-        category.ImageUrl = updateDto.ImageUrl;
-        category.IsActive = updateDto.IsActive;
+        if (updateDto.Description != null || updateDto.MoTa != null)
+        {
+            category.Description = updateDto.GetDescription();
+        }
+
+        if (updateDto.ImageUrl != null || updateDto.DuongDanAnh != null)
+        {
+            category.ImageUrl = updateDto.GetImageUrl();
+        }
+
+        if (updateDto.IsActive.HasValue || updateDto.DangHoatDong.HasValue)
+        {
+            category.IsActive = updateDto.GetIsActive();
+        }
 
         await _context.SaveChangesAsync();
 

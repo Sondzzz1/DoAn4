@@ -1,6 +1,4 @@
-﻿namespace RoomRental.BackEnd.DTO.Admin;
-
-using System.Text.Json.Serialization;
+namespace RoomRental.BackEnd.DTO.Admin;
 
 public class AdminUserDto
 {
@@ -37,7 +35,6 @@ public class AdminLandlordDto
 
 public class RejectPostDto
 {
-    [JsonIgnore]
     public string? Reason { get; set; }
     public string? LyDo { get; set; }
 

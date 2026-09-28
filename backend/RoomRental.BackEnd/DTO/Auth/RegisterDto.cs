@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
+using System.ComponentModel.DataAnnotations;
 
 namespace RoomRental.BackEnd.DTO.Auth;
 
@@ -9,7 +8,6 @@ namespace RoomRental.BackEnd.DTO.Auth;
 public class RegisterDto
 {
     [StringLength(100, ErrorMessage = "Họ tên không được vượt quá 100 ký tự")]
-    [JsonIgnore]
     public string? FullName { get; set; }
 
     [StringLength(100, ErrorMessage = "Họ tên không được vượt quá 100 ký tự")]
@@ -21,7 +19,6 @@ public class RegisterDto
 
     [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
     [StringLength(20, ErrorMessage = "Số điện thoại không được vượt quá 20 ký tự")]
-    [JsonIgnore]
     public string? Phone { get; set; }
 
     [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
@@ -29,17 +26,14 @@ public class RegisterDto
     public string? SoDienThoai { get; set; }
 
     [StringLength(100, MinimumLength = 6, ErrorMessage = "Mật khẩu phải từ 6 đến 100 ký tự")]
-    [JsonIgnore]
     public string? Password { get; set; }
 
     [StringLength(100, MinimumLength = 6, ErrorMessage = "Mật khẩu phải từ 6 đến 100 ký tự")]
     public string? MatKhau { get; set; }
 
-    [JsonIgnore]
     public string? ConfirmPassword { get; set; }
-    public string? XacNhanMatKhau { get => ConfirmPassword; set => ConfirmPassword = value; }
+    public string? XacNhanMatKhau { get; set; }
 
-    [JsonIgnore]
     public string? RoleName { get; set; }
     public string? VaiTro { get; set; }
 

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RoomRental.BackEnd.DTO.Room;
 using RoomRental.BackEnd.BLL.Interfaces;
 using RoomRental.BackEnd.Models;
@@ -72,7 +72,8 @@ public class RoomBLL : IRoomService
     {
         var landlord = await GetOrCreateLandlordProfileAsync(landlordAccountId);
 
-        if (string.IsNullOrWhiteSpace(createDto.RoomName))
+        var roomName = createDto.GetRoomName();
+        if (string.IsNullOrWhiteSpace(roomName))
         {
             throw new Exception("Tên phòng không được để trống");
         }
@@ -80,25 +81,25 @@ public class RoomBLL : IRoomService
         var room = new Room
         {
             LandlordId = landlord.Id,
-            CategoryId = createDto.CategoryId > 0 ? createDto.CategoryId : 1,
-            RoomName = createDto.RoomName,
-            Description = createDto.Description,
-            Price = createDto.Price,
-            Area = createDto.Area > 0 ? createDto.Area : 20,
-            MaxOccupants = createDto.MaxOccupants > 0 ? createDto.MaxOccupants : 2,
+            CategoryId = createDto.GetCategoryId(),
+            RoomName = roomName,
+            Description = createDto.GetDescription(),
+            Price = createDto.GetPrice(),
+            Area = createDto.GetArea() > 0 ? createDto.GetArea() : 20,
+            MaxOccupants = createDto.GetMaxOccupants() > 0 ? createDto.GetMaxOccupants() : 2,
             CurrentOccupants = 0,
-            Bedrooms = createDto.Bedrooms,
-            Bathrooms = createDto.Bathrooms,
-            Floor = createDto.Floor,
-            Address = createDto.Address,
-            Ward = createDto.Ward,
-            District = createDto.District,
-            Province = createDto.Province,
-            Latitude = createDto.Latitude,
-            Longitude = createDto.Longitude,
-            ElectricityPrice = createDto.ElectricityPrice,
-            WaterPrice = createDto.WaterPrice,
-            ServiceFee = createDto.ServiceFee,
+            Bedrooms = createDto.GetBedrooms(),
+            Bathrooms = createDto.GetBathrooms(),
+            Floor = createDto.GetFloor(),
+            Address = createDto.GetAddress(),
+            Ward = createDto.GetWard(),
+            District = createDto.GetDistrict(),
+            Province = createDto.GetProvince(),
+            Latitude = createDto.GetLatitude(),
+            Longitude = createDto.GetLongitude(),
+            ElectricityPrice = createDto.GetElectricityPrice(),
+            WaterPrice = createDto.GetWaterPrice(),
+            ServiceFee = createDto.GetServiceFee(),
             Status = RoomStatus.Available,
             CreatedAt = DateTime.Now
         };
@@ -156,24 +157,49 @@ public class RoomBLL : IRoomService
             throw new Exception("Bạn không có quyền chỉnh sửa phòng này");
         }
 
-        room.RoomName = updateDto.RoomName;
-        room.Description = updateDto.Description;
-        room.Price = updateDto.Price;
-        room.Area = updateDto.Area;
-        room.MaxOccupants = updateDto.MaxOccupants;
-        room.CategoryId = updateDto.CategoryId;
-        room.Bedrooms = updateDto.Bedrooms;
-        room.Bathrooms = updateDto.Bathrooms;
-        room.Floor = updateDto.Floor;
-        room.Address = updateDto.Address;
-        room.Ward = updateDto.Ward;
-        room.District = updateDto.District;
-        room.Province = updateDto.Province;
-        room.Latitude = updateDto.Latitude;
-        room.Longitude = updateDto.Longitude;
-        room.ElectricityPrice = updateDto.ElectricityPrice;
-        room.WaterPrice = updateDto.WaterPrice;
-        room.ServiceFee = updateDto.ServiceFee;
+        var updateName = updateDto.GetRoomName();
+        if (!string.IsNullOrWhiteSpace(updateName))
+        {
+            room.RoomName = updateName;
+        }
+
+        if (updateDto.Description != null || updateDto.MoTa != null)
+        {
+            room.Description = updateDto.GetDescription();
+        }
+
+        if (updateDto.Price.HasValue || updateDto.Gia.HasValue)
+        {
+            room.Price = updateDto.GetPrice();
+        }
+
+        if (updateDto.Area.HasValue || updateDto.DienTich.HasValue)
+        {
+            room.Area = updateDto.GetArea();
+        }
+
+        if (updateDto.MaxOccupants.HasValue || updateDto.SoNguoiToiDa.HasValue)
+        {
+            room.MaxOccupants = updateDto.GetMaxOccupants();
+        }
+
+        if (updateDto.CategoryId.HasValue || updateDto.DanhMucId.HasValue)
+        {
+            room.CategoryId = updateDto.GetCategoryId();
+        }
+
+        room.Bedrooms = updateDto.GetBedrooms() ?? room.Bedrooms;
+        room.Bathrooms = updateDto.GetBathrooms() ?? room.Bathrooms;
+        room.Floor = updateDto.GetFloor() ?? room.Floor;
+        if (!string.IsNullOrWhiteSpace(updateDto.GetAddress())) room.Address = updateDto.GetAddress();
+        if (!string.IsNullOrWhiteSpace(updateDto.GetWard())) room.Ward = updateDto.GetWard();
+        if (!string.IsNullOrWhiteSpace(updateDto.GetDistrict())) room.District = updateDto.GetDistrict();
+        if (!string.IsNullOrWhiteSpace(updateDto.GetProvince())) room.Province = updateDto.GetProvince();
+        room.Latitude = updateDto.GetLatitude() ?? room.Latitude;
+        room.Longitude = updateDto.GetLongitude() ?? room.Longitude;
+        room.ElectricityPrice = updateDto.GetElectricityPrice() ?? room.ElectricityPrice;
+        room.WaterPrice = updateDto.GetWaterPrice() ?? room.WaterPrice;
+        room.ServiceFee = updateDto.GetServiceFee() ?? room.ServiceFee;
         room.UpdatedAt = DateTime.Now;
 
         if (updateDto.AmenityIds != null)

@@ -1,6 +1,6 @@
 import React from 'react';
-import { FiMapPin, FiExternalLink } from 'react-icons/fi';
-import LeafletMap from '../map/LeafletMap';
+import { FiMapPin } from 'react-icons/fi';
+import LeafletMapView from '../map/LeafletMapView';
 import './RoomLocation.css';
 
 interface RoomLocationProps {
@@ -26,16 +26,14 @@ const RoomLocation: React.FC<RoomLocationProps> = ({
     .filter(Boolean)
     .join(', ');
 
-  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    fullAddress
-  )}`;
-
-  // Default coordinate if lat/lng is missing (Hanoi Center)
-  const defaultLat = 21.0285;
-  const defaultLng = 105.8542;
-
-  const lat = latitude || defaultLat;
-  const lng = longitude || defaultLng;
+  // Check if we have valid coordinates
+  const hasValidCoords = 
+    latitude !== null && 
+    latitude !== undefined && 
+    longitude !== null && 
+    longitude !== undefined &&
+    latitude >= -90 && latitude <= 90 && 
+    longitude >= -180 && longitude <= 180;
 
   return (
     <section className="room-location-card">
@@ -47,7 +45,9 @@ const RoomLocation: React.FC<RoomLocationProps> = ({
 
           <div>
             <h2 className="room-location-title">Vị trí phòng trọ</h2>
-            <p className="room-location-subtitle">Bản đồ số OpenStreetMap</p>
+            <p className="room-location-subtitle">
+              {hasValidCoords ? 'Bản đồ Google Maps' : 'Thông tin địa chỉ'}
+            </p>
           </div>
         </div>
       </div>
@@ -58,28 +58,20 @@ const RoomLocation: React.FC<RoomLocationProps> = ({
       </div>
 
       <div className="my-4">
-        <LeafletMap
-          height="320px"
-          singleRoom={{
-            latitude: lat,
-            longitude: lng,
-            title: title,
-            address: fullAddress,
-          }}
-          zoom={15}
-        />
-      </div>
-
-      <div className="pt-2">
-        <a
-          href={googleMapsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="room-location-google-link"
-        >
-          <FiExternalLink />
-          <span>Mở chỉ đường trên Google Maps</span>
-        </a>
+        {hasValidCoords ? (
+          <LeafletMapView
+            latitude={latitude!}
+            longitude={longitude!}
+            address={fullAddress}
+          />
+        ) : (
+          <div className="room-location-no-map">
+            <FiMapPin size={48} />
+            <p className="no-map-title">Vị trí bản đồ chưa được cập nhật</p>
+            <p className="no-map-subtitle">Chủ trọ chưa chọn vị trí trên bản đồ</p>
+            <p className="no-map-address">{fullAddress}</p>
+          </div>
+        )}
       </div>
     </section>
   );

@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
+using System.ComponentModel.DataAnnotations;
 
 namespace RoomRental.BackEnd.DTO.User;
 
@@ -8,17 +7,16 @@ namespace RoomRental.BackEnd.DTO.User;
 /// </summary>
 public class ChangePasswordDto
 {
-    [Required(ErrorMessage = "Mật khẩu hiện tại là bắt buộc")]
-    [JsonIgnore] public string CurrentPassword { get; set; } = string.Empty;
-    public string MatKhauHienTai { get => CurrentPassword; set => CurrentPassword = value; }
+    public string? CurrentPassword { get; set; }
+    public string? MatKhauHienTai { get; set; }
 
-    [Required(ErrorMessage = "Mật khẩu mới là bắt buộc")]
-    [StringLength(100, MinimumLength = 6, ErrorMessage = "Mật khẩu mới phải từ 6 đến 100 ký tự")]
-    [JsonIgnore] public string NewPassword { get; set; } = string.Empty;
-    public string MatKhauMoi { get => NewPassword; set => NewPassword = value; }
+    public string? NewPassword { get; set; }
+    public string? MatKhauMoi { get; set; }
 
-    [Required(ErrorMessage = "Xác nhận mật khẩu là bắt buộc")]
-    [Compare("NewPassword", ErrorMessage = "Mật khẩu xác nhận không khớp")]
-    [JsonIgnore] public string ConfirmPassword { get; set; } = string.Empty;
-    public string XacNhanMatKhau { get => ConfirmPassword; set => ConfirmPassword = value; }
+    public string? ConfirmPassword { get; set; }
+    public string? XacNhanMatKhau { get; set; }
+
+    public string GetCurrentPassword() => !string.IsNullOrWhiteSpace(CurrentPassword) ? CurrentPassword : (MatKhauHienTai ?? string.Empty);
+    public string GetNewPassword() => !string.IsNullOrWhiteSpace(NewPassword) ? NewPassword : (MatKhauMoi ?? string.Empty);
+    public string GetConfirmPassword() => !string.IsNullOrWhiteSpace(ConfirmPassword) ? ConfirmPassword : (XacNhanMatKhau ?? string.Empty);
 }

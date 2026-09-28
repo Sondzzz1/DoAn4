@@ -30,9 +30,17 @@ export interface ContractDto {
   ngayBatDau: string;
   ngayKetThuc: string;
   tienThueHangThang: number;
+  tienDatCoc?: number;
   trangThai: number; // 0: Chờ xác nhận, 1: Đang hiệu lực, 2: Đã kết thúc
   nguoiThueDaXacNhan: boolean;
   chuTroDaXacNhan: boolean;
+  ngayTao?: string;
+  tenPhong?: string;
+  diaChiPhong?: string;
+  tenNguoiThue?: string;
+  sdtNguoiThue?: string;
+  tenChuTro?: string;
+  sdtChuTro?: string;
 }
 
 export interface IncidentDto {
@@ -63,8 +71,14 @@ export const rentalService = {
     return response.data;
   },
 
-  getMyRentalRequests: async (): Promise<ApiResponse<RentalRequestDto[]>> => {
-    const response = await api.get<ApiResponse<RentalRequestDto[]>>('/yeu-cau-thue/cua-toi');
+  getMyRentalRequests: async (isLandlord?: boolean): Promise<ApiResponse<RentalRequestDto[]>> => {
+    const endpoint = isLandlord ? '/yeu-cau-thue/chu-tro' : '/yeu-cau-thue/cua-toi';
+    const response = await api.get<ApiResponse<RentalRequestDto[]>>(endpoint);
+    return response.data;
+  },
+
+  updateRentalRequestStatus: async (id: number, trangThai: number, ghiChu?: string): Promise<ApiResponse<RentalRequestDto>> => {
+    const response = await api.put<ApiResponse<RentalRequestDto>>(`/yeu-cau-thue/${id}/trang-thai`, { trangThai, ghiChu });
     return response.data;
   },
 
@@ -80,13 +94,28 @@ export const rentalService = {
   },
 
   // Hợp đồng
+  createContract: async (data: { yeuCauThueId: number; ngayBatDau: string; ngayKetThuc: string; tienThueHangThang: number }): Promise<ApiResponse<ContractDto>> => {
+    const response = await api.post<ApiResponse<ContractDto>>('/hop-dong', data);
+    return response.data;
+  },
+
   getMyContracts: async (): Promise<ApiResponse<ContractDto[]>> => {
     const response = await api.get<ApiResponse<ContractDto[]>>('/hop-dong/cua-toi');
     return response.data;
   },
 
+  getContractDetail: async (id: number): Promise<ApiResponse<ContractDto>> => {
+    const response = await api.get<ApiResponse<ContractDto>>(`/hop-dong/${id}`);
+    return response.data;
+  },
+
   confirmContract: async (id: number): Promise<ApiResponse<ContractDto>> => {
     const response = await api.put<ApiResponse<ContractDto>>(`/hop-dong/${id}/xac-nhan`);
+    return response.data;
+  },
+
+  terminateContract: async (id: number, lyDo?: string): Promise<ApiResponse<ContractDto>> => {
+    const response = await api.put<ApiResponse<ContractDto>>(`/hop-dong/${id}/cham-dut`, { lyDo });
     return response.data;
   },
 

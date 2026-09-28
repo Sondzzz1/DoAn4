@@ -24,8 +24,9 @@ export enum RoomStatus {
 export interface Amenity {
   id: number;
   name: string;
-  icon: string;
-  description: string;
+  icon?: string | null;
+  description?: string | null;
+  isActive?: boolean;
 }
 
 /**
@@ -104,6 +105,8 @@ export interface CreatePostRequest {
   district: string;
   ward: string;
   address: string;
+  latitude?: number;
+  longitude?: number;
   amenityIds: number[];
   imageUrls: string[];
 }
@@ -121,6 +124,8 @@ export interface UpdatePostRequest {
   district: string;
   ward: string;
   address: string;
+  latitude?: number;
+  longitude?: number;
   amenityIds: number[];
   imageUrls: string[];
 }

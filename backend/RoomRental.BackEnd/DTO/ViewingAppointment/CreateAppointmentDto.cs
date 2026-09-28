@@ -1,24 +1,26 @@
-﻿namespace RoomRental.BackEnd.DTO.ViewingAppointment;
-
-using System.Text.Json.Serialization;
+namespace RoomRental.BackEnd.DTO.ViewingAppointment;
 
 /// <summary>
 /// DTO đặt lịch xem phòng từ Tenant
-/// Hỗ trợ cả property tiếng Anh và tiếng Việt (Mục 7)
+/// Hỗ trợ cả property tiếng Anh và tiếng Việt
 /// </summary>
 public class CreateAppointmentDto
 {
-    [JsonIgnore] public int PostId { get; set; }
+    public int PostId { get; set; }
     public int BaiDangId { get => PostId; set => PostId = value; }
-    [JsonIgnore] public int? LandlordId { get; set; }
+
+    public int? LandlordId { get; set; }
     public int? ChuTroId { get => LandlordId; set => LandlordId = value; }
 
     public string? NgayXem { get; set; }
     public string? GioXem { get; set; }
-    [JsonIgnore] public DateTime? ScheduledAt { get; set; }
+    public DateTime? ScheduledAt { get; set; }
 
     public string? GhiChu { get; set; }
-    [JsonIgnore] public string? TenantNote { get; set; }
+    public string? TenantNote { get; set; }
+
+    public int GetPostId() => PostId > 0 ? PostId : BaiDangId;
+    public int? GetLandlordId() => LandlordId ?? ChuTroId;
 
     public DateTime GetScheduledDateTime()
     {

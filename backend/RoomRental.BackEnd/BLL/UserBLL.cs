@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RoomRental.BackEnd.DTO.User;
 using RoomRental.BackEnd.BLL.Interfaces;
 using RoomRental.BackEnd.Models;
@@ -116,9 +116,22 @@ public class UserBLL : IUserService
             throw new Exception("Không tìm thấy người dùng");
         }
 
+        var currentPassword = changePasswordDto.GetCurrentPassword();
+        var newPassword = changePasswordDto.GetNewPassword();
+
+        if (string.IsNullOrWhiteSpace(currentPassword))
+        {
+            throw new Exception("Vui lòng nhập mật khẩu hiện tại");
+        }
+
+        if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
+        {
+            throw new Exception("Mật khẩu mới phải có ít nhất 6 ký tự");
+        }
+
         // Verify mật khẩu hiện tại
         var isCurrentPasswordValid = BCrypt.Net.BCrypt.Verify(
-            changePasswordDto.CurrentPassword, 
+            currentPassword, 
             user.PasswordHash
         );
 
@@ -128,7 +141,7 @@ public class UserBLL : IUserService
         }
 
         // Hash mật khẩu mới
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(changePasswordDto.NewPassword);
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
         user.UpdatedAt = DateTime.Now;
 
         await _context.SaveChangesAsync();

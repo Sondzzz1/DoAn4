@@ -1,20 +1,19 @@
-﻿namespace RoomRental.BackEnd.DTO.Room;
-
-using System.Text.Json.Serialization;
+namespace RoomRental.BackEnd.DTO.Room;
 
 public class UpdateRoomStatusDto
 {
-    [JsonIgnore] public string? Status { get; set; }
-    [JsonIgnore] public RoomRental.BackEnd.Models.Enums.RoomStatus? DesiredStatus { get; set; }
-    public string? TrangThai { get => Status; set => Status = value; }
+    public string? Status { get; set; }
+    public RoomRental.BackEnd.Models.Enums.RoomStatus? DesiredStatus { get; set; }
+    public string? TrangThai { get; set; }
 
     public RoomRental.BackEnd.Models.Enums.RoomStatus GetResolvedStatus()
     {
         if (DesiredStatus.HasValue) return DesiredStatus.Value;
 
-        if (!string.IsNullOrWhiteSpace(Status))
+        var rawStatus = !string.IsNullOrWhiteSpace(Status) ? Status : TrangThai;
+        if (!string.IsNullOrWhiteSpace(rawStatus))
         {
-            var s = Status.Trim().ToLowerInvariant();
+            var s = rawStatus.Trim().ToLowerInvariant();
             return s switch
             {
                 "available" or "controng" or "còn trống" or "0" => RoomRental.BackEnd.Models.Enums.RoomStatus.Available,

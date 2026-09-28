@@ -1,4 +1,4 @@
-﻿namespace RoomRental.BackEnd.DTO.Rental;
+namespace RoomRental.BackEnd.DTO.Rental;
 
 public class TaoYeuCauThueDto
 {
@@ -68,6 +68,11 @@ public class DatCocDto
     public DateTime NgayTao { get; set; }
 }
 
+public class ChamDutHopDongDto
+{
+    public string? LyDo { get; set; }
+}
+
 public class HopDongDto
 {
     public int Id { get; set; }
@@ -78,9 +83,19 @@ public class HopDongDto
     public DateTime NgayBatDau { get; set; }
     public DateTime NgayKetThuc { get; set; }
     public decimal TienThueHangThang { get; set; }
+    public decimal TienDatCoc { get; set; }
     public int TrangThai { get; set; }
     public bool NguoiThueDaXacNhan { get; set; }
     public bool ChuTroDaXacNhan { get; set; }
+    public DateTime NgayTao { get; set; }
+
+    // Additional display info
+    public string? TenPhong { get; set; }
+    public string? DiaChiPhong { get; set; }
+    public string? TenNguoiThue { get; set; }
+    public string? SdtNguoiThue { get; set; }
+    public string? TenChuTro { get; set; }
+    public string? SdtChuTro { get; set; }
 }
 
 public class SuCoDto
