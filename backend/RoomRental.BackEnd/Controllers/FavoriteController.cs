@@ -13,7 +13,7 @@ namespace RoomRental.BackEnd.Controllers;
 /// </summary>
 [Route("api/yeu-thich")]
 [ApiController]
-[Authorize]
+[Authorize(Roles = "Tenant")]
 public class FavoriteController : ControllerBase
 {
     private readonly IFavoriteService _favoriteService;
@@ -42,7 +42,7 @@ public class FavoriteController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi thêm bài đăng yêu thích");
-            return BadRequest(ApiResponse<bool>.ErrorResponse(ex.Message));
+            return this.BusinessError<bool>(ex);
         }
     }
 
@@ -63,7 +63,7 @@ public class FavoriteController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi xóa bài đăng yêu thích");
-            return BadRequest(ApiResponse<bool>.ErrorResponse(ex.Message));
+            return this.BusinessError<bool>(ex);
         }
     }
 
@@ -84,7 +84,7 @@ public class FavoriteController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy danh sách yêu thích");
-            return BadRequest(ApiResponse<List<PostListDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<PostListDto>>(ex);
         }
     }
 
@@ -105,7 +105,7 @@ public class FavoriteController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi kiểm tra trạng thái yêu thích");
-            return BadRequest(ApiResponse<bool>.ErrorResponse(ex.Message));
+            return this.BusinessError<bool>(ex);
         }
     }
 

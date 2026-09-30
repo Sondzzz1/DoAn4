@@ -117,6 +117,10 @@ public class FavoriteBLL : IFavoriteService
 
     public async Task<bool> IsFavoritedAsync(int accountId, int postId)
     {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == accountId)
+            ?? throw BusinessRuleException.NotFound("Người dùng không tồn tại");
+        if (user.RoleId != 1)
+            throw BusinessRuleException.Forbidden("Chỉ người thuê mới có thể sử dụng danh sách yêu thích.");
         var tenant = await _context.TenantProfiles.FirstOrDefaultAsync(t => t.AccountId == accountId);
         if (tenant == null) return false;
 
@@ -131,8 +135,11 @@ public class FavoriteBLL : IFavoriteService
 
         if (user == null)
         {
-            throw new Exception("Người dùng không tồn tại");
+            throw BusinessRuleException.NotFound("Người dùng không tồn tại");
         }
+
+        if (user.RoleId != 1)
+            throw BusinessRuleException.Forbidden("Chỉ người thuê mới có thể sử dụng danh sách yêu thích.");
 
         if (user.IsBlocked)
         {
