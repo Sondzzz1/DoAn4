@@ -15,7 +15,8 @@ export enum PostStatus {
 export enum RoomStatus {
   Available = 0,
   Rented = 1,
-  TemporarilyUnavailable = 2,
+  Reserved = 2,
+  TemporarilyUnavailable = 3,
 }
 
 /**

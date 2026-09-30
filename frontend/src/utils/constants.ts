@@ -21,7 +21,8 @@ export const POST_STATUS = {
 export const ROOM_STATUS = {
   AVAILABLE: 0,
   RENTED: 1,
-  TEMPORARILY_UNAVAILABLE: 2,
+  RESERVED: 2,
+  TEMPORARILY_UNAVAILABLE: 3,
 } as const;
 
 // Appointment Status
@@ -56,6 +57,11 @@ export const APPOINTMENT_STATUS_LABELS = {
   [APPOINTMENT_STATUS.COMPLETED]: 'Đã hoàn thành',
   [APPOINTMENT_STATUS.CANCELLED]: 'Đã hủy',
 } as const;
+
+export const RENTAL_REQUEST_STATUS = { PENDING: 0, APPROVED: 1, REJECTED: 2, CANCELLED: 3, CONVERTED: 4 } as const;
+export const DEPOSIT_STATUS = { PENDING: 0, PAID: 1, CONFIRMED: 2, REFUND_REQUESTED: 3, REFUNDED: 4, CANCELLED: 5 } as const;
+export const CONTRACT_STATUS = { PENDING_SIGNATURE: 0, ACTIVE: 1, TERMINATED: 2, EXPIRED: 3, CANCELLED: 4 } as const;
+export const MONTHLY_BILL_STATUS = { UNPAID: 0, PAID: 1, CANCELLED: 2, PENDING_PAYMENT: 3, OVERDUE: 4 } as const;
 
 // Local Storage Keys
 export const STORAGE_KEYS = {
