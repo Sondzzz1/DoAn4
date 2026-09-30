@@ -5,6 +5,7 @@ using Microsoft.OpenApi;
 using RoomRental.BackEnd.BLL;
 using RoomRental.BackEnd.BLL.Interfaces;
 using RoomRental.BackEnd.DAL;
+using RoomRental.BackEnd.Controllers;
 using RoomRental.BackEnd.Hubs;
 using System.Text;
 using System.Text.Json;
@@ -94,7 +95,7 @@ builder.Services.AddAuthentication(options =>
 // Add Authorization
 builder.Services.AddAuthorization();
 
-builder.Services.AddControllers()
+builder.Services.AddControllers(options => options.Filters.Add<BusinessExceptionFilter>())
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
