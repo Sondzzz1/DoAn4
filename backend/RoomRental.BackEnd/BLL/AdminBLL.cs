@@ -332,6 +332,9 @@ public class AdminBLL : IAdminService
             throw new Exception("Không tìm thấy bài đăng");
         }
 
+        if (post.Status != PostStatus.Pending)
+            throw BusinessRuleException.Conflict("Chỉ bài đăng đang chờ duyệt mới có thể được duyệt.");
+
         post.Status = PostStatus.Approved;
         post.ApprovedAt = DateTime.Now;
         post.PostedAt = DateTime.Now;
@@ -353,6 +356,12 @@ public class AdminBLL : IAdminService
         {
             throw new Exception("Không tìm thấy bài đăng");
         }
+
+        if (post.Status != PostStatus.Pending)
+            throw BusinessRuleException.Conflict("Chỉ bài đăng đang chờ duyệt mới có thể bị từ chối.");
+
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new BusinessRuleException("Vui lòng nhập lý do từ chối bài đăng.");
 
         post.Status = PostStatus.Rejected;
         post.RejectionReason = reason;

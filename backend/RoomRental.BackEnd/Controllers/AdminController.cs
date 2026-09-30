@@ -156,7 +156,7 @@ public class AdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi duyệt bài đăng ID: {Id}", id);
-            return BadRequest(ApiResponse<PostDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<PostDto>(ex);
         }
     }
 
@@ -175,7 +175,7 @@ public class AdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi từ chối bài đăng ID: {Id}", id);
-            return BadRequest(ApiResponse<PostDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<PostDto>(ex);
         }
     }
 
@@ -194,7 +194,7 @@ public class AdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi ẩn bài đăng ID: {Id}", id);
-            return BadRequest(ApiResponse<PostDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<PostDto>(ex);
         }
     }
 

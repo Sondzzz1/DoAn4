@@ -41,7 +41,7 @@ public class ReportController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi gửi báo cáo vi phạm");
-            return BadRequest(ApiResponse<ReportDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<ReportDto>(ex);
         }
     }
 
@@ -61,7 +61,7 @@ public class ReportController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy danh sách báo cáo");
-            return BadRequest(ApiResponse<List<ReportDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<ReportDto>>(ex);
         }
     }
 
@@ -81,7 +81,7 @@ public class ReportController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy chi tiết báo cáo ID: {Id}", id);
-            return BadRequest(ApiResponse<ReportDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<ReportDto>(ex);
         }
     }
 
@@ -103,7 +103,7 @@ public class ReportController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi cập nhật trạng thái báo cáo ID: {Id}", id);
-            return BadRequest(ApiResponse<ReportDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<ReportDto>(ex);
         }
     }
 

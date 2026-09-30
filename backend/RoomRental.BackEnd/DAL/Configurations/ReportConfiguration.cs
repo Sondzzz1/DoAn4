@@ -34,5 +34,9 @@ public class ReportConfiguration : IEntityTypeConfiguration<Report>
             .WithMany()
             .HasForeignKey(x => x.ResolvedByAccountId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(x => new { x.ReporterAccountId, x.PostId })
+            .IsUnique()
+            .HasFilter("[TrangThai] = 0");
     }
 }
