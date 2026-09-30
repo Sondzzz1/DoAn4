@@ -28,7 +28,7 @@ public class ExportBLL : IExportService
     {
         var contract = await _db.RentalContracts
             .Include(c => c.Post)
-                .ThenInclude(p => p.Room)
+                .ThenInclude(p => p!.Room)
             .FirstOrDefaultAsync(c => c.Id == hopDongId && (c.TenantAccountId == taiKhoanId || c.LandlordAccountId == taiKhoanId || taiKhoanId == 0))
             ?? throw new Exception("Không tìm thấy hợp đồng hoặc bạn không có quyền xem.");
 
@@ -175,7 +175,7 @@ public class ExportBLL : IExportService
         var billQuery = _db.MonthlyBills
             .Include(b => b.Contract)
                 .ThenInclude(c => c.Post)
-                    .ThenInclude(p => p.Room)
+                    .ThenInclude(p => p!.Room)
             .Where(b => contractIds.Contains(b.ContractId) && b.Year == targetYear);
 
         if (thang.HasValue && thang.Value > 0)
@@ -336,7 +336,7 @@ public class ExportBLL : IExportService
 
         var contracts = await contractQuery
             .Include(c => c.Post)
-                .ThenInclude(p => p.Room)
+                .ThenInclude(p => p!.Room)
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync();
 

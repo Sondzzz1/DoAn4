@@ -42,7 +42,7 @@ public class RoomController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy danh sách phòng của Landlord");
-            return BadRequest(ApiResponse<List<RoomDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<RoomDto>>(ex);
         }
     }
 
@@ -61,7 +61,7 @@ public class RoomController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy thông tin phòng ID: {Id}", id);
-            return BadRequest(ApiResponse<RoomDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<RoomDto>(ex);
         }
     }
 
@@ -82,7 +82,7 @@ public class RoomController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi thêm phòng mới");
-            return BadRequest(ApiResponse<RoomDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<RoomDto>(ex);
         }
     }
 
@@ -103,7 +103,7 @@ public class RoomController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi cập nhật phòng ID: {Id}", id);
-            return BadRequest(ApiResponse<RoomDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<RoomDto>(ex);
         }
     }
 
@@ -125,7 +125,7 @@ public class RoomController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi cập nhật trạng thái phòng ID: {Id}", id);
-            return BadRequest(ApiResponse<RoomDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<RoomDto>(ex);
         }
     }
 
@@ -146,7 +146,7 @@ public class RoomController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi xóa phòng ID: {Id}", id);
-            return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
+            return this.BusinessError<object>(ex);
         }
     }
 
