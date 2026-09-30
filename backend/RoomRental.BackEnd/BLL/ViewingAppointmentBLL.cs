@@ -26,27 +26,53 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
         var postId = createDto.GetPostId();
         var post = await _context.Posts
             .Include(p => p.Landlord)
+            .Include(p => p.Room)
             .FirstOrDefaultAsync(p => p.Id == postId);
 
         if (post == null)
         {
-            throw new Exception("Không tìm thấy tin đăng phòng trọ");
+            throw BusinessRuleException.NotFound("Không tìm thấy tin đăng phòng trọ");
         }
+
+        if (post.Status != PostStatus.Approved)
+            throw BusinessRuleException.Conflict("Tin đăng chưa được duyệt hoặc không còn khả dụng.");
+
+        if (post.Room.Status != RoomStatus.Available)
+            throw BusinessRuleException.Conflict("Phòng hiện không còn trống để đặt lịch xem.");
+
+        if (tenant.AccountId == post.Landlord.AccountId)
+            throw BusinessRuleException.Forbidden("Chủ trọ không thể tự đặt lịch xem phòng của mình.");
 
         var scheduledAt = createDto.GetScheduledDateTime();
 
         if (scheduledAt <= DateTime.Now)
         {
-            throw new Exception("Thời gian hẹn xem phòng phải ở tương lai");
+            throw new BusinessRuleException("Thời gian hẹn xem phòng phải ở tương lai");
         }
 
-        var landlordId = createDto.GetLandlordId() ?? post.LandlordId;
+        var requestedLandlordId = createDto.GetLandlordId();
+        if (requestedLandlordId.HasValue && requestedLandlordId.Value != post.LandlordId)
+            throw new BusinessRuleException("Chủ trọ không khớp với tin đăng.");
+
+        var hasDuplicate = await _context.ViewingAppointments.AnyAsync(a =>
+            a.TenantId == tenant.Id &&
+            a.PostId == post.Id &&
+            (a.Status == AppointmentStatus.Pending || a.Status == AppointmentStatus.Confirmed));
+        if (hasDuplicate)
+            throw BusinessRuleException.Conflict("Bạn đã có một lịch xem đang chờ xử lý cho phòng này.");
+
+        var hasScheduleConflict = await _context.ViewingAppointments.AnyAsync(a =>
+            a.ScheduledAt == scheduledAt &&
+            (a.Status == AppointmentStatus.Pending || a.Status == AppointmentStatus.Confirmed) &&
+            (a.TenantId == tenant.Id || a.LandlordId == post.LandlordId));
+        if (hasScheduleConflict)
+            throw BusinessRuleException.Conflict("Khung giờ này đã có lịch xem phòng. Vui lòng chọn thời gian khác.");
 
         var appointment = new ViewingAppointment
         {
             TenantId = tenant.Id,
             PostId = post.Id,
-            LandlordId = landlordId,
+            LandlordId = post.LandlordId,
             ScheduledAt = scheduledAt,
             Status = AppointmentStatus.Pending,
             TenantNote = createDto.GetNote(),
@@ -97,27 +123,20 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
 
         if (appointment == null)
         {
-            throw new Exception("Không tìm thấy lịch hẹn");
+            throw BusinessRuleException.NotFound("Không tìm thấy lịch hẹn");
         }
 
         if (appointment.TenantId != tenant.Id)
         {
-            throw new Exception("Bạn không có quyền hủy lịch hẹn này");
+            throw BusinessRuleException.Forbidden("Bạn không có quyền hủy lịch hẹn này");
         }
 
-        if (appointment.Status == AppointmentStatus.Cancelled)
-        {
-            throw new Exception("Lịch hẹn này đã bị hủy trước đó");
-        }
-
-        if (appointment.Status == AppointmentStatus.Completed)
-        {
-            throw new Exception("Không thể hủy lịch hẹn đã hoàn thành");
-        }
+        if (appointment.Status != AppointmentStatus.Pending && appointment.Status != AppointmentStatus.Confirmed)
+            throw BusinessRuleException.Conflict("Chỉ có thể hủy lịch hẹn đang chờ hoặc đã được xác nhận.");
 
         if (appointment.ScheduledAt <= DateTime.Now)
         {
-            throw new Exception("Chỉ được hủy khi lịch hẹn chưa diễn ra");
+            throw BusinessRuleException.Conflict("Chỉ được hủy khi lịch hẹn chưa diễn ra");
         }
 
         appointment.Status = AppointmentStatus.Cancelled;
@@ -170,7 +189,7 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
 
         if (appointment.Status != AppointmentStatus.Pending)
         {
-            throw new Exception("Chỉ có thể xác nhận các lịch hẹn đang ở trạng thái Chờ xác nhận (Pending)");
+            throw BusinessRuleException.Conflict("Chỉ có thể xác nhận lịch hẹn đang chờ xử lý.");
         }
 
         appointment.Status = AppointmentStatus.Confirmed;
@@ -188,10 +207,8 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
     {
         var appointment = await GetLandlordAppointmentEntityAsync(landlordAccountId, appointmentId);
 
-        if (appointment.Status == AppointmentStatus.Completed || appointment.Status == AppointmentStatus.Cancelled)
-        {
-            throw new Exception("Không thể từ chối lịch hẹn đã hoàn tất hoặc đã hủy");
-        }
+        if (appointment.Status != AppointmentStatus.Pending)
+            throw BusinessRuleException.Conflict("Chỉ có thể từ chối lịch hẹn đang chờ xử lý.");
 
         appointment.Status = AppointmentStatus.Rejected;
         appointment.LandlordResponse = reason ?? "Chủ trọ bận không thể tiếp vào thời gian này.";
@@ -208,6 +225,9 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
     public async Task<AppointmentDto> CompleteAppointmentAsync(int landlordAccountId, int appointmentId)
     {
         var appointment = await GetLandlordAppointmentEntityAsync(landlordAccountId, appointmentId);
+
+        if (appointment.Status != AppointmentStatus.Confirmed)
+            throw BusinessRuleException.Conflict("Chỉ lịch hẹn đã được xác nhận mới có thể hoàn thành.");
 
         appointment.Status = AppointmentStatus.Completed;
         appointment.UpdatedAt = DateTime.Now;
@@ -233,7 +253,7 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
 
         if (appointment == null)
         {
-            throw new Exception("Không tìm thấy lịch hẹn");
+            throw BusinessRuleException.NotFound("Không tìm thấy lịch hẹn");
         }
 
         // Kiểm tra quyền xem
@@ -242,7 +262,7 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == accountId);
             if (user == null || user.RoleId != 0) // Không phải Admin
             {
-                throw new Exception("Bạn không có quyền truy cập thông tin lịch hẹn này");
+                throw BusinessRuleException.Forbidden("Bạn không có quyền truy cập thông tin lịch hẹn này");
             }
         }
 
@@ -264,12 +284,12 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
 
         if (appointment == null)
         {
-            throw new Exception("Không tìm thấy lịch hẹn");
+            throw BusinessRuleException.NotFound("Không tìm thấy lịch hẹn");
         }
 
         if (appointment.LandlordId != landlord.Id)
         {
-            throw new Exception("Bạn không có quyền xử lý lịch hẹn này");
+            throw BusinessRuleException.Forbidden("Bạn không có quyền xử lý lịch hẹn này");
         }
 
         return appointment;
@@ -311,8 +331,11 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
 
         if (user == null)
         {
-            throw new Exception("Người dùng không tồn tại");
+            throw BusinessRuleException.NotFound("Người dùng không tồn tại");
         }
+
+        if (user.RoleId != 1)
+            throw BusinessRuleException.Forbidden("Chỉ người thuê mới có thể đặt và quản lý lịch xem phòng.");
 
         if (user.IsBlocked)
         {

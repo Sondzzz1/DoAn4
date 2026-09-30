@@ -42,7 +42,7 @@ public class ViewingAppointmentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi đặt lịch xem phòng");
-            return BadRequest(ApiResponse<AppointmentDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<AppointmentDto>(ex);
         }
     }
 
@@ -63,7 +63,7 @@ public class ViewingAppointmentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy danh sách lịch hẹn của Tenant");
-            return BadRequest(ApiResponse<List<AppointmentDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<AppointmentDto>>(ex);
         }
     }
 
@@ -85,7 +85,7 @@ public class ViewingAppointmentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy danh sách lịch hẹn của Landlord");
-            return BadRequest(ApiResponse<List<AppointmentDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<AppointmentDto>>(ex);
         }
     }
 
@@ -106,7 +106,7 @@ public class ViewingAppointmentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi hủy lịch hẹn ID: {Id}", id);
-            return BadRequest(ApiResponse<AppointmentDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<AppointmentDto>(ex);
         }
     }
 
@@ -128,7 +128,7 @@ public class ViewingAppointmentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi xác nhận lịch hẹn ID: {Id}", id);
-            return BadRequest(ApiResponse<AppointmentDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<AppointmentDto>(ex);
         }
     }
 
@@ -150,7 +150,7 @@ public class ViewingAppointmentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi từ chối lịch hẹn ID: {Id}", id);
-            return BadRequest(ApiResponse<AppointmentDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<AppointmentDto>(ex);
         }
     }
 
@@ -172,7 +172,7 @@ public class ViewingAppointmentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi hoàn tất lịch hẹn ID: {Id}", id);
-            return BadRequest(ApiResponse<AppointmentDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<AppointmentDto>(ex);
         }
     }
 
@@ -193,7 +193,7 @@ public class ViewingAppointmentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy chi tiết lịch hẹn ID: {Id}", id);
-            return BadRequest(ApiResponse<AppointmentDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<AppointmentDto>(ex);
         }
     }
 
