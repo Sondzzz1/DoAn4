@@ -31,6 +31,25 @@ import {
 import { exportService } from '../../services/exportService';
 import { paymentService } from '../../services/paymentService';
 import { formatPrice } from '../../utils/helpers';
+import StatusBadge, { StatusTone } from '../../components/common/StatusBadge';
+import PageState from '../../components/common/PageState';
+import { CONTRACT_STATUS, DEPOSIT_STATUS, MONTHLY_BILL_STATUS, RENTAL_REQUEST_STATUS } from '../../utils/constants';
+import { getApiErrorMessage } from '../../utils/apiError';
+
+const requestStatus = (status: number): { label: string; tone: StatusTone } => ({
+  0: { label: 'Đang chờ chủ trọ duyệt', tone: 'pending' }, 1: { label: 'Đã chấp nhận', tone: 'success' },
+  2: { label: 'Đã từ chối', tone: 'danger' }, 3: { label: 'Đã hủy', tone: 'danger' }, 4: { label: 'Đã tạo hợp đồng', tone: 'info' },
+}[status] as { label: string; tone: StatusTone } || { label: 'Không xác định', tone: 'neutral' });
+const depositStatus = (status: number): { label: string; tone: StatusTone } => ({
+  0: { label: 'Chờ thanh toán', tone: 'pending' }, 1: { label: 'Đã thanh toán - chờ xác nhận', tone: 'info' },
+  2: { label: 'Đã xác nhận', tone: 'success' }, 3: { label: 'Đang yêu cầu hoàn', tone: 'pending' },
+  4: { label: 'Đã hoàn tiền', tone: 'neutral' }, 5: { label: 'Đã hủy', tone: 'danger' },
+}[status] as { label: string; tone: StatusTone } || { label: 'Không xác định', tone: 'neutral' });
+const billStatus = (status: number): { label: string; tone: StatusTone } => ({
+  0: { label: 'Chưa thanh toán', tone: 'pending' }, 1: { label: 'Đã thanh toán', tone: 'success' },
+  2: { label: 'Đã hủy', tone: 'danger' }, 3: { label: 'Đang thanh toán', tone: 'info' },
+  4: { label: 'Quá hạn', tone: 'danger' },
+}[status] as { label: string; tone: StatusTone } || { label: 'Không xác định', tone: 'neutral' });
 
 const TenantRentalsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'requests' | 'contracts' | 'bills' | 'incidents' | 'reviews'>('bills');
@@ -99,15 +118,14 @@ const TenantRentalsPage: React.FC = () => {
   };
 
   const handlePayBill = async (billId: number) => {
-    if (!window.confirm('Xác nhận bạn đã chuyển khoản hoặc thanh toán hóa đơn này?')) return;
     try {
-      await monthlyBillService.payBill(billId, {
-        phuongThucThanhToan: 'Người thuê xác nhận đã chuyển khoản/thanh toán',
+      const res = await paymentService.createVnPayUrl({
+        monthlyBillId: billId,
+        orderInfo: `Thanh toan hoa don thang ID ${billId}`,
       });
-      toast.success('Xác nhận thanh toán hóa đơn thành công!');
-      await loadData();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể xác nhận thanh toán.');
+      if (res.data?.paymentUrl) window.location.href = res.data.paymentUrl;
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể tạo liên kết thanh toán hóa đơn.'));
     }
   };
 
@@ -175,6 +193,21 @@ const TenantRentalsPage: React.FC = () => {
     }
   };
 
+  const handleCancelRequest = async (requestId: number) => {
+    if (!window.confirm('Bạn có chắc muốn hủy yêu cầu thuê phòng này?')) return;
+    try { await rentalService.cancelRentalRequest(requestId); toast.success('Đã hủy yêu cầu thuê phòng'); await loadData(); }
+    catch (error) { toast.error(getApiErrorMessage(error, 'Không thể hủy yêu cầu thuê phòng.')); }
+  };
+
+  const handleCreateDeposit = async (requestId: number) => {
+    const amountText = window.prompt('Nhập số tiền đặt cọc (VNĐ):');
+    if (amountText === null) return;
+    const amount = Number(amountText.replace(/\D/g, ''));
+    if (!Number.isFinite(amount) || amount <= 0) { toast.warning('Số tiền đặt cọc không hợp lệ.'); return; }
+    try { await rentalService.createDeposit({ yeuCauThueId: requestId, soTien: amount }); toast.success('Đã tạo khoản cọc. Bạn có thể thanh toán qua VNPay.'); await loadData(); }
+    catch (error) { toast.error(getApiErrorMessage(error, 'Không thể tạo khoản cọc.')); }
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
@@ -182,7 +215,7 @@ const TenantRentalsPage: React.FC = () => {
         <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-[#0084ff] font-bold mb-1">
           <FiFileText /> Quản lý thuê phòng
         </div>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Hợp Đồng & Hóa Đơn Thuê Phòng</h1>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Hợp Đồng & Hóa Đơn Thuê Phòng</h1>
         <p className="text-sm text-slate-500 mt-1">
           Xem và thanh toán hóa đơn điện nước hàng tháng, quản lý hợp đồng thuê, đặt cọc và phản ánh sự cố.
         </p>
@@ -209,10 +242,10 @@ const TenantRentalsPage: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 mb-6 overflow-x-auto pb-1">
+      <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 border-b border-slate-200 mb-6 pb-2">
         <button
           onClick={() => setActiveTab('bills')}
-          className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+          className={`px-3 py-2.5 rounded-lg font-semibold text-xs sm:text-sm transition-all sm:whitespace-nowrap flex items-center justify-center gap-2 cursor-pointer ${
             activeTab === 'bills'
               ? 'bg-[#0084ff] text-white shadow-md shadow-blue-500/20'
               : 'text-slate-600 hover:bg-slate-100'
@@ -222,7 +255,7 @@ const TenantRentalsPage: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveTab('contracts')}
-          className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+          className={`px-3 py-2.5 rounded-lg font-semibold text-xs sm:text-sm transition-all sm:whitespace-nowrap flex items-center justify-center gap-2 cursor-pointer ${
             activeTab === 'contracts'
               ? 'bg-[#0084ff] text-white shadow-md shadow-blue-500/20'
               : 'text-slate-600 hover:bg-slate-100'
@@ -232,7 +265,7 @@ const TenantRentalsPage: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveTab('requests')}
-          className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+          className={`px-3 py-2.5 rounded-lg font-semibold text-xs sm:text-sm transition-all sm:whitespace-nowrap flex items-center justify-center gap-2 cursor-pointer ${
             activeTab === 'requests'
               ? 'bg-[#0084ff] text-white shadow-md shadow-blue-500/20'
               : 'text-slate-600 hover:bg-slate-100'
@@ -242,7 +275,7 @@ const TenantRentalsPage: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveTab('incidents')}
-          className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+          className={`px-3 py-2.5 rounded-lg font-semibold text-xs sm:text-sm transition-all sm:whitespace-nowrap flex items-center justify-center gap-2 cursor-pointer ${
             activeTab === 'incidents'
               ? 'bg-[#0084ff] text-white shadow-md shadow-blue-500/20'
               : 'text-slate-600 hover:bg-slate-100'
@@ -252,7 +285,7 @@ const TenantRentalsPage: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveTab('reviews')}
-          className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+          className={`col-span-2 sm:col-span-1 px-3 py-2.5 rounded-lg font-semibold text-xs sm:text-sm transition-all sm:whitespace-nowrap flex items-center justify-center gap-2 cursor-pointer ${
             activeTab === 'reviews'
               ? 'bg-[#0084ff] text-white shadow-md shadow-blue-500/20'
               : 'text-slate-600 hover:bg-slate-100'
@@ -264,9 +297,7 @@ const TenantRentalsPage: React.FC = () => {
 
       {/* Tab Content */}
       {loading ? (
-        <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center text-slate-500 animate-pulse">
-          Đang tải dữ liệu...
-        </div>
+        <PageState type="loading" message="Đang tải dữ liệu thuê phòng..." />
       ) : activeTab === 'bills' ? (
         /* TAB: BILLS */
         bills.length === 0 ? (
@@ -292,15 +323,7 @@ const TenantRentalsPage: React.FC = () => {
                         <h3 className="text-lg font-bold text-slate-900">
                           Hóa đơn tiền phòng tháng {bill.thang}/{bill.nam}
                         </h3>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-bold ${
-                            bill.trangThai === 1
-                              ? 'bg-emerald-100 text-emerald-700'
-                              : 'bg-amber-100 text-amber-700'
-                          }`}
-                        >
-                          {bill.trangThai === 1 ? 'Đã thanh toán' : 'Chờ thanh toán'}
-                        </span>
+                        <StatusBadge {...billStatus(bill.trangThai)} />
                       </div>
                       <p className="text-xs text-slate-500 mt-0.5">
                         {bill.tenPhong} • Chủ trọ: {bill.tenChuTro} {bill.sdtChuTro ? `(${bill.sdtChuTro})` : ''}
@@ -314,23 +337,25 @@ const TenantRentalsPage: React.FC = () => {
                       <div className="text-2xl font-black text-[#0084ff]">{formatPrice(bill.tongTien)}</div>
                     </div>
 
-                    {bill.trangThai === 0 ? (
+                    {(bill.trangThai === MONTHLY_BILL_STATUS.UNPAID || bill.trangThai === MONTHLY_BILL_STATUS.OVERDUE) ? (
                       <button
                         onClick={() => handlePayBill(bill.id)}
                         className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md cursor-pointer transition-all border-none"
                       >
-                        <FiCheckCircle /> Xác nhận thanh toán
+                        <FiCreditCard /> Thanh toán VNPay
                       </button>
-                    ) : (
+                    ) : bill.trangThai === MONTHLY_BILL_STATUS.PAID ? (
                       <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">
                         <FiCheckCircle /> Đã thanh toán {bill.ngayThanhToan ? `(${new Date(bill.ngayThanhToan).toLocaleDateString('vi-VN')})` : ''}
                       </span>
-                    )}
+                    ) : bill.trangThai === MONTHLY_BILL_STATUS.PENDING_PAYMENT ? (
+                      <span className="text-xs font-semibold text-blue-700">Đang chờ VNPay xác nhận</span>
+                    ) : null}
                   </div>
                 </div>
 
                 {/* Breakdown Details */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-100">
                   <div>
                     <span className="text-slate-400 block mb-1 font-semibold flex items-center gap-1">
                       <FiDollarSign /> Tiền thuê phòng:
@@ -354,6 +379,11 @@ const TenantRentalsPage: React.FC = () => {
                     <strong className="text-slate-800 text-sm">
                       {bill.soNuocTieuThu} m³ ({formatPrice(bill.tienNuoc)})
                     </strong>
+                  </div>
+
+                  <div>
+                    <span className="text-slate-400 block mb-1 font-semibold">Phí dịch vụ:</span>
+                    <strong className="text-slate-800 text-sm">{formatPrice(bill.phiDichVu || 0)}</strong>
                   </div>
 
                   <div>
@@ -389,10 +419,10 @@ const TenantRentalsPage: React.FC = () => {
                       <span className="text-xs font-bold uppercase tracking-wider text-[#0084ff]">Hợp đồng HD-{String(item.id).padStart(4, '0')}</span>
                       <span
                         className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                          item.trangThai === 1 ? 'bg-emerald-100 text-emerald-700' : (item.trangThai === 2 ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700')
+                          item.trangThai === CONTRACT_STATUS.ACTIVE ? 'bg-emerald-100 text-emerald-700' : (item.trangThai >= CONTRACT_STATUS.TERMINATED ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-700')
                         }`}
                       >
-                        {item.trangThai === 1 ? 'Đang hiệu lực' : (item.trangThai === 2 ? 'Đã chấm dứt' : 'Chờ 2 bên xác nhận')}
+                        {item.trangThai === CONTRACT_STATUS.ACTIVE ? 'Đang hiệu lực' : item.trangThai === CONTRACT_STATUS.TERMINATED ? 'Đã chấm dứt' : item.trangThai === CONTRACT_STATUS.EXPIRED ? 'Đã hết hạn' : 'Chờ 2 bên xác nhận'}
                       </span>
                     </div>
                     <h3 className="text-lg font-bold text-slate-900 mt-1 mb-0.5">
@@ -413,7 +443,7 @@ const TenantRentalsPage: React.FC = () => {
                       <FiDownload /> Tải Hợp Đồng (PDF)
                     </button>
 
-                    {!item.nguoiThueDaXacNhan ? (
+                    {item.trangThai === CONTRACT_STATUS.PENDING_SIGNATURE && !item.nguoiThueDaXacNhan ? (
                       <button
                         onClick={() => handleConfirmContract(item.id)}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md cursor-pointer transition-all border-none"
@@ -426,7 +456,7 @@ const TenantRentalsPage: React.FC = () => {
                       </span>
                     )}
 
-                    {item.trangThai === 1 && (
+                    {item.trangThai === CONTRACT_STATUS.ACTIVE && (
                       <>
                         <button
                           onClick={() => {
@@ -491,12 +521,10 @@ const TenantRentalsPage: React.FC = () => {
                     <div>
                       <span className="text-xs text-slate-400 font-semibold block">Tiền đặt cọc #{dep.id}</span>
                       <div className="text-xl font-black text-slate-900 mt-0.5">{formatPrice(dep.soTien)}</div>
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold mt-2 ${dep.trangThai === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                        {dep.trangThai === 1 ? 'Đã thanh toán cọc' : 'Chờ thanh toán'}
-                      </span>
+                      <div className="mt-2"><StatusBadge label={depositStatus(dep.trangThai).label} tone={depositStatus(dep.trangThai).tone} /></div>
                     </div>
 
-                    {dep.trangThai === 0 ? (
+                    {dep.trangThai === DEPOSIT_STATUS.PENDING ? (
                       <button
                         onClick={() => handlePayDepositVnPay(dep.id)}
                         className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-md cursor-pointer transition-all border-none"
@@ -505,7 +533,7 @@ const TenantRentalsPage: React.FC = () => {
                       </button>
                     ) : (
                       <div className="text-right text-xs text-emerald-600 font-semibold flex items-center gap-1">
-                        <FiCheckCircle /> Đã thanh toán
+                        <FiCheckCircle /> {dep.trangThai === DEPOSIT_STATUS.CONFIRMED ? 'Đã xác nhận' : 'Đang chờ chủ trọ xác nhận'}
                       </div>
                     )}
                   </div>
@@ -532,17 +560,7 @@ const TenantRentalsPage: React.FC = () => {
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="text-lg font-bold text-slate-900">{item.tieuDeBaiDang || 'Bài đăng thuê phòng'}</h3>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-bold ${
-                            item.trangThai === 0
-                              ? 'bg-amber-100 text-amber-700'
-                              : item.trangThai === 1
-                              ? 'bg-emerald-100 text-emerald-700'
-                              : 'bg-rose-100 text-rose-700'
-                          }`}
-                        >
-                          {item.trangThai === 0 ? 'Đang chờ chủ trọ duyệt' : item.trangThai === 1 ? 'Chủ trọ đã chấp nhận' : 'Bị từ chối'}
-                        </span>
+                        <StatusBadge label={requestStatus(item.trangThai).label} tone={requestStatus(item.trangThai).tone} />
                       </div>
 
                       <div className="text-sm text-slate-500 space-y-1">
@@ -551,6 +569,10 @@ const TenantRentalsPage: React.FC = () => {
                         </p>
                         {item.ghiChu && <p className="text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs">Ghi chú: {item.ghiChu}</p>}
                       </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {item.trangThai === RENTAL_REQUEST_STATUS.PENDING && <button onClick={() => handleCancelRequest(item.id)} className="rounded-md border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50">Hủy yêu cầu</button>}
+                      {item.trangThai === RENTAL_REQUEST_STATUS.APPROVED && !deposits.some(d => d.yeuCauThueId === item.id) && <button onClick={() => handleCreateDeposit(item.id)} className="rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700">Tạo khoản đặt cọc</button>}
                     </div>
                   </div>
                 ))}
@@ -622,7 +644,7 @@ const TenantRentalsPage: React.FC = () => {
       {/* Modal Báo Sự Cố */}
       {incidentModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in-95">
+          <div className="bg-white rounded-3xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl animate-in fade-in zoom-in-95">
             <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
               <FiAlertTriangle className="text-amber-500" /> Báo cáo sự cố phòng trọ
             </h3>
@@ -673,7 +695,7 @@ const TenantRentalsPage: React.FC = () => {
       {/* Modal Đánh Giá Phòng */}
       {reviewModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in-95">
+          <div className="bg-white rounded-3xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl animate-in fade-in zoom-in-95">
             <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
               <FiStar className="text-amber-400" /> Đánh giá trải nghiệm phòng trọ
             </h3>
