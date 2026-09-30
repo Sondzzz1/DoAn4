@@ -3,6 +3,8 @@ using RoomRental.BackEnd.DTO.Rental;
 using RoomRental.BackEnd.BLL.Interfaces;
 using RoomRental.BackEnd.Models;
 using RoomRental.BackEnd.DAL;
+using RoomRental.BackEnd.Models.Enums;
+using System.Data;
 
 namespace RoomRental.BackEnd.BLL;
 
@@ -13,12 +15,18 @@ public class RentalRequestBLL : IRentalRequestService
 
     public async Task<YeuCauThueDto> TaoAsync(int nguoiThueId, TaoYeuCauThueDto dto)
     {
-        var post = await _db.Posts.Include(x => x.Landlord).FirstOrDefaultAsync(x => x.Id == dto.BaiDangId)
-            ?? throw new Exception("Không tìm thấy bài đăng");
-        if (post.Status != RoomRental.BackEnd.Models.Enums.PostStatus.Approved) throw new Exception("Bài đăng chưa được duyệt");
-        if (await _db.RentalRequests.AnyAsync(x => x.PostId == dto.BaiDangId && x.TenantAccountId == nguoiThueId && x.Status == 0))
-            throw new Exception("Bạn đã gửi yêu cầu cho bài đăng này");
-        var item = new RentalRequest { PostId = post.Id, TenantAccountId = nguoiThueId, LandlordAccountId = post.Landlord.AccountId, Note = dto.GhiChu };
+        var tenant = await _db.Users.FirstOrDefaultAsync(x => x.Id == nguoiThueId)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy người thuê.");
+        if (tenant.RoleId != 1) throw BusinessRuleException.Forbidden("Chỉ người thuê mới có thể gửi yêu cầu thuê phòng.");
+
+        var post = await _db.Posts.Include(x => x.Landlord).Include(x => x.Room).FirstOrDefaultAsync(x => x.Id == dto.BaiDangId)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy bài đăng");
+        if (post.Status != PostStatus.Approved) throw BusinessRuleException.Conflict("Bài đăng chưa được duyệt hoặc không còn khả dụng.");
+        if (post.Room.Status != RoomStatus.Available) throw BusinessRuleException.Conflict("Phòng hiện không còn trống.");
+        if (post.Landlord.AccountId == nguoiThueId) throw BusinessRuleException.Forbidden("Chủ trọ không thể gửi yêu cầu thuê phòng của mình.");
+        if (await _db.RentalRequests.AnyAsync(x => x.PostId == dto.BaiDangId && x.TenantAccountId == nguoiThueId && x.Status == RentalRequestStatus.Pending))
+            throw BusinessRuleException.Conflict("Bạn đã gửi yêu cầu thuê phòng này.");
+        var item = new RentalRequest { PostId = post.Id, TenantAccountId = nguoiThueId, LandlordAccountId = post.Landlord.AccountId, Note = dto.GhiChu, Status = RentalRequestStatus.Pending };
         _db.RentalRequests.Add(item); await _db.SaveChangesAsync(); return await Map(item);
     }
 
@@ -26,17 +34,34 @@ public class RentalRequestBLL : IRentalRequestService
     {
         var q = _db.RentalRequests.Include(x => x.Post).AsQueryable();
         q = chuTro ? q.Where(x => x.LandlordAccountId == taiKhoanId) : q.Where(x => x.TenantAccountId == taiKhoanId);
-        return await q.OrderByDescending(x => x.CreatedAt).Select(x => new YeuCauThueDto { Id=x.Id, BaiDangId=x.PostId, NguoiThueId=x.TenantAccountId, ChuTroId=x.LandlordAccountId, TieuDeBaiDang=x.Post.Title, TrangThai=x.Status, GhiChu=x.Note, NgayTao=x.CreatedAt }).ToListAsync();
+        return await q.OrderByDescending(x => x.CreatedAt).Select(x => new YeuCauThueDto { Id=x.Id, BaiDangId=x.PostId, NguoiThueId=x.TenantAccountId, ChuTroId=x.LandlordAccountId, TieuDeBaiDang=x.Post.Title, AnhPhong=x.Post.Room.Images.OrderByDescending(i => i.IsThumbnail).Select(i => i.ImageUrl).FirstOrDefault(), GiaThue=x.Post.DisplayPrice, DiaChi=x.Post.Room.Address, TenNguoiThue=_db.Users.Where(u => u.Id == x.TenantAccountId).Select(u => u.FullName).FirstOrDefault(), SdtNguoiThue=_db.Users.Where(u => u.Id == x.TenantAccountId).Select(u => u.Phone).FirstOrDefault(), TrangThai=x.Status, GhiChu=x.Note, NgayTao=x.CreatedAt }).ToListAsync();
     }
 
-    public async Task<YeuCauThueDto> CapNhatTrangThaiAsync(int chuTroId, int id, int trangThai)
+    public async Task<YeuCauThueDto> CapNhatTrangThaiAsync(int chuTroId, int id, int trangThai, string? ghiChu = null)
     {
-        var item = await _db.RentalRequests.Include(x => x.Post).FirstOrDefaultAsync(x => x.Id == id && x.LandlordAccountId == chuTroId) ?? throw new Exception("Không tìm thấy yêu cầu thuê phòng");
-        if (trangThai is < 1 or > 2) throw new Exception("Trạng thái phải là 1 (duyệt) hoặc 2 (từ chối)");
-        item.Status = trangThai; await _db.SaveChangesAsync(); return await Map(item);
+        var item = await _db.RentalRequests.Include(x => x.Post).FirstOrDefaultAsync(x => x.Id == id)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy yêu cầu thuê phòng");
+        if (chuTroId != 0 && item.LandlordAccountId != chuTroId) throw BusinessRuleException.Forbidden("Bạn không có quyền xử lý yêu cầu thuê phòng này.");
+        if (trangThai != RentalRequestStatus.Approved && trangThai != RentalRequestStatus.Rejected)
+            throw new BusinessRuleException("Chỉ có thể chấp nhận hoặc từ chối yêu cầu thuê phòng.");
+        if (item.Status != RentalRequestStatus.Pending) throw BusinessRuleException.Conflict("Yêu cầu thuê phòng này không còn ở trạng thái chờ xử lý.");
+        item.Status = trangThai;
+        if (trangThai == RentalRequestStatus.Rejected && !string.IsNullOrWhiteSpace(ghiChu)) item.Note = ghiChu.Trim();
+        await _db.SaveChangesAsync(); return await Map(item);
     }
 
-    private async Task<YeuCauThueDto> Map(RentalRequest x) => await _db.RentalRequests.Where(y => y.Id == x.Id).Select(y => new YeuCauThueDto { Id=y.Id, BaiDangId=y.PostId, NguoiThueId=y.TenantAccountId, ChuTroId=y.LandlordAccountId, TieuDeBaiDang=y.Post.Title, TrangThai=y.Status, GhiChu=y.Note, NgayTao=y.CreatedAt }).FirstAsync();
+    public async Task<YeuCauThueDto> HuyAsync(int nguoiThueId, int id)
+    {
+        var item = await _db.RentalRequests.FirstOrDefaultAsync(x => x.Id == id)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy yêu cầu thuê phòng");
+        if (item.TenantAccountId != nguoiThueId) throw BusinessRuleException.Forbidden("Bạn không có quyền hủy yêu cầu này.");
+        if (item.Status != RentalRequestStatus.Pending) throw BusinessRuleException.Conflict("Chỉ có thể hủy yêu cầu đang chờ xử lý.");
+        item.Status = RentalRequestStatus.Cancelled;
+        await _db.SaveChangesAsync();
+        return await Map(item);
+    }
+
+    private async Task<YeuCauThueDto> Map(RentalRequest x) => await _db.RentalRequests.Where(y => y.Id == x.Id).Select(y => new YeuCauThueDto { Id=y.Id, BaiDangId=y.PostId, NguoiThueId=y.TenantAccountId, ChuTroId=y.LandlordAccountId, TieuDeBaiDang=y.Post.Title, AnhPhong=y.Post.Room.Images.OrderByDescending(i => i.IsThumbnail).Select(i => i.ImageUrl).FirstOrDefault(), GiaThue=y.Post.DisplayPrice, DiaChi=y.Post.Room.Address, TenNguoiThue=_db.Users.Where(u => u.Id == y.TenantAccountId).Select(u => u.FullName).FirstOrDefault(), SdtNguoiThue=_db.Users.Where(u => u.Id == y.TenantAccountId).Select(u => u.Phone).FirstOrDefault(), TrangThai=y.Status, GhiChu=y.Note, NgayTao=y.CreatedAt }).FirstAsync();
 }
 
 public class DepositBLL : IDepositService
@@ -45,16 +70,25 @@ public class DepositBLL : IDepositService
     public DepositBLL(ApplicationDbContext db) => _db = db;
     public async Task<DatCocDto> TaoAsync(int nguoiThueId, TaoDatCocDto dto)
     {
-        var request = await _db.RentalRequests.FirstOrDefaultAsync(x => x.Id == dto.YeuCauThueId && x.TenantAccountId == nguoiThueId && x.Status == 1) ?? throw new Exception("Yêu cầu thuê chưa được chủ trọ duyệt");
-        if (dto.SoTien <= 0) throw new Exception("Số tiền đặt cọc phải lớn hơn 0");
-        var item = new Deposit { RentalRequestId=request.Id, TenantAccountId=nguoiThueId, LandlordAccountId=request.LandlordAccountId, Amount=dto.SoTien, Status=0 };
+        var request = await _db.RentalRequests.Include(x => x.Post).ThenInclude(x => x.Room).FirstOrDefaultAsync(x => x.Id == dto.YeuCauThueId)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy yêu cầu thuê phòng.");
+        if (request.TenantAccountId != nguoiThueId) throw BusinessRuleException.Forbidden("Bạn không có quyền tạo khoản cọc cho yêu cầu này.");
+        if (request.Status != RentalRequestStatus.Approved) throw BusinessRuleException.Conflict("Yêu cầu thuê chưa được chủ trọ duyệt");
+        if (request.Post.Room.Status != RoomStatus.Available) throw BusinessRuleException.Conflict("Phòng hiện không còn trống.");
+        if (dto.SoTien <= 0) throw new BusinessRuleException("Số tiền đặt cọc phải lớn hơn 0");
+        if (await _db.Deposits.AnyAsync(x => x.RentalRequestId == request.Id)) throw BusinessRuleException.Conflict("Khoản cọc cho yêu cầu thuê này đã tồn tại.");
+        var item = new Deposit { RentalRequestId=request.Id, TenantAccountId=nguoiThueId, LandlordAccountId=request.LandlordAccountId, Amount=dto.SoTien, Status=DepositStatus.Pending };
         _db.Deposits.Add(item); await _db.SaveChangesAsync(); return Map(item);
     }
     public async Task<List<DatCocDto>> LayCuaToiAsync(int taiKhoanId) => await _db.Deposits.Where(x => x.TenantAccountId == taiKhoanId || x.LandlordAccountId == taiKhoanId).OrderByDescending(x => x.CreatedAt).Select(MapExpression()).ToListAsync();
     public async Task<DatCocDto> CapNhatTrangThaiAsync(int taiKhoanId, int id, int trangThai)
     {
-        var item = await _db.Deposits.FirstOrDefaultAsync(x => x.Id == id && x.LandlordAccountId == taiKhoanId) ?? throw new Exception("Không tìm thấy khoản đặt cọc");
-        item.Status = trangThai; item.PaidAt = trangThai == 1 ? DateTime.Now : item.PaidAt; await _db.SaveChangesAsync(); return Map(item);
+        var item = await _db.Deposits.FirstOrDefaultAsync(x => x.Id == id)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy khoản đặt cọc");
+        if (taiKhoanId != 0 && item.LandlordAccountId != taiKhoanId) throw BusinessRuleException.Forbidden("Bạn không có quyền xác nhận khoản cọc này.");
+        if (trangThai != DepositStatus.Confirmed) throw new BusinessRuleException("Chủ trọ chỉ có thể xác nhận khoản cọc đã thanh toán.");
+        if (item.Status != DepositStatus.Paid) throw BusinessRuleException.Conflict("Chỉ khoản cọc đã thanh toán mới có thể được xác nhận.");
+        item.Status = DepositStatus.Confirmed; await _db.SaveChangesAsync(); return Map(item);
     }
     private static DatCocDto Map(Deposit x) => new() { Id=x.Id, YeuCauThueId=x.RentalRequestId, SoTien=x.Amount, TrangThai=x.Status, NgayThanhToan=x.PaidAt, NgayTao=x.CreatedAt };
     private static System.Linq.Expressions.Expression<Func<Deposit, DatCocDto>> MapExpression() => x => new DatCocDto { Id=x.Id, YeuCauThueId=x.RentalRequestId, SoTien=x.Amount, TrangThai=x.Status, NgayThanhToan=x.PaidAt, NgayTao=x.CreatedAt };
@@ -67,18 +101,42 @@ public class RentalContractBLL : IRentalContractService
 
     public async Task<HopDongDto> TaoAsync(int chuTroId, TaoHopDongDto dto)
     {
-        var request = await _db.RentalRequests.FirstOrDefaultAsync(x => x.Id == dto.YeuCauThueId && (x.LandlordAccountId == chuTroId || chuTroId == 0) && x.Status == 1)
-            ?? throw new Exception("Yêu cầu thuê chưa được duyệt hoặc bạn không có quyền.");
+        await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        var request = await _db.RentalRequests
+            .Include(x => x.Post).ThenInclude(x => x.Room)
+            .FirstOrDefaultAsync(x => x.Id == dto.YeuCauThueId)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy yêu cầu thuê phòng.");
+
+        if (chuTroId != 0 && request.LandlordAccountId != chuTroId)
+            throw BusinessRuleException.Forbidden("Bạn không có quyền tạo hợp đồng cho yêu cầu này.");
+        if (request.Status != RentalRequestStatus.Approved)
+            throw BusinessRuleException.Conflict("Yêu cầu thuê chưa được duyệt hoặc đã được chuyển thành hợp đồng.");
+        if (request.Post.Room.Status != RoomStatus.Available)
+            throw BusinessRuleException.Conflict("Phòng hiện không còn trống.");
+        if (request.TenantAccountId == request.LandlordAccountId)
+            throw BusinessRuleException.Conflict("Người thuê và chủ trọ không thể là cùng một tài khoản.");
+
+        var confirmedDeposit = await _db.Deposits.FirstOrDefaultAsync(d =>
+            d.RentalRequestId == request.Id && d.Status == DepositStatus.Confirmed);
+        if (confirmedDeposit == null)
+            throw BusinessRuleException.Conflict("Khoản cọc phải được chủ trọ xác nhận trước khi tạo hợp đồng.");
 
         if (dto.NgayKetThuc <= dto.NgayBatDau)
-            throw new Exception("Ngày kết thúc hợp đồng phải sau ngày bắt đầu.");
+            throw new BusinessRuleException("Ngày kết thúc hợp đồng phải sau ngày bắt đầu.");
         if (dto.TienThueHangThang <= 0)
-            throw new Exception("Tiền thuê hàng tháng phải lớn hơn 0.");
+            throw new BusinessRuleException("Tiền thuê hàng tháng phải lớn hơn 0.");
 
-        // Kiểm tra xem phòng có hợp đồng ACTIVE nào khác không
-        var hasActiveContract = await _db.RentalContracts.AnyAsync(c => c.PostId == request.PostId && c.Status == 1);
-        if (hasActiveContract)
-            throw new Exception("Phòng này hiện đã có hợp đồng thuê đang hiệu lực.");
+        if (await _db.RentalContracts.AnyAsync(c => c.RentalRequestId == request.Id))
+            throw BusinessRuleException.Conflict("Yêu cầu thuê này đã có hợp đồng.");
+
+        var roomId = request.Post.RoomId;
+        var hasOverlappingContract = await _db.RentalContracts
+            .Include(c => c.Post)
+            .AnyAsync(c => c.Post!.RoomId == roomId &&
+                RentalContractStatus.EffectiveStatuses.Contains(c.Status) &&
+                c.StartDate <= dto.NgayKetThuc && c.EndDate >= dto.NgayBatDau);
+        if (hasOverlappingContract)
+            throw BusinessRuleException.Conflict("Phòng đã có hợp đồng trùng thời gian.");
 
         var item = new RentalContract
         {
@@ -89,18 +147,26 @@ public class RentalContractBLL : IRentalContractService
             StartDate = dto.NgayBatDau,
             EndDate = dto.NgayKetThuc,
             MonthlyRent = dto.TienThueHangThang,
-            Status = 0, // Chờ xác nhận
+            DepositAmount = confirmedDeposit.Amount,
+            ElectricityPrice = request.Post.Room.ElectricityPrice ?? 0,
+            WaterPrice = request.Post.Room.WaterPrice ?? 0,
+            ServiceFee = request.Post.Room.ServiceFee ?? 0,
+            Terms = string.IsNullOrWhiteSpace(dto.DieuKhoan) ? null : dto.DieuKhoan.Trim(),
+            Status = RentalContractStatus.PendingSignature,
             CreatedAt = DateTime.Now
         };
 
         _db.RentalContracts.Add(item);
+        request.Status = RentalRequestStatus.ConvertedToContract;
         await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         return await MapToDtoAsync(item);
     }
 
     public async Task<List<HopDongDto>> LayCuaToiAsync(int taiKhoanId)
     {
+        await ExpireEndedContractsAsync();
         var query = _db.RentalContracts.AsQueryable();
         if (taiKhoanId != 0)
         {
@@ -118,59 +184,115 @@ public class RentalContractBLL : IRentalContractService
 
     public async Task<HopDongDto> LayChiTietAsync(int taiKhoanId, int id)
     {
+        await ExpireEndedContractsAsync();
         var contract = await _db.RentalContracts.FirstOrDefaultAsync(x => x.Id == id)
-            ?? throw new Exception("Không tìm thấy hợp đồng.");
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy hợp đồng.");
 
         if (taiKhoanId != 0 && contract.TenantAccountId != taiKhoanId && contract.LandlordAccountId != taiKhoanId)
-            throw new Exception("Bạn không có quyền xem hợp đồng này.");
+            throw BusinessRuleException.Forbidden("Bạn không có quyền xem hợp đồng này.");
 
         return await MapToDtoAsync(contract);
     }
 
     public async Task<HopDongDto> XacNhanAsync(int taiKhoanId, int id)
     {
-        var item = await _db.RentalContracts.FirstOrDefaultAsync(x => x.Id == id && (x.TenantAccountId == taiKhoanId || x.LandlordAccountId == taiKhoanId || taiKhoanId == 0))
-            ?? throw new Exception("Không tìm thấy hợp đồng hoặc bạn không có quyền.");
+        await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        var item = await _db.RentalContracts.FirstOrDefaultAsync(x => x.Id == id)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy hợp đồng.");
+        if (taiKhoanId != 0 && item.TenantAccountId != taiKhoanId && item.LandlordAccountId != taiKhoanId)
+            throw BusinessRuleException.Forbidden("Bạn không có quyền xác nhận hợp đồng này.");
+        if (item.Status != RentalContractStatus.PendingSignature)
+            throw BusinessRuleException.Conflict("Hợp đồng này không còn ở trạng thái chờ ký.");
 
-        if (taiKhoanId == item.TenantAccountId) item.TenantConfirmed = true;
-        if (taiKhoanId == item.LandlordAccountId || taiKhoanId == 0) item.LandlordConfirmed = true;
+        if (taiKhoanId == item.TenantAccountId)
+        {
+            if (item.TenantConfirmed) throw BusinessRuleException.Conflict("Bạn đã xác nhận hợp đồng này.");
+            item.TenantConfirmed = true;
+        }
+        if (taiKhoanId == item.LandlordAccountId || taiKhoanId == 0)
+        {
+            if (item.LandlordConfirmed) throw BusinessRuleException.Conflict("Chủ trọ đã xác nhận hợp đồng này.");
+            item.LandlordConfirmed = true;
+        }
 
         if (item.TenantConfirmed && item.LandlordConfirmed)
         {
-            item.Status = 1; // Đang hiệu lực (Active)
-            item.UpdatedAt = DateTime.Now;
+            var post = await _db.Posts.Include(p => p.Room).FirstAsync(p => p.Id == item.PostId);
+            var hasOtherActiveContract = await _db.RentalContracts
+                .Include(c => c.Post)
+                .AnyAsync(c => c.Id != item.Id && c.Post!.RoomId == post.RoomId &&
+                    c.Status == RentalContractStatus.Active &&
+                    c.StartDate <= item.EndDate && c.EndDate >= item.StartDate);
+            if (hasOtherActiveContract)
+                throw BusinessRuleException.Conflict("Phòng đã có hợp đồng đang hoạt động trùng thời gian.");
+            if (post.Room.Status != RoomStatus.Available)
+                throw BusinessRuleException.Conflict("Phòng không còn ở trạng thái sẵn sàng cho thuê.");
 
-            // Cập nhật trạng thái phòng sang Đã thuê (Rented = 1)
-            var post = await _db.Posts.Include(p => p.Room).FirstOrDefaultAsync(p => p.Id == item.PostId);
-            if (post?.Room != null)
-            {
-                post.Room.Status = RoomRental.BackEnd.Models.Enums.RoomStatus.Rented;
-                post.Room.UpdatedAt = DateTime.Now;
-            }
+            item.Status = RentalContractStatus.Active;
+            item.UpdatedAt = DateTime.Now;
+            post.Room.Status = RoomStatus.Rented;
+            post.Room.UpdatedAt = DateTime.Now;
         }
 
         await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
         return await MapToDtoAsync(item);
     }
 
     public async Task<HopDongDto> ChamDutAsync(int taiKhoanId, int id, string? lyDo = null)
     {
-        var item = await _db.RentalContracts.FirstOrDefaultAsync(x => x.Id == id && (x.LandlordAccountId == taiKhoanId || taiKhoanId == 0))
-            ?? throw new Exception("Không tìm thấy hợp đồng hoặc bạn không có quyền chấm dứt.");
+        await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        var item = await _db.RentalContracts.FirstOrDefaultAsync(x => x.Id == id)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy hợp đồng.");
+        if (taiKhoanId != 0 && item.LandlordAccountId != taiKhoanId)
+            throw BusinessRuleException.Forbidden("Bạn không có quyền chấm dứt hợp đồng này.");
+        if (item.Status != RentalContractStatus.Active)
+            throw BusinessRuleException.Conflict("Chỉ hợp đồng đang hiệu lực mới có thể chấm dứt.");
 
-        item.Status = 2; // Đã kết thúc / Chấm dứt (Ended)
+        item.Status = RentalContractStatus.Terminated;
         item.UpdatedAt = DateTime.Now;
 
-        // Trả trạng thái phòng về Còn trống (Available = 0)
         var post = await _db.Posts.Include(p => p.Room).FirstOrDefaultAsync(p => p.Id == item.PostId);
         if (post?.Room != null)
         {
-            post.Room.Status = RoomRental.BackEnd.Models.Enums.RoomStatus.Available;
-            post.Room.UpdatedAt = DateTime.Now;
+            var hasOtherActiveContract = await _db.RentalContracts
+                .Include(c => c.Post)
+                .AnyAsync(c => c.Id != item.Id && c.Post!.RoomId == post.RoomId && c.Status == RentalContractStatus.Active);
+            if (!hasOtherActiveContract)
+            {
+                post.Room.Status = RoomStatus.Available;
+                post.Room.UpdatedAt = DateTime.Now;
+            }
         }
 
         await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
         return await MapToDtoAsync(item);
+    }
+
+    private async Task ExpireEndedContractsAsync()
+    {
+        await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        var expired = await _db.RentalContracts
+            .Include(c => c.Post).ThenInclude(p => p!.Room)
+            .Where(c => c.Status == RentalContractStatus.Active && c.EndDate < DateTime.Now)
+            .ToListAsync();
+        if (expired.Count == 0)
+        {
+            await transaction.CommitAsync();
+            return;
+        }
+
+        foreach (var contract in expired) contract.Status = RentalContractStatus.Expired;
+        await _db.SaveChangesAsync();
+        foreach (var room in expired.Select(c => c.Post!.Room).DistinctBy(r => r.Id))
+        {
+            var hasActive = await _db.RentalContracts.Include(c => c.Post)
+                .AnyAsync(c => c.Status == RentalContractStatus.Active && c.Post!.RoomId == room.Id);
+            if (!hasActive) room.Status = RoomStatus.Available;
+        }
+        await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
     }
 
     private async Task<HopDongDto> MapToDtoAsync(RentalContract x)
@@ -178,8 +300,6 @@ public class RentalContractBLL : IRentalContractService
         var post = await _db.Posts.Include(p => p.Room).FirstOrDefaultAsync(p => p.Id == x.PostId);
         var tenant = await _db.Users.FirstOrDefaultAsync(u => u.Id == x.TenantAccountId);
         var landlord = await _db.Users.FirstOrDefaultAsync(u => u.Id == x.LandlordAccountId);
-        var deposit = await _db.Deposits.FirstOrDefaultAsync(d => d.RentalRequestId == x.RentalRequestId);
-
         return new HopDongDto
         {
             Id = x.Id,
@@ -190,7 +310,11 @@ public class RentalContractBLL : IRentalContractService
             NgayBatDau = x.StartDate,
             NgayKetThuc = x.EndDate,
             TienThueHangThang = x.MonthlyRent,
-            TienDatCoc = deposit?.Amount ?? 0,
+            TienDatCoc = x.DepositAmount,
+            GiaDien = x.ElectricityPrice,
+            GiaNuoc = x.WaterPrice,
+            PhiDichVu = x.ServiceFee,
+            DieuKhoan = x.Terms,
             TrangThai = x.Status,
             NguoiThueDaXacNhan = x.TenantConfirmed,
             ChuTroDaXacNhan = x.LandlordConfirmed,
@@ -231,9 +355,20 @@ public class RoomReviewBLL : IRoomReviewService
     public RoomReviewBLL(ApplicationDbContext db) => _db = db;
     public async Task<DanhGiaDto> TaoAsync(int nguoiThueId, TaoDanhGiaDto dto)
     {
-        var contract = await _db.RentalContracts.FirstOrDefaultAsync(x => x.Id == dto.HopDongId && x.TenantAccountId == nguoiThueId) ?? throw new Exception("Không tìm thấy hợp đồng thuê");
-        if (dto.SoSao < 1 || dto.SoSao > 5) throw new Exception("Số sao phải từ 1 đến 5");
-        if (await _db.RoomReviews.AnyAsync(x => x.ContractId == dto.HopDongId && x.TenantAccountId == nguoiThueId)) throw new Exception("Hợp đồng này đã được đánh giá");
+        var tenant = await _db.Users.FirstOrDefaultAsync(x => x.Id == nguoiThueId)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy người dùng.");
+        if (tenant.RoleId != 1)
+            throw BusinessRuleException.Forbidden("Chỉ người thuê mới có thể đánh giá phòng.");
+
+        var contract = await _db.RentalContracts.FirstOrDefaultAsync(x => x.Id == dto.HopDongId)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy hợp đồng thuê.");
+        if (contract.TenantAccountId != nguoiThueId)
+            throw BusinessRuleException.Forbidden("Bạn không có quyền đánh giá hợp đồng này.");
+        if (contract.Status is not (RentalContractStatus.Active or RentalContractStatus.Expired or RentalContractStatus.Terminated))
+            throw BusinessRuleException.Conflict("Hợp đồng chưa đủ điều kiện để đánh giá.");
+        if (dto.SoSao < 1 || dto.SoSao > 5) throw new BusinessRuleException("Số sao phải từ 1 đến 5.");
+        if (await _db.RoomReviews.AnyAsync(x => x.ContractId == dto.HopDongId && x.TenantAccountId == nguoiThueId))
+            throw BusinessRuleException.Conflict("Hợp đồng này đã được đánh giá.");
         var item = new RoomReview { ContractId=contract.Id, PostId=contract.PostId, TenantAccountId=nguoiThueId, Rating=dto.SoSao, Comment=dto.NhanXet };
         _db.RoomReviews.Add(item); await _db.SaveChangesAsync(); return Map(item);
     }

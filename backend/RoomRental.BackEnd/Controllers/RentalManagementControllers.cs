@@ -17,7 +17,8 @@ public class RentalRequestController : ControllerBase
     [HttpPost] public async Task<IActionResult> Tao([FromBody] TaoYeuCauThueDto dto) => Ok(ApiResponse<YeuCauThueDto>.SuccessResponse(await _service.TaoAsync(Id(), dto), "Gửi yêu cầu thuê phòng thành công"));
     [HttpGet("cua-toi")] public async Task<IActionResult> CuaToi() => Ok(ApiResponse<List<YeuCauThueDto>>.SuccessResponse(await _service.LayCuaToiAsync(Id(), false)));
     [HttpGet("chu-tro")][Authorize(Roles="Landlord,Admin")] public async Task<IActionResult> CuaChuTro() => Ok(ApiResponse<List<YeuCauThueDto>>.SuccessResponse(await _service.LayCuaToiAsync(Id(), true)));
-    [HttpPut("{id:int}/trang-thai")][Authorize(Roles="Landlord,Admin")] public async Task<IActionResult> TrangThai(int id, [FromBody] CapNhatTrangThaiDto dto) => Ok(ApiResponse<YeuCauThueDto>.SuccessResponse(await _service.CapNhatTrangThaiAsync(Id(), id, dto.TrangThai)));
+    [HttpPut("{id:int}/trang-thai")][Authorize(Roles="Landlord,Admin")] public async Task<IActionResult> TrangThai(int id, [FromBody] CapNhatTrangThaiDto dto) => Ok(ApiResponse<YeuCauThueDto>.SuccessResponse(await _service.CapNhatTrangThaiAsync(Id(), id, dto.TrangThai, dto.GhiChu)));
+    [HttpPut("{id:int}/huy")][Authorize(Roles="Tenant")] public async Task<IActionResult> Huy(int id) => Ok(ApiResponse<YeuCauThueDto>.SuccessResponse(await _service.HuyAsync(Id(), id), "Hủy yêu cầu thuê phòng thành công"));
     private int Id() => int.Parse(User.FindFirst("UserId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 }
 
@@ -53,7 +54,7 @@ public class ContractController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(ApiResponse<HopDongDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<HopDongDto>(ex);
         }
     }
 
@@ -67,7 +68,7 @@ public class ContractController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(ApiResponse<List<HopDongDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<HopDongDto>>(ex);
         }
     }
 
@@ -81,7 +82,7 @@ public class ContractController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(ApiResponse<HopDongDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<HopDongDto>(ex);
         }
     }
 
@@ -95,7 +96,7 @@ public class ContractController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(ApiResponse<HopDongDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<HopDongDto>(ex);
         }
     }
 
@@ -111,7 +112,7 @@ public class ContractController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(ApiResponse<HopDongDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<HopDongDto>(ex);
         }
     }
 
