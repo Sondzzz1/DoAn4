@@ -14,7 +14,9 @@ public class RentalRequestConfiguration : IEntityTypeConfiguration<RentalRequest
         builder.Property(x => x.Status).HasColumnName("TrangThai").HasDefaultValue(0);
         builder.Property(x => x.CreatedAt).HasColumnName("NgayTao").HasDefaultValueSql("SYSDATETIME()");
         builder.Property(x => x.UpdatedAt).HasColumnName("NgayCapNhat");
-        builder.HasIndex(x => new { x.TenantAccountId, x.PostId });
+        builder.HasIndex(x => new { x.TenantAccountId, x.PostId })
+            .IsUnique()
+            .HasFilter("[TrangThai] = 0");
         builder.HasOne(x => x.Post).WithMany().HasForeignKey(x => x.PostId).OnDelete(DeleteBehavior.Restrict);
     }
 }
@@ -30,7 +32,7 @@ public class DepositConfiguration : IEntityTypeConfiguration<Deposit>
         builder.Property(x => x.PaidAt).HasColumnName("NgayThanhToan");
         builder.Property(x => x.CreatedAt).HasColumnName("NgayTao").HasDefaultValueSql("SYSDATETIME()");
         builder.Property(x => x.UpdatedAt).HasColumnName("NgayCapNhat");
-        builder.HasIndex(x => x.RentalRequestId);
+        builder.HasIndex(x => x.RentalRequestId).IsUnique();
     }
 }
 
@@ -41,6 +43,11 @@ public class RentalContractConfiguration : IEntityTypeConfiguration<RentalContra
         builder.ToTable("HopDongThue");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.MonthlyRent).HasColumnName("TienThueHangThang").HasColumnType("decimal(18,2)");
+        builder.Property(x => x.DepositAmount).HasColumnName("TienDatCoc").HasColumnType("decimal(18,2)");
+        builder.Property(x => x.ElectricityPrice).HasColumnName("GiaDien").HasColumnType("decimal(18,2)");
+        builder.Property(x => x.WaterPrice).HasColumnName("GiaNuoc").HasColumnType("decimal(18,2)");
+        builder.Property(x => x.ServiceFee).HasColumnName("PhiDichVu").HasColumnType("decimal(18,2)");
+        builder.Property(x => x.Terms).HasColumnName("DieuKhoan").HasMaxLength(4000);
         builder.Property(x => x.Status).HasColumnName("TrangThai").HasDefaultValue(0);
         builder.Property(x => x.TenantConfirmed).HasColumnName("NguoiThueDaXacNhan");
         builder.Property(x => x.LandlordConfirmed).HasColumnName("ChuTroDaXacNhan");
@@ -75,6 +82,7 @@ public class RoomReviewConfiguration : IEntityTypeConfiguration<RoomReview>
         builder.Property(x => x.Rating).HasColumnName("SoSao").IsRequired();
         builder.Property(x => x.Comment).HasColumnName("NhanXet").HasMaxLength(2000);
         builder.Property(x => x.CreatedAt).HasColumnName("NgayTao").HasDefaultValueSql("SYSDATETIME()");
+        builder.Property(x => x.UpdatedAt).HasColumnName("NgayCapNhat");
         builder.HasIndex(x => new { x.ContractId, x.TenantAccountId }).IsUnique();
         builder.HasIndex(x => x.PostId);
     }
@@ -96,6 +104,7 @@ public class MonthlyBillConfiguration : IEntityTypeConfiguration<MonthlyBill>
         builder.Property(x => x.NewWater).HasColumnName("SoNuocMoi").HasColumnType("decimal(18,2)");
         builder.Property(x => x.WaterPrice).HasColumnName("GiaNuoc").HasColumnType("decimal(18,2)");
         builder.Property(x => x.RoomPrice).HasColumnName("TienPhong").HasColumnType("decimal(18,2)");
+        builder.Property(x => x.ServiceFee).HasColumnName("PhiDichVu").HasColumnType("decimal(18,2)").HasDefaultValue(0);
         builder.Property(x => x.OtherFees).HasColumnName("ChiPhiKhac").HasColumnType("decimal(18,2)").HasDefaultValue(0);
         builder.Property(x => x.OtherFeesNote).HasColumnName("GhiChuChiPhiKhac").HasMaxLength(500);
         builder.Property(x => x.TotalAmount).HasColumnName("TongTien").HasColumnType("decimal(18,2)");
@@ -111,7 +120,7 @@ public class MonthlyBillConfiguration : IEntityTypeConfiguration<MonthlyBill>
         builder.HasOne(x => x.Contract)
             .WithMany(c => c.MonthlyBills)
             .HasForeignKey(x => x.ContractId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

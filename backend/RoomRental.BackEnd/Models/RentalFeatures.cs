@@ -36,6 +36,11 @@ public class RentalContract
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public decimal MonthlyRent { get; set; }
+    public decimal DepositAmount { get; set; }
+    public decimal ElectricityPrice { get; set; }
+    public decimal WaterPrice { get; set; }
+    public decimal ServiceFee { get; set; }
+    public string? Terms { get; set; }
     public int Status { get; set; }
     public bool TenantConfirmed { get; set; }
     public bool LandlordConfirmed { get; set; }
@@ -67,4 +72,5 @@ public class RoomReview
     public int Rating { get; set; }
     public string? Comment { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime? UpdatedAt { get; set; }
 }

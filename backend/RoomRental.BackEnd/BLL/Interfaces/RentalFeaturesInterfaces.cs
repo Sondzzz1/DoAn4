@@ -6,7 +6,8 @@ public interface IRentalRequestService
 {
     Task<YeuCauThueDto> TaoAsync(int nguoiThueId, TaoYeuCauThueDto dto);
     Task<List<YeuCauThueDto>> LayCuaToiAsync(int taiKhoanId, bool chuTro);
-    Task<YeuCauThueDto> CapNhatTrangThaiAsync(int chuTroId, int id, int trangThai);
+    Task<YeuCauThueDto> CapNhatTrangThaiAsync(int chuTroId, int id, int trangThai, string? ghiChu = null);
+    Task<YeuCauThueDto> HuyAsync(int nguoiThueId, int id);
 }
 
 public interface IDepositService

@@ -24,6 +24,7 @@ public class TaoHopDongDto
     public DateTime NgayBatDau { get; set; }
     public DateTime NgayKetThuc { get; set; }
     public decimal TienThueHangThang { get; set; }
+    public string? DieuKhoan { get; set; }
 }
 
 public class TaoSuCoDto
@@ -53,6 +54,11 @@ public class YeuCauThueDto
     public int NguoiThueId { get; set; }
     public int ChuTroId { get; set; }
     public string? TieuDeBaiDang { get; set; }
+    public string? AnhPhong { get; set; }
+    public decimal GiaThue { get; set; }
+    public string? DiaChi { get; set; }
+    public string? TenNguoiThue { get; set; }
+    public string? SdtNguoiThue { get; set; }
     public int TrangThai { get; set; }
     public string? GhiChu { get; set; }
     public DateTime NgayTao { get; set; }
@@ -84,6 +90,10 @@ public class HopDongDto
     public DateTime NgayKetThuc { get; set; }
     public decimal TienThueHangThang { get; set; }
     public decimal TienDatCoc { get; set; }
+    public decimal GiaDien { get; set; }
+    public decimal GiaNuoc { get; set; }
+    public decimal PhiDichVu { get; set; }
+    public string? DieuKhoan { get; set; }
     public int TrangThai { get; set; }
     public bool NguoiThueDaXacNhan { get; set; }
     public bool ChuTroDaXacNhan { get; set; }
