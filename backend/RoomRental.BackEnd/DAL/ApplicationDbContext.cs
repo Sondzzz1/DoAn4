@@ -37,6 +37,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Incident> Incidents { get; set; } = null!;
     public DbSet<RoomReview> RoomReviews { get; set; } = null!;
     public DbSet<ChatMessage> ChatMessages { get; set; } = null!;
+    public DbSet<PaymentTransaction> PaymentTransactions { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -2,7 +2,8 @@ namespace RoomRental.BackEnd.DTO.Payment;
 
 public class CreatePaymentRequestDto
 {
-    public int DepositId { get; set; }
+    public int? DepositId { get; set; }
+    public int? MonthlyBillId { get; set; }
     public string? OrderInfo { get; set; }
 }
 
@@ -22,4 +23,7 @@ public class PaymentResultDto
     public decimal Amount { get; set; }
     public string ResponseCode { get; set; } = string.Empty;
     public int? DepositId { get; set; }
+    public int? MonthlyBillId { get; set; }
+    public DateTime? ProcessedAt { get; set; }
+    public string TargetType { get; set; } = "Deposit";
 }
