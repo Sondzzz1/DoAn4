@@ -86,6 +86,11 @@ const LandlordPostsPage: React.FC = () => {
     navigate(`/rooms/${id}`);
   };
 
+  const handleEdit = (post: PostListItem) => {
+    if (post.status === PostStatus.Approved && !window.confirm('Chỉnh sửa nội dung bài đăng sẽ đưa bài về trạng thái chờ duyệt. Bạn muốn tiếp tục?')) return;
+    navigate(`/landlord/posts/${post.id}/edit`);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -279,7 +284,7 @@ const LandlordPostsPage: React.FC = () => {
                             <FiEye /> Xem chi tiết
                           </button>
                           <button
-                            onClick={() => navigate(`/landlord/posts/${post.id}/edit`)}
+                            onClick={() => handleEdit(post)}
                             className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:from-amber-600 hover:to-amber-700 shadow-md hover:shadow-lg transition-all"
                           >
                             <FiEdit2 /> Chỉnh sửa

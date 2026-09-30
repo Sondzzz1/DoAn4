@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import { roomService } from '../../services/roomService';
 import { RoomItem } from '../../types/room.types';
 
-const roomStatusLabel = (status: number) => ['Còn trống', 'Đã thuê', 'Tạm ngưng'][status] || 'Không rõ';
+const roomStatusLabel = (status: number) => ({ 0: 'Còn trống', 1: 'Đã thuê', 2: 'Đã giữ chỗ', 3: 'Tạm ngưng' }[status] || 'Không rõ');
 
 const emptyForm = {
   tenPhong: '',
@@ -119,7 +119,8 @@ const LandlordRoomManagementPage: React.FC = () => {
 
   const handleStatusToggle = async (id: number, status: number) => {
     try {
-      const nextStatus = status === 0 ? 2 : 0;
+      if (status === 1) { toast.info('Phòng đang có hợp đồng hiệu lực. Trạng thái sẽ được cập nhật khi hợp đồng kết thúc.'); return; }
+      const nextStatus = status === 0 ? 3 : 0;
       await roomService.updateRoomStatus(id, nextStatus);
       toast.success('Cập nhật trạng thái phòng thành công');
       await loadRooms();
@@ -208,7 +209,7 @@ const LandlordRoomManagementPage: React.FC = () => {
                     <button onClick={() => handleEdit(room)} className="inline-flex items-center gap-1 bg-amber-100 text-amber-700 px-3 py-2 rounded-lg text-sm font-medium">
                       <FiEdit2 /> Sửa
                     </button>
-                    <button onClick={() => handleStatusToggle(room.id, room.status)} className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-3 py-2 rounded-lg text-sm font-medium">
+                    <button disabled={room.status === 1} title={room.status === 1 ? 'Phòng đang có hợp đồng hiệu lực' : 'Đổi giữa còn trống và tạm ngưng'} onClick={() => handleStatusToggle(room.id, room.status)} className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-3 py-2 rounded-lg text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50">
                       <FiCheck /> Đổi trạng thái
                     </button>
                     <button onClick={() => handleDelete(room.id)} className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-3 py-2 rounded-lg text-sm font-medium">

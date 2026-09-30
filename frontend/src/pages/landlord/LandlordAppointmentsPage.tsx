@@ -1,149 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import { FiCheck, FiClock, FiMapPin, FiPhone, FiUser, FiX } from 'react-icons/fi';
+import React, { useEffect, useMemo, useState } from 'react';
+import { FiCheck, FiCheckCircle, FiClock, FiMapPin, FiPhone, FiUser, FiX } from 'react-icons/fi';
 import { toast } from 'react-toastify';
-import { landlordService } from '../../services/landlordService';
+import StatusBadge, { StatusTone } from '../../components/common/StatusBadge';
+import PageState from '../../components/common/PageState';
 import { AppointmentItem } from '../../services/appointmentService';
-import { APPOINTMENT_STATUS_LABELS } from '../../utils/constants';
+import { landlordService } from '../../services/landlordService';
+import { APPOINTMENT_STATUS, APPOINTMENT_STATUS_LABELS } from '../../utils/constants';
+import { getApiErrorMessage } from '../../utils/apiError';
 
-const statusColor: Record<number, string> = {
-  0: 'bg-amber-100 text-amber-700',
-  1: 'bg-emerald-100 text-emerald-700',
-  2: 'bg-rose-100 text-rose-700',
-  3: 'bg-slate-100 text-slate-700',
-  4: 'bg-blue-100 text-blue-700',
-};
+const tone = (status: number): StatusTone => status === 0 ? 'pending' : status === 1 ? 'success' : status === 3 ? 'info' : 'danger';
 
 const LandlordAppointmentsPage: React.FC = () => {
-  const [appointments, setAppointments] = useState<AppointmentItem[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const loadAppointments = async () => {
-    setLoading(true);
-    try {
-      const response = await landlordService.getAppointments();
-      const data = response?.data || response || [];
-      setAppointments(Array.isArray(data) ? data : []);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể tải lịch hẹn của bạn.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadAppointments();
-  }, []);
-
-  const updateAppointment = async (id: number, action: 'confirm' | 'reject' | 'complete') => {
-    try {
-      if (action === 'confirm') {
-        await landlordService.confirmAppointment(id);
-        toast.success('Đã xác nhận lịch hẹn');
-      } else if (action === 'reject') {
-        await landlordService.rejectAppointment(id, 'Chủ trọ không thể nhận lịch vào thời điểm này.');
-        toast.success('Đã từ chối lịch hẹn');
-      } else {
-        await landlordService.completeAppointment(id);
-        toast.success('Đã đánh dấu hoàn thành buổi xem phòng');
-      }
-
-      await loadAppointments();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể cập nhật lịch hẹn.');
-    }
-  };
-
-  return (
-    <div className="p-6">
-      <div className="mb-6">
-        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">CHỦ TRỌ</p>
-        <h1 className="text-3xl font-bold text-slate-900">Lịch hẹn xem phòng</h1>
-      </div>
-
-      {loading ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center text-slate-500">
-          Đang tải danh sách lịch hẹn...
-        </div>
-      ) : appointments.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center text-slate-500">
-          Chưa có lịch hẹn nào cần xử lý.
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {appointments.map((appointment) => (
-            <div key={appointment.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-              <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <h2 className="text-xl font-bold text-slate-900">{appointment.postTitle || 'Tin đăng'}</h2>
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusColor[appointment.status] || 'bg-slate-100 text-slate-700'}`}>
-                      {APPOINTMENT_STATUS_LABELS[appointment.status as keyof typeof APPOINTMENT_STATUS_LABELS] || 'Không xác định'}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-600">
-                    <div className="flex items-center gap-2">
-                      <FiMapPin className="text-slate-400" />
-                      <span>{appointment.postAddress || 'Địa chỉ chưa cập nhật'}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <FiClock className="text-slate-400" />
-                      <span>{appointment.ngayXem} • {appointment.gioXem}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <FiUser className="text-slate-400" />
-                      <span>{appointment.tenantName}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <FiPhone className="text-slate-400" />
-                      <span>{appointment.tenantPhone}</span>
-                    </div>
-                  </div>
-
-                  {appointment.tenantNote && (
-                    <div className="mt-3 text-sm text-slate-600 bg-slate-50 rounded-lg p-3 border border-slate-200">
-                      Ghi chú của người thuê: {appointment.tenantNote}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {appointment.status === 0 && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => updateAppointment(appointment.id, 'confirm')}
-                        className="inline-flex items-center gap-2 bg-emerald-500 text-white px-3 py-2 rounded-lg text-sm font-medium"
-                      >
-                        <FiCheck /> Xác nhận
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateAppointment(appointment.id, 'reject')}
-                        className="inline-flex items-center gap-2 bg-rose-500 text-white px-3 py-2 rounded-lg text-sm font-medium"
-                      >
-                        <FiX /> Từ chối
-                      </button>
-                    </>
-                  )}
-
-                  {appointment.status === 1 && (
-                    <button
-                      type="button"
-                      onClick={() => updateAppointment(appointment.id, 'complete')}
-                      className="inline-flex items-center gap-2 bg-blue-500 text-white px-3 py-2 rounded-lg text-sm font-medium"
-                    >
-                      <FiCheck /> Hoàn thành
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  const [items,setItems]=useState<AppointmentItem[]>([]); const [loading,setLoading]=useState(true); const [error,setError]=useState(''); const [filter,setFilter]=useState<number|'all'>('all');
+  const load=async()=>{setLoading(true);setError('');try{const r=await landlordService.getAppointments();const d=r?.data||r||[];setItems(Array.isArray(d)?d:[]);}catch(e){const m=getApiErrorMessage(e,'Không thể tải lịch hẹn.');setError(m);toast.error(m);}finally{setLoading(false);}};
+  useEffect(()=>{void load();},[]);
+  const visible=useMemo(()=>filter==='all'?items:items.filter(x=>x.status===filter),[items,filter]);
+  const act=async(id:number,action:'confirm'|'reject'|'complete')=>{try{if(action==='confirm')await landlordService.confirmAppointment(id);if(action==='complete')await landlordService.completeAppointment(id);if(action==='reject'){const reason=window.prompt('Nhập lý do từ chối lịch hẹn:');if(reason===null)return;await landlordService.rejectAppointment(id,reason.trim()||undefined);}toast.success('Đã cập nhật lịch hẹn');await load();}catch(e){toast.error(getApiErrorMessage(e,'Không thể cập nhật lịch hẹn.'));}};
+  return <div className="mx-auto max-w-6xl p-4 md:p-6"><header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase text-blue-600">Chủ trọ</p><h1 className="text-2xl font-bold text-slate-900">Lịch xem phòng</h1><p className="mt-1 text-sm text-slate-500">Duyệt và theo dõi các buổi xem phòng.</p></div><select value={filter} onChange={e=>setFilter(e.target.value==='all'?'all':Number(e.target.value))} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"><option value="all">Tất cả trạng thái</option>{Object.entries(APPOINTMENT_STATUS_LABELS).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></header>
+  {loading?<PageState type="loading" message="Đang tải lịch hẹn..."/>:error?<PageState type="error" message={error} onRetry={load}/>:visible.length===0?<PageState type="empty" message="Chưa có lịch xem phòng phù hợp."/>:<div className="space-y-3">{visible.map(a=><article key={a.id} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"><div className="flex flex-col gap-4 md:flex-row md:justify-between"><div className="min-w-0"><div className="mb-3 flex flex-wrap items-center gap-2"><h2 className="text-lg font-bold">{a.roomName||a.postTitle}</h2><StatusBadge label={APPOINTMENT_STATUS_LABELS[a.status as keyof typeof APPOINTMENT_STATUS_LABELS]||'Không xác định'} tone={tone(a.status)}/></div><div className="grid gap-2 text-sm text-slate-600 sm:grid-cols-2"><span className="flex gap-2"><FiMapPin/>{a.postAddress}</span><span className="flex gap-2"><FiClock/>{new Date(a.scheduledAt).toLocaleString('vi-VN')}</span><span className="flex gap-2"><FiUser/>{a.tenantName}</span><span className="flex gap-2"><FiPhone/>{a.tenantPhone}</span></div>{a.tenantNote&&<p className="mt-3 rounded-md bg-slate-50 p-3 text-sm">Ghi chú: {a.tenantNote}</p>}</div><div className="flex flex-wrap items-start gap-2">{a.status===APPOINTMENT_STATUS.PENDING&&<><button onClick={()=>act(a.id,'confirm')} className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white"><FiCheck/>Chấp nhận</button><button onClick={()=>act(a.id,'reject')} className="inline-flex items-center gap-2 rounded-md border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700"><FiX/>Từ chối</button></>}{a.status===APPOINTMENT_STATUS.CONFIRMED&&<button onClick={()=>act(a.id,'complete')} className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white"><FiCheckCircle/>Hoàn thành</button>}</div></div></article>)}</div>}</div>;
 };
-
 export default LandlordAppointmentsPage;

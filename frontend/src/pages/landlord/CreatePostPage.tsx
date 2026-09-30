@@ -175,7 +175,7 @@ const CreatePostPage: React.FC = () => {
 
   if (loadingData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
+      <div className="min-h-screen bg-slate-50 p-4 sm:p-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center py-20">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
@@ -187,17 +187,16 @@ const CreatePostPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
+    <div className="min-h-screen bg-slate-50 p-0 sm:p-6">
       <div className="max-w-5xl mx-auto">
-        {/* Header với gradient và icon */}
-        <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg mb-4">
-            <FiFileText className="text-white text-2xl" />
+        <div className="mb-6 px-4 pt-5 text-center sm:px-0 sm:pt-0">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-600 rounded-lg shadow-sm mb-3">
+            <FiFileText className="text-white text-xl" />
           </div>
-          <p className="text-xs uppercase tracking-[0.3em] text-blue-600 font-semibold mb-2">
+          <p className="text-xs uppercase text-blue-600 font-semibold mb-2">
             {isEditMode ? 'CHỈNH SỬA TIN ĐĂNG' : 'ĐĂNG TIN MỚI'}
           </p>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">
             {isEditMode ? 'Cập nhật tin đăng' : 'Tạo tin đăng phòng trọ'}
           </h1>
           <p className="text-slate-600 max-w-2xl mx-auto">
@@ -208,34 +207,32 @@ const CreatePostPage: React.FC = () => {
         </div>
 
         {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex items-center justify-center space-x-4">
-            <div className="flex items-center">
+        <div className="mb-6 px-4 sm:px-0">
+          <div className="grid grid-cols-3 gap-2 max-w-lg mx-auto">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2">
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 text-white font-semibold shadow-md">
                 1
               </div>
-              <span className="ml-2 text-sm font-medium text-slate-700">Thông tin</span>
+              <span className="text-xs sm:text-sm font-medium text-slate-700">Thông tin</span>
             </div>
-            <div className="w-16 h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded"></div>
-            <div className="flex items-center">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-purple-500 text-white font-semibold shadow-md">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 text-white font-semibold shadow-md">
                 2
               </div>
-              <span className="ml-2 text-sm font-medium text-slate-700">Địa chỉ</span>
+              <span className="text-xs sm:text-sm font-medium text-slate-700">Địa chỉ</span>
             </div>
-            <div className="w-16 h-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded"></div>
-            <div className="flex items-center">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-pink-500 text-white font-semibold shadow-md">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-emerald-500 text-white font-semibold shadow-md">
                 3
               </div>
-              <span className="ml-2 text-sm font-medium text-slate-700">Hoàn tất</span>
+              <span className="text-xs sm:text-sm font-medium text-slate-700">Hoàn tất</span>
             </div>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Thông tin cơ bản */}
-          <div className="rounded-3xl border-2 border-blue-100 bg-white shadow-xl p-8 hover:shadow-2xl transition-all duration-300">
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-md">
                 <FiFileText className="text-white text-xl" />
@@ -330,7 +327,7 @@ const CreatePostPage: React.FC = () => {
           </div>
 
           {/* Địa chỉ */}
-          <div className="rounded-3xl border-2 border-purple-100 bg-white shadow-xl p-8 hover:shadow-2xl transition-all duration-300">
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-md">
                 <FiMapPin className="text-white text-xl" />
@@ -396,7 +393,7 @@ const CreatePostPage: React.FC = () => {
           </div>
 
           {/* Vị trí trên bản đồ */}
-          <div className="rounded-3xl border-2 border-purple-100 bg-white shadow-xl p-8 hover:shadow-2xl transition-all duration-300">
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-md">
                 <FiMapPin className="text-white text-xl" />
@@ -434,7 +431,7 @@ const CreatePostPage: React.FC = () => {
           </div>
 
           {/* Tiện ích */}
-          <div className="rounded-3xl border-2 border-green-100 bg-white shadow-xl p-8 hover:shadow-2xl transition-all duration-300">
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-md">
                 <FiCheckCircle className="text-white text-xl" />
@@ -482,7 +479,7 @@ const CreatePostPage: React.FC = () => {
           </div>
 
           {/* Hình ảnh */}
-          <div className="rounded-3xl border-2 border-pink-100 bg-white shadow-xl p-8 hover:shadow-2xl transition-all duration-300">
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-3 bg-gradient-to-br from-pink-500 to-pink-600 rounded-xl shadow-md">
                 <FiImage className="text-white text-xl" />
