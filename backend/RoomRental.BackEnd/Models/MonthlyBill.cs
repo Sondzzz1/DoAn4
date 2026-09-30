@@ -22,6 +22,7 @@ public class MonthlyBill
 
     // Tiền phòng và phụ phí
     public decimal RoomPrice { get; set; }
+    public decimal ServiceFee { get; set; }
     public decimal OtherFees { get; set; }
     public string? OtherFeesNote { get; set; }
 

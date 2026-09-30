@@ -3,6 +3,7 @@ using RoomRental.BackEnd.BLL.Interfaces;
 using RoomRental.BackEnd.DAL;
 using RoomRental.BackEnd.DTO.Rental;
 using RoomRental.BackEnd.Models;
+using RoomRental.BackEnd.Models.Enums;
 
 namespace RoomRental.BackEnd.BLL;
 
@@ -10,41 +11,35 @@ public class MonthlyBillBLL : IMonthlyBillService
 {
     private readonly ApplicationDbContext _db;
     private readonly INotificationService _notificationService;
+    private readonly ILogger<MonthlyBillBLL> _logger;
 
-    public MonthlyBillBLL(ApplicationDbContext db, INotificationService notificationService)
+    public MonthlyBillBLL(
+        ApplicationDbContext db,
+        INotificationService notificationService,
+        ILogger<MonthlyBillBLL> logger)
     {
         _db = db;
         _notificationService = notificationService;
+        _logger = logger;
     }
 
     public async Task<HoaDonDto> TaoAsync(int chuTroId, TaoHoaDonDto dto)
     {
-        if (dto.Thang < 1 || dto.Thang > 12)
-            throw new Exception("Tháng không hợp lệ (1-12).");
-        if (dto.Nam < 2000 || dto.Nam > 2100)
-            throw new Exception("Năm không hợp lệ.");
-        if (dto.SoDienMoi < dto.SoDienCu)
-            throw new Exception("Số điện mới không được nhỏ hơn số điện cũ.");
-        if (dto.SoNuocMoi < dto.SoNuocCu)
-            throw new Exception("Số nước mới không được nhỏ hơn số nước cũ.");
+        ValidatePeriod(dto.Thang, dto.Nam);
+        ValidateReadings(dto.SoDienCu, dto.SoDienMoi, dto.SoNuocCu, dto.SoNuocMoi);
+        if (dto.ChiPhiKhac < 0) throw new BusinessRuleException("Chi phí khác không được âm.");
 
         var contract = await _db.RentalContracts
-            .Include(c => c.Post)
-                .ThenInclude(p => p.Room)
-            .FirstOrDefaultAsync(c => c.Id == dto.HopDongId && (c.LandlordAccountId == chuTroId || chuTroId == 0))
-            ?? throw new Exception("Không tìm thấy hợp đồng thuê phòng hoặc bạn không có quyền.");
+            .Include(c => c.Post).ThenInclude(p => p!.Room)
+            .FirstOrDefaultAsync(c => c.Id == dto.HopDongId)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy hợp đồng thuê phòng.");
 
-        var exists = await _db.MonthlyBills
-            .AnyAsync(b => b.ContractId == dto.HopDongId && b.Month == dto.Thang && b.Year == dto.Nam);
-        if (exists)
-            throw new Exception($"Hóa đơn tháng {dto.Thang}/{dto.Nam} cho hợp đồng này đã được tạo trước đó.");
-
-        var roomPrice = dto.TienPhong ?? contract.MonthlyRent;
-        var elecDiff = Math.Max(0, dto.SoDienMoi - dto.SoDienCu);
-        var waterDiff = Math.Max(0, dto.SoNuocMoi - dto.SoNuocCu);
-        var elecAmount = elecDiff * dto.GiaDien;
-        var waterAmount = waterDiff * dto.GiaNuoc;
-        var totalAmount = roomPrice + elecAmount + waterAmount + dto.ChiPhiKhac;
+        if (contract.LandlordAccountId != chuTroId)
+            throw BusinessRuleException.Forbidden("Bạn không có quyền lập hóa đơn cho hợp đồng này.");
+        if (contract.Status != RentalContractStatus.Active)
+            throw BusinessRuleException.Conflict("Chỉ có thể lập hóa đơn cho hợp đồng đang hiệu lực.");
+        if (await _db.MonthlyBills.AnyAsync(b => b.ContractId == dto.HopDongId && b.Month == dto.Thang && b.Year == dto.Nam))
+            throw BusinessRuleException.Conflict($"Hóa đơn tháng {dto.Thang}/{dto.Nam} cho hợp đồng này đã tồn tại.");
 
         var bill = new MonthlyBill
         {
@@ -53,132 +48,104 @@ public class MonthlyBillBLL : IMonthlyBillService
             Year = dto.Nam,
             OldElectricity = dto.SoDienCu,
             NewElectricity = dto.SoDienMoi,
-            ElectricityPrice = dto.GiaDien,
+            ElectricityPrice = contract.ElectricityPrice,
             OldWater = dto.SoNuocCu,
             NewWater = dto.SoNuocMoi,
-            WaterPrice = dto.GiaNuoc,
-            RoomPrice = roomPrice,
+            WaterPrice = contract.WaterPrice,
+            RoomPrice = contract.MonthlyRent,
+            ServiceFee = contract.ServiceFee,
             OtherFees = dto.ChiPhiKhac,
-            OtherFeesNote = dto.GhiChuChiPhiKhac,
-            TotalAmount = totalAmount,
-            Status = 0, // Chờ thanh toán
+            OtherFeesNote = dto.GhiChuChiPhiKhac?.Trim(),
+            Status = MonthlyBillStatus.Unpaid,
             DueDate = dto.HanThanhToan ?? DateTime.Now.AddDays(7),
-            Note = dto.GhiChu,
+            Note = dto.GhiChu?.Trim(),
             CreatedAt = DateTime.Now
         };
+        bill.TotalAmount = CalculateTotal(bill);
 
         _db.MonthlyBills.Add(bill);
         await _db.SaveChangesAsync();
 
-        // Gửi thông báo đến người thuê phòng
         try
         {
             await _notificationService.CreateNotificationAsync(
                 contract.TenantAccountId,
                 $"Hóa đơn tiền phòng tháng {bill.Month}/{bill.Year}",
-                $"Chủ trọ đã lập hóa đơn tháng {bill.Month}/{bill.Year}. Tổng tiền: {bill.TotalAmount:N0} VNĐ (Điện: {elecDiff} kWh, Nước: {waterDiff} m³).",
+                $"Tổng tiền: {bill.TotalAmount:N0} VNĐ. Hạn thanh toán: {bill.DueDate:dd/MM/yyyy}.",
                 1,
-                "/tenant/rentals"
-            );
+                "/tenant/rentals");
         }
-        catch { /* ignore notification errors */ }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Không thể gửi thông báo cho hóa đơn {BillId}", bill.Id);
+        }
 
         return await LayChiTietAsync(chuTroId, bill.Id);
     }
 
     public async Task<List<HoaDonDto>> LayTheoHopDongAsync(int taiKhoanId, int hopDongId)
     {
-        var contract = await _db.RentalContracts
-            .FirstOrDefaultAsync(c => c.Id == hopDongId && (c.TenantAccountId == taiKhoanId || c.LandlordAccountId == taiKhoanId || taiKhoanId == 0))
-            ?? throw new Exception("Không tìm thấy hợp đồng hoặc bạn không có quyền xem.");
+        await ReconcileOverdueAsync();
+        var contract = await _db.RentalContracts.FirstOrDefaultAsync(c => c.Id == hopDongId)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy hợp đồng.");
+        EnsureContractParticipant(contract, taiKhoanId);
 
-        var bills = await _db.MonthlyBills
-            .Where(b => b.ContractId == hopDongId)
-            .OrderByDescending(b => b.Year)
-            .ThenByDescending(b => b.Month)
-            .ToListAsync();
-
+        var bills = await _db.MonthlyBills.Where(b => b.ContractId == hopDongId)
+            .OrderByDescending(b => b.Year).ThenByDescending(b => b.Month).ToListAsync();
         var result = new List<HoaDonDto>();
-        foreach (var b in bills)
-        {
-            result.Add(await MapToDtoAsync(b, contract));
-        }
+        foreach (var bill in bills) result.Add(await MapToDtoAsync(bill, contract));
         return result;
     }
 
     public async Task<List<HoaDonDto>> LayDanhSachCuaToiAsync(int taiKhoanId, bool isLandlord)
     {
+        await ReconcileOverdueAsync();
         var contractQuery = _db.RentalContracts.AsQueryable();
-        if (taiKhoanId != 0)
-        {
-            contractQuery = isLandlord
-                ? contractQuery.Where(c => c.LandlordAccountId == taiKhoanId)
-                : contractQuery.Where(c => c.TenantAccountId == taiKhoanId);
-        }
+        contractQuery = isLandlord
+            ? contractQuery.Where(c => c.LandlordAccountId == taiKhoanId)
+            : contractQuery.Where(c => c.TenantAccountId == taiKhoanId);
 
         var contractIds = await contractQuery.Select(c => c.Id).ToListAsync();
-
-        var bills = await _db.MonthlyBills
-            .Include(b => b.Contract)
+        var bills = await _db.MonthlyBills.Include(b => b.Contract)
             .Where(b => contractIds.Contains(b.ContractId))
-            .OrderByDescending(b => b.Year)
-            .ThenByDescending(b => b.Month)
-            .ThenByDescending(b => b.CreatedAt)
+            .OrderByDescending(b => b.Year).ThenByDescending(b => b.Month).ThenByDescending(b => b.CreatedAt)
             .ToListAsync();
-
         var result = new List<HoaDonDto>();
-        foreach (var b in bills)
-        {
-            result.Add(await MapToDtoAsync(b, b.Contract));
-        }
+        foreach (var bill in bills) result.Add(await MapToDtoAsync(bill, bill.Contract));
         return result;
     }
 
     public async Task<HoaDonDto> LayChiTietAsync(int taiKhoanId, int id)
     {
-        var bill = await _db.MonthlyBills
-            .Include(b => b.Contract)
-            .FirstOrDefaultAsync(b => b.Id == id)
-            ?? throw new Exception("Không tìm thấy hóa đơn.");
-
-        if (taiKhoanId != 0 && bill.Contract.TenantAccountId != taiKhoanId && bill.Contract.LandlordAccountId != taiKhoanId)
-            throw new Exception("Bạn không có quyền xem hóa đơn này.");
-
+        await ReconcileOverdueAsync();
+        var bill = await _db.MonthlyBills.Include(b => b.Contract).FirstOrDefaultAsync(b => b.Id == id)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy hóa đơn.");
+        EnsureContractParticipant(bill.Contract, taiKhoanId);
         return await MapToDtoAsync(bill, bill.Contract);
     }
 
     public async Task<HoaDonDto> CapNhatAsync(int chuTroId, int id, CapNhatHoaDonDto dto)
     {
-        if (dto.SoDienMoi < dto.SoDienCu)
-            throw new Exception("Số điện mới không được nhỏ hơn số điện cũ.");
-        if (dto.SoNuocMoi < dto.SoNuocCu)
-            throw new Exception("Số nước mới không được nhỏ hơn số nước cũ.");
+        ValidateReadings(dto.SoDienCu, dto.SoDienMoi, dto.SoNuocCu, dto.SoNuocMoi);
+        if (dto.ChiPhiKhac < 0) throw new BusinessRuleException("Chi phí khác không được âm.");
 
-        var bill = await _db.MonthlyBills
-            .Include(b => b.Contract)
-            .FirstOrDefaultAsync(b => b.Id == id)
-            ?? throw new Exception("Không tìm thấy hóa đơn.");
-
-        if (chuTroId != 0 && bill.Contract.LandlordAccountId != chuTroId)
-            throw new Exception("Bạn không có quyền chỉnh sửa hóa đơn này.");
-
-        var elecDiff = Math.Max(0, dto.SoDienMoi - dto.SoDienCu);
-        var waterDiff = Math.Max(0, dto.SoNuocMoi - dto.SoNuocCu);
-        var totalAmount = dto.TienPhong + (elecDiff * dto.GiaDien) + (waterDiff * dto.GiaNuoc) + dto.ChiPhiKhac;
+        var bill = await _db.MonthlyBills.Include(b => b.Contract).FirstOrDefaultAsync(b => b.Id == id)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy hóa đơn.");
+        if (bill.Contract.LandlordAccountId != chuTroId)
+            throw BusinessRuleException.Forbidden("Bạn không có quyền chỉnh sửa hóa đơn này.");
+        if (bill.Status is MonthlyBillStatus.Paid or MonthlyBillStatus.PendingPayment or MonthlyBillStatus.Cancelled)
+            throw BusinessRuleException.Conflict("Không thể chỉnh sửa hóa đơn đã thanh toán, đang thanh toán hoặc đã hủy.");
 
         bill.OldElectricity = dto.SoDienCu;
         bill.NewElectricity = dto.SoDienMoi;
-        bill.ElectricityPrice = dto.GiaDien;
         bill.OldWater = dto.SoNuocCu;
         bill.NewWater = dto.SoNuocMoi;
-        bill.WaterPrice = dto.GiaNuoc;
-        bill.RoomPrice = dto.TienPhong;
         bill.OtherFees = dto.ChiPhiKhac;
-        bill.OtherFeesNote = dto.GhiChuChiPhiKhac;
-        bill.TotalAmount = totalAmount;
-        if (dto.TrangThai.HasValue) bill.Status = dto.TrangThai.Value;
-        if (dto.HanThanhToan.HasValue) bill.DueDate = dto.HanThanhToan.Value;
-        if (dto.GhiChu != null) bill.Note = dto.GhiChu;
+        bill.OtherFeesNote = dto.GhiChuChiPhiKhac?.Trim();
+        if (dto.HanThanhToan.HasValue) bill.DueDate = dto.HanThanhToan;
+        if (dto.GhiChu != null) bill.Note = dto.GhiChu.Trim();
+        bill.Status = bill.DueDate < DateTime.Now ? MonthlyBillStatus.Overdue : MonthlyBillStatus.Unpaid;
+        bill.TotalAmount = CalculateTotal(bill);
         bill.UpdatedAt = DateTime.Now;
 
         await _db.SaveChangesAsync();
@@ -187,96 +154,114 @@ public class MonthlyBillBLL : IMonthlyBillService
 
     public async Task<HoaDonDto> ThanhToanAsync(int taiKhoanId, int id, XacNhanThanhToanHoaDonDto? dto = null)
     {
-        var bill = await _db.MonthlyBills
-            .Include(b => b.Contract)
-            .FirstOrDefaultAsync(b => b.Id == id)
-            ?? throw new Exception("Không tìm thấy hóa đơn.");
+        var bill = await _db.MonthlyBills.Include(b => b.Contract).FirstOrDefaultAsync(b => b.Id == id)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy hóa đơn.");
+        if (bill.Contract.LandlordAccountId != taiKhoanId)
+            throw BusinessRuleException.Forbidden("Chỉ chủ trọ sở hữu hợp đồng mới được xác nhận thanh toán thủ công.");
+        if (bill.Status == MonthlyBillStatus.Paid)
+            throw BusinessRuleException.Conflict("Hóa đơn đã được thanh toán.");
+        if (bill.Status == MonthlyBillStatus.Cancelled)
+            throw BusinessRuleException.Conflict("Hóa đơn đã bị hủy.");
 
-        if (taiKhoanId != 0 && bill.Contract.TenantAccountId != taiKhoanId && bill.Contract.LandlordAccountId != taiKhoanId)
-            throw new Exception("Bạn không có quyền xác nhận thanh toán hóa đơn này.");
-
-        bill.Status = 1; // Đã thanh toán
+        bill.Status = MonthlyBillStatus.Paid;
         bill.PaidAt = DateTime.Now;
-        bill.PaymentMethod = dto?.PhuongThucThanhToan ?? "Xác nhận đã thanh toán";
-        if (!string.IsNullOrEmpty(dto?.GhiChu))
-        {
-            bill.Note = string.IsNullOrEmpty(bill.Note) ? dto.GhiChu : $"{bill.Note} | {dto.GhiChu}";
-        }
+        bill.PaymentMethod = dto?.PhuongThucThanhToan?.Trim() ?? "Chủ trọ xác nhận";
+        if (!string.IsNullOrWhiteSpace(dto?.GhiChu))
+            bill.Note = string.IsNullOrWhiteSpace(bill.Note) ? dto.GhiChu.Trim() : $"{bill.Note} | {dto.GhiChu.Trim()}";
         bill.UpdatedAt = DateTime.Now;
-
         await _db.SaveChangesAsync();
 
-        // Gửi thông báo
         try
         {
-            var isTenantPaying = taiKhoanId == bill.Contract.TenantAccountId;
-            var targetAccountId = isTenantPaying ? bill.Contract.LandlordAccountId : bill.Contract.TenantAccountId;
-            var senderRole = isTenantPaying ? "Khách thuê" : "Chủ trọ";
-
             await _notificationService.CreateNotificationAsync(
-                targetAccountId,
-                $"Xác nhận thanh toán hóa đơn {bill.Month}/{bill.Year}",
-                $"{senderRole} đã xác nhận thanh toán hóa đơn tháng {bill.Month}/{bill.Year} ({bill.TotalAmount:N0} VNĐ).",
+                bill.Contract.TenantAccountId,
+                $"Hóa đơn {bill.Month}/{bill.Year} đã được xác nhận",
+                $"Chủ trọ đã xác nhận thanh toán {bill.TotalAmount:N0} VNĐ.",
                 1,
-                isTenantPaying ? "/landlord/contracts" : "/tenant/rentals"
-            );
+                "/tenant/rentals");
         }
-        catch { /* ignore */ }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Không thể gửi thông báo thanh toán hóa đơn {BillId}", bill.Id);
+        }
 
         return await MapToDtoAsync(bill, bill.Contract);
     }
 
     public async Task<bool> XoaAsync(int chuTroId, int id)
     {
-        var bill = await _db.MonthlyBills
-            .Include(b => b.Contract)
-            .FirstOrDefaultAsync(b => b.Id == id)
-            ?? throw new Exception("Không tìm thấy hóa đơn.");
+        var bill = await _db.MonthlyBills.Include(b => b.Contract).FirstOrDefaultAsync(b => b.Id == id)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy hóa đơn.");
+        if (bill.Contract.LandlordAccountId != chuTroId)
+            throw BusinessRuleException.Forbidden("Bạn không có quyền hủy hóa đơn này.");
+        if (bill.Status == MonthlyBillStatus.Paid)
+            throw BusinessRuleException.Conflict("Không thể hủy hóa đơn đã thanh toán.");
+        if (bill.Status == MonthlyBillStatus.PendingPayment)
+            throw BusinessRuleException.Conflict("Không thể hủy hóa đơn đang có giao dịch thanh toán.");
+        if (bill.Status == MonthlyBillStatus.Cancelled)
+            throw BusinessRuleException.Conflict("Hóa đơn đã được hủy trước đó.");
 
-        if (chuTroId != 0 && bill.Contract.LandlordAccountId != chuTroId)
-            throw new Exception("Bạn không có quyền xóa hóa đơn này.");
-
-        _db.MonthlyBills.Remove(bill);
+        bill.Status = MonthlyBillStatus.Cancelled;
+        bill.UpdatedAt = DateTime.Now;
         await _db.SaveChangesAsync();
         return true;
     }
 
-    private async Task<HoaDonDto> MapToDtoAsync(MonthlyBill b, RentalContract contract)
+    private async Task ReconcileOverdueAsync()
     {
-        var post = await _db.Posts
-            .Include(p => p.Room)
-            .FirstOrDefaultAsync(p => p.Id == contract.PostId);
+        var overdue = await _db.MonthlyBills
+            .Where(b => b.Status == MonthlyBillStatus.Unpaid && b.DueDate < DateTime.Now)
+            .ToListAsync();
+        if (overdue.Count == 0) return;
+        foreach (var bill in overdue) bill.Status = MonthlyBillStatus.Overdue;
+        await _db.SaveChangesAsync();
+    }
 
+    private static decimal CalculateTotal(MonthlyBill bill) =>
+        bill.RoomPrice +
+        (bill.NewElectricity - bill.OldElectricity) * bill.ElectricityPrice +
+        (bill.NewWater - bill.OldWater) * bill.WaterPrice +
+        bill.ServiceFee + bill.OtherFees;
+
+    private static void ValidatePeriod(int month, int year)
+    {
+        if (month is < 1 or > 12) throw new BusinessRuleException("Tháng không hợp lệ (1-12).");
+        if (year is < 2000 or > 2100) throw new BusinessRuleException("Năm không hợp lệ.");
+    }
+
+    private static void ValidateReadings(decimal oldElectricity, decimal newElectricity, decimal oldWater, decimal newWater)
+    {
+        if (oldElectricity < 0 || oldWater < 0) throw new BusinessRuleException("Chỉ số điện nước không được âm.");
+        if (newElectricity < oldElectricity) throw new BusinessRuleException("Số điện mới không được nhỏ hơn số điện cũ.");
+        if (newWater < oldWater) throw new BusinessRuleException("Số nước mới không được nhỏ hơn số nước cũ.");
+    }
+
+    private static void EnsureContractParticipant(RentalContract contract, int accountId)
+    {
+        if (contract.TenantAccountId != accountId && contract.LandlordAccountId != accountId)
+            throw BusinessRuleException.Forbidden("Bạn không có quyền xem hóa đơn này.");
+    }
+
+    private async Task<HoaDonDto> MapToDtoAsync(MonthlyBill bill, RentalContract contract)
+    {
+        var post = await _db.Posts.Include(p => p.Room).FirstOrDefaultAsync(p => p.Id == contract.PostId);
         var tenant = await _db.Users.FirstOrDefaultAsync(u => u.Id == contract.TenantAccountId);
         var landlord = await _db.Users.FirstOrDefaultAsync(u => u.Id == contract.LandlordAccountId);
 
         return new HoaDonDto
         {
-            Id = b.Id,
-            HopDongId = b.ContractId,
-            Thang = b.Month,
-            Nam = b.Year,
-            SoDienCu = b.OldElectricity,
-            SoDienMoi = b.NewElectricity,
-            GiaDien = b.ElectricityPrice,
-            SoNuocCu = b.OldWater,
-            SoNuocMoi = b.NewWater,
-            GiaNuoc = b.WaterPrice,
-            TienPhong = b.RoomPrice,
-            ChiPhiKhac = b.OtherFees,
-            GhiChuChiPhiKhac = b.OtherFeesNote,
-            TongTien = b.TotalAmount,
-            TrangThai = b.Status,
-            HanThanhToan = b.DueDate,
-            NgayThanhToan = b.PaidAt,
-            PhuongThucThanhToan = b.PaymentMethod,
-            GhiChu = b.Note,
-            NgayTao = b.CreatedAt,
+            Id = bill.Id, HopDongId = bill.ContractId, Thang = bill.Month, Nam = bill.Year,
+            SoDienCu = bill.OldElectricity, SoDienMoi = bill.NewElectricity, GiaDien = bill.ElectricityPrice,
+            SoNuocCu = bill.OldWater, SoNuocMoi = bill.NewWater, GiaNuoc = bill.WaterPrice,
+            TienPhong = bill.RoomPrice, PhiDichVu = bill.ServiceFee,
+            ChiPhiKhac = bill.OtherFees, GhiChuChiPhiKhac = bill.OtherFeesNote,
+            TongTien = bill.TotalAmount, TrangThai = bill.Status, HanThanhToan = bill.DueDate,
+            NgayThanhToan = bill.PaidAt, PhuongThucThanhToan = bill.PaymentMethod,
+            GhiChu = bill.Note, NgayTao = bill.CreatedAt,
             TenPhong = post?.Title ?? post?.Room?.RoomName ?? $"Phòng hợp đồng #{contract.Id}",
             DiaChiPhong = post?.Room != null ? $"{post.Room.Address}, {post.Room.Ward}, {post.Room.District}, {post.Room.Province}" : "",
             TenNguoiThue = tenant?.FullName ?? $"Khách thuê #{contract.TenantAccountId}",
-            SdtNguoiThue = tenant?.Phone ?? "",
-            TenChuTro = landlord?.FullName ?? $"Chủ trọ #{contract.LandlordAccountId}",
+            SdtNguoiThue = tenant?.Phone ?? "", TenChuTro = landlord?.FullName ?? $"Chủ trọ #{contract.LandlordAccountId}",
             SdtChuTro = landlord?.Phone ?? ""
         };
     }

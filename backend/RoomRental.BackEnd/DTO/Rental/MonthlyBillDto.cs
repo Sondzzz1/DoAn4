@@ -15,6 +15,7 @@ public class TaoHoaDonDto
     public decimal GiaNuoc { get; set; }
 
     public decimal? TienPhong { get; set; }
+    public decimal? PhiDichVu { get; set; }
     public decimal ChiPhiKhac { get; set; } = 0;
     public string? GhiChuChiPhiKhac { get; set; }
 
@@ -33,6 +34,7 @@ public class CapNhatHoaDonDto
     public decimal GiaNuoc { get; set; }
 
     public decimal TienPhong { get; set; }
+    public decimal? PhiDichVu { get; set; }
     public decimal ChiPhiKhac { get; set; }
     public string? GhiChuChiPhiKhac { get; set; }
 
@@ -67,11 +69,12 @@ public class HoaDonDto
     public decimal TienNuoc => Math.Max(0, SoNuocMoi - SoNuocCu) * GiaNuoc;
 
     public decimal TienPhong { get; set; }
+    public decimal PhiDichVu { get; set; }
     public decimal ChiPhiKhac { get; set; }
     public string? GhiChuChiPhiKhac { get; set; }
 
     public decimal TongTien { get; set; }
-    public int TrangThai { get; set; } // 0: Chờ thanh toán, 1: Đã thanh toán, 2: Đã hủy
+    public int TrangThai { get; set; } // 0: Unpaid, 1: Paid, 2: Cancelled, 3: PendingPayment, 4: Overdue
     public DateTime? HanThanhToan { get; set; }
     public DateTime? NgayThanhToan { get; set; }
     public string? PhuongThucThanhToan { get; set; }

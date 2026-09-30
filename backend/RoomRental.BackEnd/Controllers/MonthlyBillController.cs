@@ -23,7 +23,7 @@ public class MonthlyBillController : ControllerBase
     /// Chủ trọ nhập số điện, nước và tạo hóa đơn hàng tháng
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = "Landlord,Admin")]
+    [Authorize(Roles = "Landlord")]
     public async Task<IActionResult> Tao([FromBody] TaoHoaDonDto dto)
     {
         try
@@ -33,7 +33,7 @@ public class MonthlyBillController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(ApiResponse<HoaDonDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<HoaDonDto>(ex);
         }
     }
 
@@ -50,7 +50,7 @@ public class MonthlyBillController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(ApiResponse<List<HoaDonDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<HoaDonDto>>(ex);
         }
     }
 
@@ -68,7 +68,7 @@ public class MonthlyBillController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(ApiResponse<List<HoaDonDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<HoaDonDto>>(ex);
         }
     }
 
@@ -85,7 +85,7 @@ public class MonthlyBillController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(ApiResponse<HoaDonDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<HoaDonDto>(ex);
         }
     }
 
@@ -93,7 +93,7 @@ public class MonthlyBillController : ControllerBase
     /// Chủ trọ cập nhật chỉ số điện nước hoặc điều chỉnh hóa đơn
     /// </summary>
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Landlord,Admin")]
+    [Authorize(Roles = "Landlord")]
     public async Task<IActionResult> CapNhat(int id, [FromBody] CapNhatHoaDonDto dto)
     {
         try
@@ -103,7 +103,7 @@ public class MonthlyBillController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(ApiResponse<HoaDonDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<HoaDonDto>(ex);
         }
     }
 
@@ -111,6 +111,7 @@ public class MonthlyBillController : ControllerBase
     /// Xác nhận thanh toán hóa đơn (Người thuê xác nhận hoặc Chủ trọ xác nhận nhận tiền)
     /// </summary>
     [HttpPut("{id:int}/thanh-toan")]
+    [Authorize(Roles = "Landlord")]
     public async Task<IActionResult> ThanhToan(int id, [FromBody] XacNhanThanhToanHoaDonDto? dto = null)
     {
         try
@@ -120,7 +121,7 @@ public class MonthlyBillController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(ApiResponse<HoaDonDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<HoaDonDto>(ex);
         }
     }
 
@@ -128,17 +129,17 @@ public class MonthlyBillController : ControllerBase
     /// Xóa hóa đơn
     /// </summary>
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Landlord,Admin")]
+    [Authorize(Roles = "Landlord")]
     public async Task<IActionResult> Xoa(int id)
     {
         try
         {
             await _service.XoaAsync(GetUserId(), id);
-            return Ok(ApiResponse<bool>.SuccessResponse(true, "Xóa hóa đơn thành công"));
+            return Ok(ApiResponse<bool>.SuccessResponse(true, "Hủy hóa đơn thành công"));
         }
         catch (Exception ex)
         {
-            return BadRequest(ApiResponse<bool>.ErrorResponse(ex.Message));
+            return this.BusinessError<bool>(ex);
         }
     }
 
