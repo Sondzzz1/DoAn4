@@ -11,10 +11,12 @@ const PaymentResultPage: React.FC = () => {
   const transactionId = searchParams.get('transactionId') || '';
   const amount = Number(searchParams.get('amount')) || 0;
   const message = searchParams.get('message') || '';
+  const processedAt = searchParams.get('processedAt') || '';
+  const targetType = searchParams.get('targetType') || 'Deposit';
 
   return (
     <div className="max-w-xl mx-auto px-4 py-16">
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 md:p-10 shadow-xl text-center">
+      <div className="bg-white rounded-lg border border-slate-200 p-8 md:p-10 shadow-lg text-center">
         {success ? (
           <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl shadow-inner">
             <FiCheckCircle />
@@ -26,7 +28,7 @@ const PaymentResultPage: React.FC = () => {
         )}
 
         <h1 className="text-2xl font-black text-slate-900 mb-2">
-          {success ? 'Thanh toán đặt cọc thành công!' : 'Thanh toán không thành công'}
+          {success ? 'Thanh toán thành công' : 'Thanh toán chưa thành công'}
         </h1>
 
         <p className="text-sm text-slate-600 mb-6">
@@ -39,6 +41,11 @@ const PaymentResultPage: React.FC = () => {
               <span className="text-slate-400">Số tiền thanh toán:</span>
               <b className="text-sm text-[#0084ff]">{formatPrice(amount)}</b>
             </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-slate-400">Đối tượng:</span>
+              <span className="font-semibold text-slate-800">{targetType === 'Deposit' ? 'Tiền đặt cọc' : targetType === 'MonthlyBill' ? 'Hóa đơn hàng tháng' : targetType}</span>
+            </div>
+            {processedAt && <div className="flex justify-between gap-4"><span className="text-slate-400">Thời gian:</span><span className="font-semibold text-slate-800">{new Date(processedAt).toLocaleString('vi-VN')}</span></div>}
             {orderId && (
               <div className="flex justify-between">
                 <span className="text-slate-400">Mã đơn hàng:</span>
@@ -63,7 +70,7 @@ const PaymentResultPage: React.FC = () => {
             to="/tenant/rentals"
             className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#0084ff] hover:bg-[#0073e6] text-white font-bold text-xs rounded-2xl shadow-md shadow-blue-500/20 transition-all"
           >
-            <FiFileText /> Xem hợp đồng & Cọc
+            <FiFileText /> Xem hóa đơn & đặt cọc
           </Link>
           <Link
             to="/"

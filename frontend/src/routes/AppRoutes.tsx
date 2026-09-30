@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
@@ -6,25 +6,26 @@ import { useAuth } from '../hooks/useAuth';
 import PublicLayout from '../layouts/PublicLayout';
 import AdminDashboardLayout from '../layouts/AdminDashboardLayout';
 
-// Public Pages
-import HomePage from '../pages/public/HomePage';
-import RoomListPage from '../pages/public/RoomListPage';
-import RoomDetailPage from '../pages/public/RoomDetailPage';
-import BlogPage from '../pages/public/BlogPage';
-import LoginPage from '../pages/auth/LoginPage';
-import RegisterPage from '../pages/auth/RegisterPage';
-import DashboardPage from '../pages/dashboard/DashboardPage';
-import AdminManagementPage from '../pages/admin/AdminManagementPage';
-import LandlordRoomManagementPage from '../pages/landlord/LandlordRoomManagementPage';
-import TenantAppointmentsPage from '../pages/tenant/TenantAppointmentsPage';
-import TenantProfilePage from '../pages/tenant/TenantProfilePage';
-import TenantFavoritesPage from '../pages/tenant/TenantFavoritesPage';
-import TenantRentalsPage from '../pages/tenant/TenantRentalsPage';
-import LandlordAppointmentsPage from '../pages/landlord/LandlordAppointmentsPage';
-import LandlordContractsPage from '../pages/landlord/LandlordContractsPage';
-import LandlordPostsPage from '../pages/landlord/LandlordPostsPage';
-import CreatePostPage from '../pages/landlord/CreatePostPage';
-import PaymentResultPage from '../pages/payment/PaymentResultPage';
+import PageState from '../components/common/PageState';
+
+const HomePage = lazy(() => import('../pages/public/HomePage'));
+const RoomListPage = lazy(() => import('../pages/public/RoomListPage'));
+const RoomDetailPage = lazy(() => import('../pages/public/RoomDetailPage'));
+const BlogPage = lazy(() => import('../pages/public/BlogPage'));
+const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
+const RegisterPage = lazy(() => import('../pages/auth/RegisterPage'));
+const DashboardPage = lazy(() => import('../pages/dashboard/DashboardPage'));
+const AdminManagementPage = lazy(() => import('../pages/admin/AdminManagementPage'));
+const LandlordRoomManagementPage = lazy(() => import('../pages/landlord/LandlordRoomManagementPage'));
+const TenantAppointmentsPage = lazy(() => import('../pages/tenant/TenantAppointmentsPage'));
+const TenantProfilePage = lazy(() => import('../pages/tenant/TenantProfilePage'));
+const TenantFavoritesPage = lazy(() => import('../pages/tenant/TenantFavoritesPage'));
+const TenantRentalsPage = lazy(() => import('../pages/tenant/TenantRentalsPage'));
+const LandlordAppointmentsPage = lazy(() => import('../pages/landlord/LandlordAppointmentsPage'));
+const LandlordContractsPage = lazy(() => import('../pages/landlord/LandlordContractsPage'));
+const LandlordPostsPage = lazy(() => import('../pages/landlord/LandlordPostsPage'));
+const CreatePostPage = lazy(() => import('../pages/landlord/CreatePostPage'));
+const PaymentResultPage = lazy(() => import('../pages/payment/PaymentResultPage'));
 
 // Protected Route
 import ProtectedRoute from './ProtectedRoute';
@@ -43,6 +44,7 @@ const AppRoutes: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
 
   return (
+    <Suspense fallback={<PageState type="loading" message="Đang tải trang..." />}>
     <Routes>
       {/* Public Routes with Header + Footer */}
       <Route element={<PublicLayout />}>
@@ -227,6 +229,7 @@ const AppRoutes: React.FC = () => {
         />
       </Route>
     </Routes>
+    </Suspense>
   );
 };
 
