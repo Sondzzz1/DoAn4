@@ -5,6 +5,7 @@ using RoomRental.BackEnd.BLL.Interfaces;
 using RoomRental.BackEnd.DTO.Common;
 using RoomRental.BackEnd.DTO.Payment;
 using System.Security.Claims;
+using System.Globalization;
 
 namespace RoomRental.BackEnd.Controllers;
 
@@ -27,7 +28,7 @@ public class PaymentController : ControllerBase
     }
 
     /// <summary>
-    /// Tạo URL thanh toán VNPay Sandbox cho khoản đặt cọc
+    /// Tạo URL thanh toán VNPay Sandbox cho khoản đặt cọc hoặc hóa đơn tháng
     /// </summary>
     [HttpPost("vnpay-tao-url")]
     [Authorize]
@@ -43,7 +44,7 @@ public class PaymentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi tạo URL thanh toán VNPay");
-            return BadRequest(ApiResponse<PaymentResponseDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<PaymentResponseDto>(ex);
         }
     }
 
@@ -59,7 +60,7 @@ public class PaymentController : ControllerBase
             var result = await _paymentService.ProcessPaymentReturnAsync(Request.Query);
             var frontendReturnUrl = _config["VnPay:FrontendReturnUrl"] ?? "http://localhost:5174/payment/result";
 
-            var redirectUrl = $"{frontendReturnUrl}?success={result.Success}&orderId={result.OrderId}&transactionId={result.TransactionId}&amount={result.Amount}&responseCode={result.ResponseCode}&message={Uri.EscapeDataString(result.Message)}&depositId={result.DepositId}";
+            var redirectUrl = $"{frontendReturnUrl}?success={result.Success}&orderId={Uri.EscapeDataString(result.OrderId)}&transactionId={Uri.EscapeDataString(result.TransactionId)}&amount={result.Amount.ToString(CultureInfo.InvariantCulture)}&responseCode={Uri.EscapeDataString(result.ResponseCode)}&message={Uri.EscapeDataString(result.Message)}&depositId={result.DepositId}&monthlyBillId={result.MonthlyBillId}&processedAt={Uri.EscapeDataString(result.ProcessedAt?.ToString("O") ?? string.Empty)}&targetType={Uri.EscapeDataString(result.TargetType)}";
 
             return Redirect(redirectUrl);
         }

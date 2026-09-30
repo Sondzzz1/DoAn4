@@ -1,200 +1,269 @@
+using System.Data;
+using System.Globalization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using RoomRental.BackEnd.BLL.Interfaces;
 using RoomRental.BackEnd.DAL;
 using RoomRental.BackEnd.DTO.Payment;
 using RoomRental.BackEnd.Helpers;
 using RoomRental.BackEnd.Models;
+using RoomRental.BackEnd.Models.Enums;
 
 namespace RoomRental.BackEnd.BLL;
 
 public class PaymentBLL : IPaymentService
 {
+    private const string DepositTarget = "Deposit";
+    private const string MonthlyBillTarget = "MonthlyBill";
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _config;
     private readonly INotificationService _notificationService;
+    private readonly ILogger<PaymentBLL> _logger;
 
     public PaymentBLL(
         ApplicationDbContext context,
         IConfiguration config,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        ILogger<PaymentBLL> logger)
     {
         _context = context;
         _config = config;
         _notificationService = notificationService;
+        _logger = logger;
     }
 
     public async Task<PaymentResponseDto> CreatePaymentUrlAsync(int userId, CreatePaymentRequestDto dto, string clientIp)
     {
-        var deposit = await _context.Deposits
-            .FirstOrDefaultAsync(d => d.Id == dto.DepositId && d.TenantAccountId == userId)
-            ?? throw new Exception("Không tìm thấy khoản đặt cọc hoặc bạn không có quyền thanh toán.");
+        var hasDeposit = dto.DepositId is > 0;
+        var hasBill = dto.MonthlyBillId is > 0;
+        if (hasDeposit == hasBill)
+            throw new BusinessRuleException("Phải chọn đúng một đối tượng thanh toán: khoản cọc hoặc hóa đơn tháng.");
 
-        if (deposit.Status == 1)
+        await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        Deposit? deposit = null;
+        MonthlyBill? bill = null;
+        decimal amount;
+        string targetType;
+        string orderInfo;
+
+        if (hasDeposit)
         {
-            throw new Exception("Khoản đặt cọc này đã được thanh toán trước đó.");
+            deposit = await _context.Deposits.FirstOrDefaultAsync(d => d.Id == dto.DepositId)
+                ?? throw BusinessRuleException.NotFound("Không tìm thấy khoản đặt cọc.");
+            if (deposit.TenantAccountId != userId)
+                throw BusinessRuleException.Forbidden("Bạn không có quyền thanh toán khoản đặt cọc này.");
+            if (deposit.Status != DepositStatus.Pending)
+                throw BusinessRuleException.Conflict("Chỉ khoản cọc đang chờ thanh toán mới có thể thanh toán.");
+            if (await _context.PaymentTransactions.AnyAsync(p => p.DepositId == deposit.Id &&
+                (p.Status == PaymentTransactionStatus.Pending || p.Status == PaymentTransactionStatus.Succeeded)))
+                throw BusinessRuleException.Conflict("Khoản cọc đã có giao dịch đang xử lý hoặc đã thành công.");
+
+            amount = deposit.Amount;
+            targetType = DepositTarget;
+            orderInfo = dto.OrderInfo ?? $"Thanh toan tien coc ID {deposit.Id}";
+        }
+        else
+        {
+            bill = await _context.MonthlyBills.Include(b => b.Contract)
+                .FirstOrDefaultAsync(b => b.Id == dto.MonthlyBillId)
+                ?? throw BusinessRuleException.NotFound("Không tìm thấy hóa đơn tháng.");
+            if (bill.Contract.TenantAccountId != userId)
+                throw BusinessRuleException.Forbidden("Bạn không có quyền thanh toán hóa đơn này.");
+            if (bill.Status is not (MonthlyBillStatus.Unpaid or MonthlyBillStatus.Overdue))
+                throw BusinessRuleException.Conflict("Hóa đơn không ở trạng thái có thể thanh toán.");
+            if (await _context.PaymentTransactions.AnyAsync(p => p.MonthlyBillId == bill.Id &&
+                (p.Status == PaymentTransactionStatus.Pending || p.Status == PaymentTransactionStatus.Succeeded)))
+                throw BusinessRuleException.Conflict("Hóa đơn đã có giao dịch đang xử lý hoặc đã thanh toán.");
+
+            amount = bill.TotalAmount;
+            targetType = MonthlyBillTarget;
+            orderInfo = dto.OrderInfo ?? $"Thanh toan hoa don thang {bill.Month}/{bill.Year} ID {bill.Id}";
+            bill.Status = MonthlyBillStatus.PendingPayment;
+            bill.UpdatedAt = DateTime.Now;
         }
 
-        var tmnCode = _config["VnPay:TmnCode"] ?? "2QXUI4J4";
-        var hashSecret = _config["VnPay:HashSecret"] ?? "RAOERGKBMVUXIAKSRBUEHNQAGWIDFUJK";
-        var baseUrl = _config["VnPay:BaseUrl"] ?? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
-        var returnUrl = _config["VnPay:ReturnUrl"] ?? "http://localhost:5000/api/thanh-toan/vnpay-return";
-
-        var orderId = $"{deposit.Id}_{DateTime.Now.Ticks}";
-        var amountInVnd = (long)(deposit.Amount * 100); // VNPay yêu cầu nhân 100
+        var orderId = $"{(targetType == DepositTarget ? "D" : "B")}_{(deposit?.Id ?? bill!.Id)}_{DateTime.UtcNow.Ticks}";
+        _context.PaymentTransactions.Add(new PaymentTransaction
+        {
+            DepositId = deposit?.Id,
+            MonthlyBillId = bill?.Id,
+            TargetType = targetType,
+            OrderId = orderId,
+            Amount = amount,
+            Status = PaymentTransactionStatus.Pending,
+            OrderInfo = orderInfo
+        });
+        await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         var vnpay = new VnPayHelper();
         vnpay.AddRequestData("vnp_Version", "2.1.0");
         vnpay.AddRequestData("vnp_Command", "pay");
-        vnpay.AddRequestData("vnp_TmnCode", tmnCode);
-        vnpay.AddRequestData("vnp_Amount", amountInVnd.ToString());
+        vnpay.AddRequestData("vnp_TmnCode", _config["VnPay:TmnCode"] ?? "2QXUI4J4");
+        vnpay.AddRequestData("vnp_Amount", ((long)(amount * 100)).ToString(CultureInfo.InvariantCulture));
         vnpay.AddRequestData("vnp_CreateDate", DateTime.Now.ToString("yyyyMMddHHmmss"));
         vnpay.AddRequestData("vnp_CurrCode", "VND");
         vnpay.AddRequestData("vnp_IpAddr", string.IsNullOrEmpty(clientIp) || clientIp == "::1" ? "127.0.0.1" : clientIp);
         vnpay.AddRequestData("vnp_Locale", "vn");
-        vnpay.AddRequestData("vnp_OrderInfo", dto.OrderInfo ?? $"Thanh toan tien coc phong dat coc ID {deposit.Id}");
+        vnpay.AddRequestData("vnp_OrderInfo", orderInfo);
         vnpay.AddRequestData("vnp_OrderType", "other");
-        vnpay.AddRequestData("vnp_ReturnUrl", returnUrl);
+        vnpay.AddRequestData("vnp_ReturnUrl", _config["VnPay:ReturnUrl"] ?? "http://localhost:5000/api/thanh-toan/vnpay-return");
         vnpay.AddRequestData("vnp_TxnRef", orderId);
 
-        var paymentUrl = vnpay.CreateRequestUrl(baseUrl, hashSecret);
-
-        return new PaymentResponseDto
-        {
-            PaymentUrl = paymentUrl,
-            OrderId = orderId,
-            Amount = deposit.Amount
-        };
+        var paymentUrl = vnpay.CreateRequestUrl(
+            _config["VnPay:BaseUrl"] ?? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html",
+            _config["VnPay:HashSecret"] ?? "RAOERGKBMVUXIAKSRBUEHNQAGWIDFUJK");
+        return new PaymentResponseDto { PaymentUrl = paymentUrl, OrderId = orderId, Amount = amount };
     }
 
     public async Task<PaymentResultDto> ProcessPaymentReturnAsync(IQueryCollection query)
     {
         var vnpay = new VnPayHelper();
         foreach (var (key, value) in query)
-        {
-            if (!string.IsNullOrEmpty(key) && key.StartsWith("vnp_"))
-            {
-                vnpay.AddResponseData(key, value.ToString());
-            }
-        }
+            if (key.StartsWith("vnp_", StringComparison.Ordinal)) vnpay.AddResponseData(key, value.ToString());
 
         var orderId = vnpay.GetResponseData("vnp_TxnRef");
-        var transactionId = vnpay.GetResponseData("vnp_TransactionNo");
-        var vnpResponseCode = vnpay.GetResponseData("vnp_ResponseCode");
-        var vnpSecureHash = query["vnp_SecureHash"].ToString();
+        var transactionCode = vnpay.GetResponseData("vnp_TransactionNo");
+        var responseCode = vnpay.GetResponseData("vnp_ResponseCode");
+        var transactionStatus = vnpay.GetResponseData("vnp_TransactionStatus");
         var hashSecret = _config["VnPay:HashSecret"] ?? "RAOERGKBMVUXIAKSRBUEHNQAGWIDFUJK";
+        if (!vnpay.ValidateSignature(query["vnp_SecureHash"].ToString(), hashSecret))
+            return Failure("Chữ ký VNPay không hợp lệ.", orderId, transactionCode, responseCode);
 
-        var isValidSignature = vnpay.ValidateSignature(vnpSecureHash, hashSecret);
-        if (!isValidSignature)
+        var payment = await PaymentQuery().FirstOrDefaultAsync(p => p.OrderId == orderId);
+        if (payment == null)
+            return Failure("Không tìm thấy giao dịch thanh toán tương ứng.", orderId, transactionCode, responseCode);
+        if (!long.TryParse(vnpay.GetResponseData("vnp_Amount"), out var rawAmount) || rawAmount != (long)(payment.Amount * 100))
+            return Failure("Số tiền VNPay trả về không khớp với giao dịch.", orderId, transactionCode, responseCode, payment);
+        if (payment.Status == PaymentTransactionStatus.Succeeded)
+            return Success(payment, "Giao dịch đã được xử lý thành công trước đó.");
+
+        if (responseCode != "00" || (!string.IsNullOrWhiteSpace(transactionStatus) && transactionStatus != "00"))
         {
-            return new PaymentResultDto
-            {
-                Success = false,
-                Message = "Chữ ký VNPay không hợp lệ.",
-                OrderId = orderId,
-                TransactionId = transactionId,
-                ResponseCode = vnpResponseCode
-            };
-        }
-
-        var parts = orderId.Split('_');
-        var depositId = int.TryParse(parts[0], out var dId) ? dId : 0;
-        var deposit = await _context.Deposits.FindAsync(depositId);
-
-        if (deposit == null)
-        {
-            return new PaymentResultDto
-            {
-                Success = false,
-                Message = "Không tìm thấy dữ liệu khoản đặt cọc tương ứng.",
-                OrderId = orderId,
-                TransactionId = transactionId,
-                ResponseCode = vnpResponseCode
-            };
-        }
-
-        if (vnpResponseCode == "00")
-        {
-            // Thanh toán thành công
-            deposit.Status = 1;
-            deposit.PaidAt = DateTime.Now;
-
-            // Tìm hoặc tạo RentalContract tự động nếu chưa có
-            var existingContract = await _context.RentalContracts
-                .FirstOrDefaultAsync(c => c.RentalRequestId == deposit.RentalRequestId);
-
-            if (existingContract == null)
-            {
-                var rentalReq = await _context.RentalRequests.FindAsync(deposit.RentalRequestId);
-                if (rentalReq != null)
-                {
-                    var post = await _context.Posts.FindAsync(rentalReq.PostId);
-                    var contract = new RentalContract
-                    {
-                        RentalRequestId = rentalReq.Id,
-                        PostId = rentalReq.PostId,
-                        TenantAccountId = rentalReq.TenantAccountId,
-                        LandlordAccountId = rentalReq.LandlordAccountId,
-                        StartDate = DateTime.Now,
-                        EndDate = DateTime.Now.AddMonths(6),
-                        MonthlyRent = post?.DisplayPrice ?? deposit.Amount,
-                        Status = 1,
-                        TenantConfirmed = true,
-                        LandlordConfirmed = true,
-                        CreatedAt = DateTime.Now
-                    };
-                    _context.RentalContracts.Add(contract);
-                }
-            }
-            else
-            {
-                existingContract.TenantConfirmed = true;
-                existingContract.Status = 1;
-            }
-
+            payment.Status = PaymentTransactionStatus.Failed;
+            payment.ResponseCode = responseCode;
+            payment.TransactionCode = string.IsNullOrWhiteSpace(transactionCode) ? null : transactionCode;
+            payment.ProcessedAt = DateTime.Now;
+            RestoreBillAfterFailedPayment(payment);
             await _context.SaveChangesAsync();
+            return Failure($"Giao dịch chưa thành công (mã: {responseCode}).", orderId, transactionCode, responseCode, payment);
+        }
 
-            // Gửi thông báo real-time
-            await _notificationService.CreateNotificationAsync(
-                deposit.TenantAccountId,
-                "Đặt cọc thành công",
-                $"Bạn đã thanh toán thành công {deposit.Amount:N0} VNĐ tiền đặt cọc phòng.",
-                1,
-                "/tenant/rentals"
-            );
+        await using var dbTransaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        payment = await PaymentQuery().FirstAsync(p => p.OrderId == orderId);
+        if (payment.Status == PaymentTransactionStatus.Succeeded)
+        {
+            await dbTransaction.CommitAsync();
+            return Success(payment, "Giao dịch đã được xử lý thành công trước đó.");
+        }
+        if (string.IsNullOrWhiteSpace(transactionCode))
+            return Failure("VNPay không trả về mã giao dịch hợp lệ.", orderId, transactionCode, responseCode, payment);
+        if (await _context.PaymentTransactions.AnyAsync(p => p.Id != payment.Id && p.TransactionCode == transactionCode))
+            return Failure("Mã giao dịch VNPay đã được xử lý.", orderId, transactionCode, responseCode, payment);
 
-            await _notificationService.CreateNotificationAsync(
-                deposit.LandlordAccountId,
-                "Nhận tiền đặt cọc phòng",
-                $"Khách thuê đã thanh toán {deposit.Amount:N0} VNĐ tiền đặt cọc phòng qua VNPay.",
-                1,
-                "/landlord/contracts"
-            );
+        ValidateTargetForSuccess(payment);
+        payment.Status = PaymentTransactionStatus.Succeeded;
+        payment.TransactionCode = transactionCode;
+        payment.ResponseCode = responseCode;
+        payment.ProcessedAt = DateTime.Now;
 
-            return new PaymentResultDto
-            {
-                Success = true,
-                Message = "Giao dịch thanh toán đặt cọc thành công.",
-                OrderId = orderId,
-                TransactionId = transactionId,
-                Amount = deposit.Amount,
-                ResponseCode = vnpResponseCode,
-                DepositId = deposit.Id
-            };
+        if (payment.Deposit != null)
+        {
+            payment.Deposit.Status = DepositStatus.Paid;
+            payment.Deposit.PaidAt = DateTime.Now;
         }
         else
         {
-            return new PaymentResultDto
+            payment.MonthlyBill!.Status = MonthlyBillStatus.Paid;
+            payment.MonthlyBill.PaidAt = DateTime.Now;
+            payment.MonthlyBill.PaymentMethod = "VNPay";
+            payment.MonthlyBill.UpdatedAt = DateTime.Now;
+        }
+
+        await _context.SaveChangesAsync();
+        await dbTransaction.CommitAsync();
+        await SendSuccessNotificationsAsync(payment);
+        return Success(payment, payment.TargetType == DepositTarget
+            ? "Giao dịch thanh toán đặt cọc thành công."
+            : "Giao dịch thanh toán hóa đơn thành công.");
+    }
+
+    private IQueryable<PaymentTransaction> PaymentQuery() => _context.PaymentTransactions
+        .Include(p => p.Deposit)
+        .Include(p => p.MonthlyBill).ThenInclude(b => b!.Contract);
+
+    private static void ValidateTargetForSuccess(PaymentTransaction payment)
+    {
+        if (payment.TargetType == DepositTarget && payment.Deposit != null)
+        {
+            if (payment.Deposit.Amount != payment.Amount)
+                throw BusinessRuleException.Conflict("Số tiền khoản cọc đã thay đổi, giao dịch bị từ chối.");
+            if (payment.Deposit.Status != DepositStatus.Pending)
+                throw BusinessRuleException.Conflict("Khoản cọc không còn ở trạng thái chờ thanh toán.");
+            return;
+        }
+
+        if (payment.TargetType == MonthlyBillTarget && payment.MonthlyBill != null)
+        {
+            if (payment.MonthlyBill.TotalAmount != payment.Amount)
+                throw BusinessRuleException.Conflict("Số tiền hóa đơn đã thay đổi, giao dịch bị từ chối.");
+            if (payment.MonthlyBill.Status != MonthlyBillStatus.PendingPayment)
+                throw BusinessRuleException.Conflict("Hóa đơn không còn ở trạng thái chờ thanh toán.");
+            return;
+        }
+
+        throw BusinessRuleException.Conflict("Đối tượng thanh toán không hợp lệ.");
+    }
+
+    private static void RestoreBillAfterFailedPayment(PaymentTransaction payment)
+    {
+        if (payment.MonthlyBill?.Status == MonthlyBillStatus.PendingPayment)
+            payment.MonthlyBill.Status = payment.MonthlyBill.DueDate < DateTime.Now
+                ? MonthlyBillStatus.Overdue
+                : MonthlyBillStatus.Unpaid;
+    }
+
+    private async Task SendSuccessNotificationsAsync(PaymentTransaction payment)
+    {
+        try
+        {
+            if (payment.Deposit != null)
             {
-                Success = false,
-                Message = $"Giao dịch không thành công hoặc đã bị hủy (Mã lỗi: {vnpResponseCode}).",
-                OrderId = orderId,
-                TransactionId = transactionId,
-                Amount = deposit.Amount,
-                ResponseCode = vnpResponseCode,
-                DepositId = deposit.Id
-            };
+                await _notificationService.CreateNotificationAsync(payment.Deposit.TenantAccountId, "Đặt cọc thành công",
+                    $"Bạn đã thanh toán {payment.Amount:N0} VNĐ tiền đặt cọc.", 1, "/tenant/rentals");
+                await _notificationService.CreateNotificationAsync(payment.Deposit.LandlordAccountId, "Có khoản cọc mới",
+                    $"Khách thuê đã thanh toán {payment.Amount:N0} VNĐ. Vui lòng xác nhận khoản cọc.", 1, "/landlord/contracts");
+            }
+            else if (payment.MonthlyBill != null)
+            {
+                await _notificationService.CreateNotificationAsync(payment.MonthlyBill.Contract.TenantAccountId,
+                    "Thanh toán hóa đơn thành công", $"Bạn đã thanh toán {payment.Amount:N0} VNĐ qua VNPay.", 1, "/tenant/rentals");
+                await _notificationService.CreateNotificationAsync(payment.MonthlyBill.Contract.LandlordAccountId,
+                    "Hóa đơn đã được thanh toán", $"Hóa đơn {payment.MonthlyBill.Month}/{payment.MonthlyBill.Year} đã được thanh toán.", 1, "/landlord/contracts");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Thanh toán {OrderId} thành công nhưng không gửi được thông báo", payment.OrderId);
         }
     }
+
+    private static PaymentResultDto Success(PaymentTransaction payment, string message) => new()
+    {
+        Success = true, Message = message, OrderId = payment.OrderId,
+        TransactionId = payment.TransactionCode ?? string.Empty, Amount = payment.Amount,
+        ResponseCode = payment.ResponseCode ?? "00", DepositId = payment.DepositId,
+        MonthlyBillId = payment.MonthlyBillId, ProcessedAt = payment.ProcessedAt,
+        TargetType = payment.TargetType
+    };
+
+    private static PaymentResultDto Failure(
+        string message, string orderId, string transactionCode, string responseCode,
+        PaymentTransaction? payment = null) => new()
+    {
+        Success = false, Message = message, OrderId = orderId, TransactionId = transactionCode,
+        Amount = payment?.Amount ?? 0, ResponseCode = responseCode,
+        DepositId = payment?.DepositId, MonthlyBillId = payment?.MonthlyBillId,
+        ProcessedAt = payment?.ProcessedAt, TargetType = payment?.TargetType ?? string.Empty
+    };
 }
