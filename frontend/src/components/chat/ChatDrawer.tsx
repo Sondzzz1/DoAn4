@@ -41,6 +41,11 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({
   const [activePost, setActivePost] = useState<{ id?: number; title?: string; price?: number; image?: string } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const activePartnerRef = useRef(activePartner);
+
+  useEffect(() => {
+    activePartnerRef.current = activePartner;
+  }, [activePartner]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -55,12 +60,13 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({
     // Lắng nghe tin nhắn mới từ SignalR
     const unsubscribe = chatService.onReceiveMessage((msg) => {
       // Nếu đang mở khung chat với người gửi đó
-      if (activePartner && (msg.senderId === activePartner.id || msg.receiverId === activePartner.id)) {
+      const currentPartner = activePartnerRef.current;
+      if (currentPartner && (msg.senderId === currentPartner.id || msg.receiverId === currentPartner.id)) {
         setMessages((prev) => [...prev, msg]);
         scrollToBottom();
         // Đánh dấu đã đọc
-        if (msg.senderId === activePartner.id) {
-          void chatService.markAsRead(activePartner.id);
+        if (msg.senderId === currentPartner.id) {
+          void chatService.markAsRead(currentPartner.id);
         }
       } else {
         // Cập nhật số tin chưa đọc
@@ -74,8 +80,9 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({
 
     return () => {
       unsubscribe();
+      void chatService.stopConnection();
     };
-  }, [isAuthenticated, activePartner]);
+  }, [isAuthenticated]);
 
   // Xử lý khi nhận sự kiện open-direct-chat từ bất kỳ đâu trên ứng dụng
   useEffect(() => {

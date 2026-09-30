@@ -44,6 +44,7 @@ const NotificationBell: React.FC = () => {
     return () => {
       unsubscribe();
       document.removeEventListener('mousedown', handleClickOutside);
+      void notificationService.stopConnection();
     };
   }, [isAuthenticated]);
 

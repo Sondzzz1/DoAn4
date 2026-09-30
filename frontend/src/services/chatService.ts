@@ -40,14 +40,21 @@ export interface SendMessagePayload {
 
 class ChatService {
   private hubConnection: signalR.HubConnection | null = null;
+  private connectionPromise: Promise<void> | null = null;
+  private shouldStayConnected = false;
   private messageListeners: ((msg: ChatMessage) => void)[] = [];
 
   public async startConnection(): Promise<void> {
     const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
     if (!token) return;
+    this.shouldStayConnected = true;
 
-    if (this.hubConnection && this.hubConnection.state === signalR.HubConnectionState.Connected) {
-      return;
+    if (this.hubConnection) {
+      if (this.hubConnection.state === signalR.HubConnectionState.Connected) return;
+      if (this.hubConnection.state === signalR.HubConnectionState.Connecting ||
+          this.hubConnection.state === signalR.HubConnectionState.Reconnecting) {
+        return this.connectionPromise ?? Promise.resolve();
+      }
     }
 
     this.hubConnection = new signalR.HubConnectionBuilder()
@@ -65,17 +72,36 @@ class ChatService {
       this.messageListeners.forEach((listener) => listener(msg));
     });
 
-    try {
-      await this.hubConnection.start();
-    } catch (err) {
-      console.warn('Không thể kết nối Chat SignalR Hub:', err);
-    }
+    const connection = this.hubConnection;
+    this.connectionPromise = connection.start()
+      .catch(() => {
+        if (this.hubConnection === connection) this.hubConnection = null;
+      })
+      .finally(() => {
+        this.connectionPromise = null;
+      });
+    await this.connectionPromise;
   }
 
-  public stopConnection(): void {
-    if (this.hubConnection) {
-      this.hubConnection.stop();
+  public async stopConnection(): Promise<void> {
+    this.shouldStayConnected = false;
+    const connection = this.hubConnection;
+    const pendingStart = this.connectionPromise;
+    if (!connection) return;
+
+    if (pendingStart) {
+      await pendingStart;
+    }
+
+    if (this.shouldStayConnected) return;
+
+    if (connection.state !== signalR.HubConnectionState.Disconnected) {
+      await connection.stop();
+    }
+
+    if (this.hubConnection === connection) {
       this.hubConnection = null;
+      this.connectionPromise = null;
     }
   }
 
