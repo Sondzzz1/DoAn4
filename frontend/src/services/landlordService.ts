@@ -9,7 +9,7 @@ export const landlordService = {
   rejectAppointment: async (id: number, reason?: string) => (await api.put(`/lich-hen-xem-phong/${id}/tu-choi`, reason ? { reason } : {})).data,
   completeAppointment: async (id: number) => (await api.put(`/lich-hen-xem-phong/${id}/hoan-thanh`)).data,
   approveRentalRequest: async (id: number) => (await api.put(`/yeu-cau-thue/${id}/trang-thai`, { trangThai: 1 })).data,
-  rejectRentalRequest: async (id: number) => (await api.put(`/yeu-cau-thue/${id}/trang-thai`, { trangThai: 2 })).data,
+  rejectRentalRequest: async (id: number, reason?: string) => (await api.put(`/yeu-cau-thue/${id}/trang-thai`, { trangThai: 2, ghiChu: reason })).data,
   confirmContract: async (id: number) => (await api.put(`/hop-dong/${id}/xac-nhan`)).data,
-  confirmDeposit: async (id: number) => (await api.put(`/dat-coc/${id}/trang-thai`, { trangThai: 1 })).data,
+  confirmDeposit: async (id: number) => (await api.put(`/dat-coc/${id}/trang-thai`, { trangThai: 2 })).data,
 };

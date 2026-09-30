@@ -2,7 +2,8 @@ import api from './api';
 import { ApiResponse } from '../types/common.types';
 
 export interface CreatePaymentRequest {
-  depositId: number;
+  depositId?: number;
+  monthlyBillId?: number;
   orderInfo?: string;
 }
 

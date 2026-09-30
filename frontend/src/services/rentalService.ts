@@ -7,7 +7,12 @@ export interface RentalRequestDto {
   nguoiThueId: number;
   chuTroId: number;
   tieuDeBaiDang?: string;
-  trangThai: number; // 0: Chờ duyệt, 1: Đã duyệt, 2: Từ chối
+  anhPhong?: string;
+  giaThue?: number;
+  diaChi?: string;
+  tenNguoiThue?: string;
+  sdtNguoiThue?: string;
+  trangThai: number; // 0 pending, 1 approved, 2 rejected, 3 cancelled, 4 converted
   ghiChu?: string;
   ngayTao: string;
 }
@@ -16,7 +21,7 @@ export interface DepositDto {
   id: number;
   yeuCauThueId: number;
   soTien: number;
-  trangThai: number; // 0: Chờ thanh toán, 1: Đã thanh toán, 2: Đã hoàn cọc/hủy
+  trangThai: number; // 0 pending, 1 paid, 2 confirmed, 3 refund requested, 4 refunded, 5 cancelled
   ngayThanhToan?: string;
   ngayTao: string;
 }
@@ -31,6 +36,10 @@ export interface ContractDto {
   ngayKetThuc: string;
   tienThueHangThang: number;
   tienDatCoc?: number;
+  giaDien: number;
+  giaNuoc: number;
+  phiDichVu: number;
+  dieuKhoan?: string;
   trangThai: number; // 0: Chờ xác nhận, 1: Đang hiệu lực, 2: Đã kết thúc
   nguoiThueDaXacNhan: boolean;
   chuTroDaXacNhan: boolean;
@@ -82,6 +91,11 @@ export const rentalService = {
     return response.data;
   },
 
+  cancelRentalRequest: async (id: number): Promise<ApiResponse<RentalRequestDto>> => {
+    const response = await api.put<ApiResponse<RentalRequestDto>>(`/yeu-cau-thue/${id}/huy`);
+    return response.data;
+  },
+
   // Đặt cọc
   createDeposit: async (data: { yeuCauThueId: number; soTien: number }): Promise<ApiResponse<DepositDto>> => {
     const response = await api.post<ApiResponse<DepositDto>>('/dat-coc', data);
@@ -93,8 +107,13 @@ export const rentalService = {
     return response.data;
   },
 
+  confirmDeposit: async (id: number): Promise<ApiResponse<DepositDto>> => {
+    const response = await api.put<ApiResponse<DepositDto>>(`/dat-coc/${id}/trang-thai`, { trangThai: 2 });
+    return response.data;
+  },
+
   // Hợp đồng
-  createContract: async (data: { yeuCauThueId: number; ngayBatDau: string; ngayKetThuc: string; tienThueHangThang: number }): Promise<ApiResponse<ContractDto>> => {
+  createContract: async (data: { yeuCauThueId: number; ngayBatDau: string; ngayKetThuc: string; tienThueHangThang: number; dieuKhoan?: string }): Promise<ApiResponse<ContractDto>> => {
     const response = await api.post<ApiResponse<ContractDto>>('/hop-dong', data);
     return response.data;
   },

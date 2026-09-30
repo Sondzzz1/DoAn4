@@ -17,10 +17,11 @@ export interface MonthlyBillDto {
   giaNuoc: number;
   tienNuoc: number;
   tienPhong: number;
+  phiDichVu: number;
   chiPhiKhac: number;
   ghiChuChiPhiKhac?: string;
   tongTien: number;
-  trangThai: number; // 0: Chờ thanh toán, 1: Đã thanh toán, 2: Đã hủy
+  trangThai: number; // 0: Unpaid, 1: Paid, 2: Cancelled, 3: PendingPayment, 4: Overdue
   hanThanhToan?: string;
   ngayThanhToan?: string;
   phuongThucThanhToan?: string;
@@ -45,6 +46,7 @@ export interface CreateMonthlyBillDto {
   soNuocMoi: number;
   giaNuoc: number;
   tienPhong?: number;
+  phiDichVu?: number;
   chiPhiKhac: number;
   ghiChuChiPhiKhac?: string;
   hanThanhToan?: string;
@@ -59,6 +61,7 @@ export interface UpdateMonthlyBillDto {
   soNuocMoi: number;
   giaNuoc: number;
   tienPhong: number;
+  phiDichVu?: number;
   chiPhiKhac: number;
   ghiChuChiPhiKhac?: string;
   trangThai?: number;
@@ -105,7 +108,7 @@ export const monthlyBillService = {
     return response.data;
   },
 
-  // Xóa hóa đơn
+  // Hủy hóa đơn, backend giữ lại lịch sử tài chính
   deleteBill: async (id: number): Promise<ApiResponse<boolean>> => {
     const response = await api.delete<ApiResponse<boolean>>(`/hoa-don/${id}`);
     return response.data;
