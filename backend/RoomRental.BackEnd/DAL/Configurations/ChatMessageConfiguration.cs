@@ -13,10 +13,10 @@ public class ChatMessageConfiguration : IEntityTypeConfiguration<ChatMessage>
 
         builder.Property(x => x.SenderId).HasColumnName("NguoiGuiId").IsRequired();
         builder.Property(x => x.ReceiverId).HasColumnName("NguoiNhanId").IsRequired();
-        builder.Property(x => x.PostId).HasColumnName("BaiDangId");
+        builder.Property(x => x.PostId).HasColumnName("TinDangId");
         builder.Property(x => x.Message).HasColumnName("NoiDung").IsRequired().HasMaxLength(2000);
         builder.Property(x => x.IsRead).HasColumnName("DaDoc").IsRequired().HasDefaultValue(false);
-        builder.Property(x => x.CreatedAt).HasColumnName("NgayTao").IsRequired().HasDefaultValueSql("SYSDATETIME()");
+        builder.Property(x => x.CreatedAt).HasColumnName("NgayGui").IsRequired().HasDefaultValueSql("SYSDATETIME()");
 
         builder.HasOne(x => x.Sender)
             .WithMany()

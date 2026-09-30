@@ -36,7 +36,7 @@ public class ChatController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy danh sách cuộc trò chuyện");
-            return BadRequest(ApiResponse<List<ConversationDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<ConversationDto>>(ex);
         }
     }
 
@@ -55,7 +55,7 @@ public class ChatController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy tin nhắn với partnerId: {PartnerId}", partnerId);
-            return BadRequest(ApiResponse<List<ChatMessageDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<ChatMessageDto>>(ex);
         }
     }
 
@@ -74,7 +74,7 @@ public class ChatController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi gửi tin nhắn");
-            return BadRequest(ApiResponse<ChatMessageDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<ChatMessageDto>(ex);
         }
     }
 
@@ -93,7 +93,7 @@ public class ChatController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi đánh dấu đã đọc");
-            return BadRequest(ApiResponse<bool>.ErrorResponse(ex.Message));
+            return this.BusinessError<bool>(ex);
         }
     }
 
@@ -111,7 +111,7 @@ public class ChatController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(ApiResponse<int>.ErrorResponse(ex.Message));
+            return this.BusinessError<int>(ex);
         }
     }
 

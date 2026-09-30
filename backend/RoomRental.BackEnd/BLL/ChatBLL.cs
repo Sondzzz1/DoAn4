@@ -71,6 +71,10 @@ public class ChatBLL : IChatService
 
     public async Task<List<ChatMessageDto>> GetMessagesAsync(int userId, int partnerId)
     {
+        if (userId == partnerId) throw new BusinessRuleException("Không thể mở hội thoại với chính mình.");
+        if (!await _context.Users.AnyAsync(u => u.Id == partnerId && u.IsActive))
+            throw BusinessRuleException.NotFound("Không tìm thấy người dùng trong hội thoại.");
+
         var messages = await _context.ChatMessages
             .Include(m => m.Sender)
             .Include(m => m.Receiver)
@@ -119,14 +123,22 @@ public class ChatBLL : IChatService
     {
         if (string.IsNullOrWhiteSpace(dto.Message))
         {
-            throw new Exception("Nội dung tin nhắn không được để trống.");
+            throw new BusinessRuleException("Nội dung tin nhắn không được để trống.");
         }
+        if (dto.Message.Trim().Length > 2000)
+            throw new BusinessRuleException("Nội dung tin nhắn không được vượt quá 2000 ký tự.");
+        if (senderId == dto.ReceiverId)
+            throw new BusinessRuleException("Không thể gửi tin nhắn cho chính mình.");
 
         var receiver = await _context.Users.FindAsync(dto.ReceiverId)
-            ?? throw new Exception("Không tìm thấy người nhận tin nhắn.");
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy người nhận tin nhắn.");
 
         var sender = await _context.Users.FindAsync(senderId)
-            ?? throw new Exception("Không tìm thấy thông tin người gửi.");
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy thông tin người gửi.");
+        if (!sender.IsActive || !receiver.IsActive)
+            throw BusinessRuleException.Forbidden("Tài khoản gửi hoặc nhận tin nhắn không hoạt động.");
+        if (!await CanCommunicateAsync(senderId, dto.ReceiverId, dto.PostId))
+            throw BusinessRuleException.Forbidden("Bạn không có quyền bắt đầu hội thoại với người dùng này.");
 
         var msg = new ChatMessage
         {
@@ -201,5 +213,35 @@ public class ChatBLL : IChatService
     public async Task<int> GetUnreadCountAsync(int userId)
     {
         return await _context.ChatMessages.CountAsync(m => m.ReceiverId == userId && !m.IsRead);
+    }
+
+    private async Task<bool> CanCommunicateAsync(int senderId, int receiverId, int? postId)
+    {
+        if (await _context.ChatMessages.AnyAsync(m =>
+            (m.SenderId == senderId && m.ReceiverId == receiverId) ||
+            (m.SenderId == receiverId && m.ReceiverId == senderId)))
+            return true;
+
+        if (postId.HasValue)
+        {
+            var postLandlordAccountId = await _context.Posts
+                .Where(p => p.Id == postId.Value)
+                .Select(p => (int?)p.Landlord.AccountId)
+                .FirstOrDefaultAsync();
+            if (!postLandlordAccountId.HasValue)
+                throw BusinessRuleException.NotFound("Không tìm thấy tin đăng được nhắc tới.");
+
+            var otherUserId = postLandlordAccountId.Value == senderId ? receiverId : senderId;
+            var otherIsTenant = await _context.Users.AnyAsync(u => u.Id == otherUserId && u.RoleId == 1);
+            if (otherIsTenant && (postLandlordAccountId.Value == senderId || postLandlordAccountId.Value == receiverId))
+                return true;
+        }
+
+        return await _context.RentalRequests.AnyAsync(r =>
+                   (r.TenantAccountId == senderId && r.LandlordAccountId == receiverId) ||
+                   (r.TenantAccountId == receiverId && r.LandlordAccountId == senderId)) ||
+               await _context.RentalContracts.AnyAsync(c =>
+                   (c.TenantAccountId == senderId && c.LandlordAccountId == receiverId) ||
+                   (c.TenantAccountId == receiverId && c.LandlordAccountId == senderId));
     }
 }
