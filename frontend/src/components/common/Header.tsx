@@ -1,18 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { ROUTES } from '../../utils/constants';
-import { FiHeart, FiChevronDown, FiLogOut, FiUser, FiCalendar, FiHome, FiPlusCircle, FiFileText } from 'react-icons/fi';
+import { FiHeart, FiChevronDown, FiLogOut, FiUser, FiCalendar, FiHome, FiPlusCircle, FiFileText, FiMenu, FiX } from 'react-icons/fi';
 import NotificationBell from './NotificationBell';
 
 const Header: React.FC = () => {
   const { user, isAuthenticated, isLandlord, isTenant, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
+    setMobileMenuOpen(false);
     logout();
     navigate(ROUTES.HOME);
   };
+
+  const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
     <header className="site-header">
@@ -21,6 +25,16 @@ const Header: React.FC = () => {
         <Link to={ROUTES.HOME} className="site-logo">
           Timnhatro<span className="site-logo-green">.vn</span>
         </Link>
+
+        <button
+          type="button"
+          className="header-menu-button"
+          onClick={() => setMobileMenuOpen((open) => !open)}
+          aria-label={mobileMenuOpen ? 'Đóng menu' : 'Mở menu'}
+          aria-expanded={mobileMenuOpen}
+        >
+          {mobileMenuOpen ? <FiX /> : <FiMenu />}
+        </button>
 
         {/* Navigation */}
         <nav className="site-nav">
@@ -136,6 +150,37 @@ const Header: React.FC = () => {
           )}
         </div>
       </div>
+
+      {mobileMenuOpen && (
+        <div className="site-mobile-menu">
+          <nav aria-label="Điều hướng di động">
+            <Link to="/rooms" onClick={closeMobileMenu}>Phòng trọ</Link>
+            <Link to="/rooms?type=house" onClick={closeMobileMenu}>Nhà nguyên căn</Link>
+            <Link to="/rooms?type=apartment" onClick={closeMobileMenu}>Căn hộ</Link>
+            <Link to="/rooms?type=share" onClick={closeMobileMenu}>Ở ghép</Link>
+            <Link to="/blog" onClick={closeMobileMenu}>Blog</Link>
+          </nav>
+
+          <div className="site-mobile-account">
+            {isAuthenticated ? (
+              <>
+                {isTenant && <Link to={ROUTES.TENANT_PROFILE} onClick={closeMobileMenu}><FiUser /> Tài khoản</Link>}
+                {isTenant && <Link to={ROUTES.TENANT_FAVORITES} onClick={closeMobileMenu}><FiHeart /> Tin đã lưu</Link>}
+                {isTenant && <Link to={ROUTES.TENANT_APPOINTMENTS} onClick={closeMobileMenu}><FiCalendar /> Lịch hẹn</Link>}
+                {isTenant && <Link to={ROUTES.TENANT_RENTALS} onClick={closeMobileMenu}><FiFileText /> Thuê phòng</Link>}
+                {isLandlord && <Link to={ROUTES.LANDLORD_DASHBOARD} onClick={closeMobileMenu}><FiHome /> Quản lý nhà trọ</Link>}
+                {isAdmin && <Link to={ROUTES.ADMIN_DASHBOARD} onClick={closeMobileMenu}><FiHome /> Quản trị hệ thống</Link>}
+                <button type="button" onClick={handleLogout}><FiLogOut /> Đăng xuất</button>
+              </>
+            ) : (
+              <>
+                <Link to={ROUTES.REGISTER} onClick={closeMobileMenu}>Đăng ký</Link>
+                <Link to={ROUTES.LOGIN} onClick={closeMobileMenu}>Đăng nhập</Link>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 };
