@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
+  <title id="title">Chưa có ảnh phòng</title>
+  <desc id="desc">Ảnh thay thế cho phòng trọ chưa có hình ảnh.</desc>
+  <rect width="1200" height="800" fill="#eef2f7"/>
+  <path d="M330 420 600 220l270 200v210H330Z" fill="#d8e2ee" stroke="#8da2b8" stroke-width="18" stroke-linejoin="round"/>
+  <path d="M515 630V455h170v175" fill="#f8fafc" stroke="#8da2b8" stroke-width="18"/>
+  <path d="M295 438 600 210l305 228" fill="none" stroke="#56738f" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="600" y="710" text-anchor="middle" fill="#56738f" font-family="Arial, sans-serif" font-size="34">Chưa có ảnh phòng</text>
+</svg>

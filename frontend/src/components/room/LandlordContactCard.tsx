@@ -1,5 +1,5 @@
 import React from 'react';
-import { Post } from '../../types/post.types';
+import { Post, RoomStatus } from '../../types/post.types';
 import { FiPhone, FiMessageSquare, FiCalendar, FiAlertCircle, FiUser, FiSend, FiHeart } from 'react-icons/fi';
 
 interface LandlordContactCardProps {
@@ -19,6 +19,7 @@ const LandlordContactCard: React.FC<LandlordContactCardProps> = ({
   onRequestRental,
   onToggleFavorite,
 }) => {
+  const isAvailable = post.roomStatus === RoomStatus.Available;
   const handleCallPhone = () => {
     window.location.href = `tel:${post.landlordPhone}`;
   };
@@ -64,16 +65,10 @@ const LandlordContactCard: React.FC<LandlordContactCardProps> = ({
           </button>
 
           {/* Book Viewing Button */}
-          <button
-            onClick={onBookViewing}
-            className="w-full flex items-center justify-center gap-2 px-5 h-[46px] rounded-2xl bg-[#0084ff] text-white text-sm font-bold hover:bg-[#0073df] transition-all shadow-md shadow-blue-500/20 cursor-pointer border-none"
-          >
-            <FiCalendar className="w-4 h-4" />
-            Đặt lịch xem phòng
-          </button>
+          {isAvailable ? <button onClick={onBookViewing} className="w-full flex items-center justify-center gap-2 px-5 h-[46px] rounded-lg bg-[#0084ff] text-white text-sm font-bold hover:bg-[#0073df] transition-all shadow-md shadow-blue-500/20 cursor-pointer border-none"><FiCalendar className="w-4 h-4" />Đặt lịch xem phòng</button> : <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-center text-sm font-semibold text-slate-600">Phòng hiện không còn trống.</div>}
 
           {/* Request Rental Button */}
-          {onRequestRental && (
+          {isAvailable && onRequestRental && (
             <button
               onClick={onRequestRental}
               className="w-full flex items-center justify-center gap-2 px-5 h-[46px] rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold hover:from-amber-600 hover:to-orange-600 transition-all shadow-md shadow-orange-500/20 cursor-pointer border-none"

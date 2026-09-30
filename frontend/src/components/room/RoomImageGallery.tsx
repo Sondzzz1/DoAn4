@@ -21,7 +21,7 @@ const RoomImageGallery: React.FC<RoomImageGalleryProps> = ({
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   const hasImages = images && images.length > 0;
-  const displayImages = hasImages ? images : ['https://via.placeholder.com/1200x800?text=No+Image'];
+  const displayImages = hasImages ? images : ['/room-placeholder.svg'];
 
   const handlePrevious = (e?: React.MouseEvent) => {
     e?.stopPropagation();

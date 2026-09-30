@@ -153,7 +153,7 @@ const SimilarRooms: React.FC<SimilarRoomsProps> = ({ currentPostId }) => {
             {/* Image */}
             <div className="relative w-full h-48 overflow-hidden bg-gray-100">
               <img
-                src={room.thumbnailUrl || 'https://via.placeholder.com/600x400?text=No+Image'}
+                src={room.thumbnailUrl || '/room-placeholder.svg'}
                 alt={room.title}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 loading="lazy"
