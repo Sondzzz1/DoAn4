@@ -7,6 +7,7 @@ using RoomRental.BackEnd.BLL.Interfaces;
 using RoomRental.BackEnd.DAL;
 using RoomRental.BackEnd.Controllers;
 using RoomRental.BackEnd.Hubs;
+using RoomRental.BackEnd.Services;
 using System.Text;
 using System.Text.Json;
 
@@ -48,6 +49,7 @@ builder.Services.AddScoped<INotificationService, NotificationBLL>();
 builder.Services.AddScoped<IPaymentService, PaymentBLL>();
 builder.Services.AddScoped<IMonthlyBillService, MonthlyBillBLL>();
 builder.Services.AddScoped<IExportService, ExportBLL>();
+builder.Services.AddHostedService<RentalLifecycleHostedService>();
 
 // Thêm SignalR hỗ trợ Real-time Chat & Notifications
 builder.Services.AddSignalR();
