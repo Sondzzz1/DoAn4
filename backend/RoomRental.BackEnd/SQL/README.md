@@ -1,5 +1,9 @@
 # Room Rental System - Database Documentation
 
+> **Database backend hien tai:** ung dung dang ket noi den `RoomRentalDB` va su dung schema tieng Viet (`TinDang`, `PhongTro`, `TaiKhoan`, ...). De nang cap cac chuc nang thue phong, dat coc, hop dong, hoa don va thanh toan, chay dung thu tu cac file `00_Preflight_WorkflowUpgrade.sql`, `01_Deploy_WorkflowUpgrade.sql`, `02_Verify_WorkflowUpgrade.sql`. Xem `WorkflowUpgrade-Runbook.md` truoc khi chay.
+>
+> Noi dung ben duoi mo ta schema demo cu `RoomRentalDb_Dev` (`Posts`, `Rooms`, `Users`). Khong chay `RoomRentalDb_Schema_And_Data.sql` len `RoomRentalDB` dang duoc backend su dung.
+
 ## 📊 Tổng quan Database
 
 Database **RoomRentalDb_Dev** được thiết kế cho hệ thống tìm kiếm và cho thuê phòng trọ với 3 actors chính:
