@@ -36,15 +36,8 @@ public class PostBLL : IPostService
                 .ThenInclude(l => l.Account)
             .AsNoTracking();
 
-        // Mặc định chỉ lấy Approved cho tìm kiếm công khai, trừ khi có filter status cụ thể
-        if (q.Status.HasValue)
-        {
-            query = query.Where(p => (int)p.Status == q.Status.Value);
-        }
-        else
-        {
-            query = query.Where(p => p.Status == PostStatus.Approved && p.Room.Status == RoomStatus.Available);
-        }
+        // Public search must never expose pending, rejected, hidden, expired, or unavailable posts.
+        query = query.Where(p => p.Status == PostStatus.Approved && p.Room.Status == RoomStatus.Available);
 
         // Lọc theo Landlord
         if (q.LandlordId.HasValue)
@@ -236,7 +229,13 @@ public class PostBLL : IPostService
     /// <summary>
     /// Lấy chi tiết bài đăng
     /// </summary>
-    public async Task<PostDto> GetPostByIdAsync(int postId, bool incrementView = true)
+    public Task<PostDto> GetPostByIdAsync(int postId, bool incrementView = true) =>
+        GetPostByIdInternalAsync(postId, incrementView, requirePublicVisibility: false);
+
+    public Task<PostDto> GetPublicPostByIdAsync(int postId) =>
+        GetPostByIdInternalAsync(postId, incrementView: true, requirePublicVisibility: true);
+
+    private async Task<PostDto> GetPostByIdInternalAsync(int postId, bool incrementView, bool requirePublicVisibility)
     {
         var post = await _context.Posts
             .Include(p => p.Landlord)
@@ -250,10 +249,9 @@ public class PostBLL : IPostService
                     .ThenInclude(ra => ra.Amenity)
             .FirstOrDefaultAsync(p => p.Id == postId);
 
-        if (post == null)
-        {
-            throw new Exception("Không tìm thấy tin đăng");
-        }
+        if (post == null || (requirePublicVisibility &&
+            (post.Status != PostStatus.Approved || post.Room.Status != RoomStatus.Available)))
+            throw BusinessRuleException.NotFound("Không tìm thấy tin đăng");
 
         if (incrementView)
         {

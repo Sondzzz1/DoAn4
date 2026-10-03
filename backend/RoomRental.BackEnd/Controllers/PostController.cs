@@ -55,13 +55,13 @@ public class PostController : ControllerBase
     {
         try
         {
-            var post = await _postService.GetPostByIdAsync(id, incrementView: true);
+            var post = await _postService.GetPublicPostByIdAsync(id);
             return Ok(ApiResponse<PostDto>.SuccessResponse(post, "Lấy chi tiết tin đăng thành công"));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy chi tiết tin đăng ID: {Id}", id);
-            return NotFound(ApiResponse<PostDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<PostDto>(ex);
         }
     }
 

@@ -34,6 +34,7 @@ public class PaymentBLL : IPaymentService
 
     public async Task<PaymentResponseDto> CreatePaymentUrlAsync(int userId, CreatePaymentRequestDto dto, string clientIp)
     {
+        var vnpaySettings = GetVnPaySettings();
         var hasDeposit = dto.DepositId is > 0;
         var hasBill = dto.MonthlyBillId is > 0;
         if (hasDeposit == hasBill)
@@ -99,7 +100,7 @@ public class PaymentBLL : IPaymentService
         var vnpay = new VnPayHelper();
         vnpay.AddRequestData("vnp_Version", "2.1.0");
         vnpay.AddRequestData("vnp_Command", "pay");
-        vnpay.AddRequestData("vnp_TmnCode", _config["VnPay:TmnCode"] ?? "2QXUI4J4");
+        vnpay.AddRequestData("vnp_TmnCode", vnpaySettings.TmnCode);
         vnpay.AddRequestData("vnp_Amount", ((long)(amount * 100)).ToString(CultureInfo.InvariantCulture));
         vnpay.AddRequestData("vnp_CreateDate", DateTime.Now.ToString("yyyyMMddHHmmss"));
         vnpay.AddRequestData("vnp_CurrCode", "VND");
@@ -107,12 +108,12 @@ public class PaymentBLL : IPaymentService
         vnpay.AddRequestData("vnp_Locale", "vn");
         vnpay.AddRequestData("vnp_OrderInfo", orderInfo);
         vnpay.AddRequestData("vnp_OrderType", "other");
-        vnpay.AddRequestData("vnp_ReturnUrl", _config["VnPay:ReturnUrl"] ?? "http://localhost:5000/api/thanh-toan/vnpay-return");
+        vnpay.AddRequestData("vnp_ReturnUrl", vnpaySettings.ReturnUrl);
         vnpay.AddRequestData("vnp_TxnRef", orderId);
 
         var paymentUrl = vnpay.CreateRequestUrl(
-            _config["VnPay:BaseUrl"] ?? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html",
-            _config["VnPay:HashSecret"] ?? "RAOERGKBMVUXIAKSRBUEHNQAGWIDFUJK");
+            vnpaySettings.BaseUrl,
+            vnpaySettings.HashSecret);
         return new PaymentResponseDto { PaymentUrl = paymentUrl, OrderId = orderId, Amount = amount };
     }
 
@@ -126,7 +127,7 @@ public class PaymentBLL : IPaymentService
         var transactionCode = vnpay.GetResponseData("vnp_TransactionNo");
         var responseCode = vnpay.GetResponseData("vnp_ResponseCode");
         var transactionStatus = vnpay.GetResponseData("vnp_TransactionStatus");
-        var hashSecret = _config["VnPay:HashSecret"] ?? "RAOERGKBMVUXIAKSRBUEHNQAGWIDFUJK";
+        var hashSecret = GetVnPaySettings().HashSecret;
         if (!vnpay.ValidateSignature(query["vnp_SecureHash"].ToString(), hashSecret))
             return Failure("Chữ ký VNPay không hợp lệ.", orderId, transactionCode, responseCode);
 
@@ -191,6 +192,23 @@ public class PaymentBLL : IPaymentService
     private IQueryable<PaymentTransaction> PaymentQuery() => _context.PaymentTransactions
         .Include(p => p.Deposit)
         .Include(p => p.MonthlyBill).ThenInclude(b => b!.Contract);
+
+    private VnPaySettings GetVnPaySettings() => new(
+        GetRequiredVnPaySetting("TmnCode"),
+        GetRequiredVnPaySetting("HashSecret"),
+        GetRequiredVnPaySetting("BaseUrl"),
+        GetRequiredVnPaySetting("ReturnUrl"));
+
+    private string GetRequiredVnPaySetting(string key)
+    {
+        var value = _config[$"VnPay:{key}"];
+        if (string.IsNullOrWhiteSpace(value))
+            throw new BusinessRuleException("Dịch vụ thanh toán chưa sẵn sàng.", StatusCodes.Status503ServiceUnavailable);
+
+        return value;
+    }
+
+    private sealed record VnPaySettings(string TmnCode, string HashSecret, string BaseUrl, string ReturnUrl);
 
     private static void ValidateTargetForSuccess(PaymentTransaction payment)
     {

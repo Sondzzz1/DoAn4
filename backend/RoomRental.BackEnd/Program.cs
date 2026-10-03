@@ -11,14 +11,17 @@ using System.Text;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
 
 // Add services to the container.
 
 // Đăng ký DbContext với SQL Server
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+    throw new InvalidOperationException("ConnectionStrings:DefaultConnection must be configured through user secrets, environment variables, or appsettings.Local.json.");
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection")
-    )
+    options.UseSqlServer(connectionString)
 );
 
 // Đăng ký toàn bộ BLL Services
@@ -54,7 +57,9 @@ builder.Services.AddHttpClient();
 
 // Cấu hình JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey = jwtSettings["SecretKey"] ?? "RoomRentalSecretKeyForJwtAuthentication2026123456";
+var secretKey = jwtSettings["SecretKey"];
+if (string.IsNullOrWhiteSpace(secretKey) || secretKey.Length < 32)
+    throw new InvalidOperationException("JwtSettings:SecretKey must be configured with at least 32 characters through user secrets, environment variables, or appsettings.Local.json.");
 
 builder.Services.AddAuthentication(options =>
 {

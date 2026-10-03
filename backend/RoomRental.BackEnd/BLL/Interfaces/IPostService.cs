@@ -19,6 +19,11 @@ public interface IPostService
     Task<PostDto> GetPostByIdAsync(int postId, bool incrementView = true);
 
     /// <summary>
+    /// Lấy chi tiết tin chỉ khi tin đã được duyệt và phòng còn trống.
+    /// </summary>
+    Task<PostDto> GetPublicPostByIdAsync(int postId);
+
+    /// <summary>
     /// Tạo post mới (Landlord đăng tin)
     /// </summary>
     Task<PostDto> CreatePostAsync(int accountId, CreatePostDto createDto);
