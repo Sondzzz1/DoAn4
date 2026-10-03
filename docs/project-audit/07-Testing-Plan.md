@@ -6,14 +6,14 @@
 
 - **PASS**: Backend build pass: 0 warning, 0 error.
 - **PASS**: Frontend production build pass khi thuc thi ngoai sandbox Windows.
-- **ISSUE**: Frontend lint fail: 122 error, 10 warning.
-- **NOT IMPLEMENTED**: khong tim thay test project/thư muc unit/integration test trong repository inventory.
+- **PASS**: Frontend lint pass: 0 error, 0 warning (`npm run lint`, 03/10/2026).
+- **PASS**: Da co `RoomRental.BackEnd.Tests` voi 3 regression test in-memory cho public post visibility va Haversine distance; `dotnet test` pass 3/3 (03/10/2026).
 - **NOT VERIFIED**: khong chay E2E vi yeu cau khong lam thay doi database that.
 
 | ID | Module | Van de | Bang chung | Muc do | Anh huong | Giai phap | File lien quan |
 |---|---|---|---|---|---|---|---|
-| TEST-01 | Backend tests | Khong co test project duoc phat hien. | `rg --files` khong tim thay `*Tests*`/test project; backend chi la web project. | P1 | Khong co regression protection cho permission va state machine. | Them `RoomRental.BackEnd.Tests` (unit) va `RoomRental.BackEnd.IntegrationTests` voi database test tach biet. | repository root, `backend/RoomRental.BackEnd` |
-| TEST-02 | Frontend lint | Lint khong dat. | `npm run lint` = 122 errors, 10 warnings. | P2 | Chat luong code khong duoc gate truoc merge. | Dua lint ve 0 va fail CI neu co loi moi. | `frontend/src/**` |
+| TEST-01 | Backend tests | Chua du regression cho permission, rental state machine va payment. | `RoomRental.BackEnd.Tests` da co 3 test public visibility/distance; chua co SQL Server integration test. | P1 | Mot so luong P1 chua duoc bao ve khi thay doi. | Mo rong unit test va them integration test voi database tach biet. | `backend/RoomRental.BackEnd.Tests` |
+| TEST-02 | Frontend lint | Lint da dat, CI chua duoc xac nhan tren GitHub. | `npm run lint` pass; `.github/workflows/ci.yml` da them. | P2 | Can evidence CI remote sau khi push. | Push repository va kiem tra workflow xanh. | `frontend/src/**`, `.github/workflows/ci.yml` |
 | TEST-03 | E2E/data isolation | Chua co evidence test database isolation/reset strategy. | Khong co test project/fixture duoc phat hien. | P1 | E2E co the lam ban du lieu that hoac khong determinisitic. | Tao SQL Server/container DB rieng, fixture reset co kiem soat, data factory va test account. | future test infrastructure |
 
 ## Test matrix uu tien

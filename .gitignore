@@ -139,6 +139,7 @@ appsettings.Local.json
 *.ntvs*
 *.njsproj
 *.sln
+!backend/RoomRental.sln
 *.sw?
 
 # OS
