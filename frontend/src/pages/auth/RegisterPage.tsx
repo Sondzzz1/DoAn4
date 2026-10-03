@@ -12,6 +12,7 @@ import {
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
 import { ROUTES, STORAGE_KEYS } from '../../utils/constants';
+import { getApiErrorMessage } from '../../utils/apiError';
 import './Auth.css';
 
 const RegisterPage: React.FC = () => {
@@ -96,10 +97,8 @@ const RegisterPage: React.FC = () => {
         const storedUser = JSON.parse(localStorage.getItem(STORAGE_KEYS.USER) || 'null');
         navigate(storedUser?.role === 'Landlord' ? ROUTES.LANDLORD_DASHBOARD : ROUTES.HOME);
       }, 300);
-    } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.';
-      toast.error(errorMessage);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Đăng ký thất bại. Vui lòng thử lại.'));
     } finally {
       setLoading(false);
     }

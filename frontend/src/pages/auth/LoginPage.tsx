@@ -4,6 +4,7 @@ import { FiEye, FiEyeOff, FiMail, FiLock, FiArrowLeft } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
 import { ROUTES, STORAGE_KEYS } from '../../utils/constants';
+import { getApiErrorMessage } from '../../utils/apiError';
 import './Auth.css';
 
 const LoginPage: React.FC = () => {
@@ -62,10 +63,8 @@ const LoginPage: React.FC = () => {
           navigate(ROUTES.HOME);
         }
       }, 300);
-    } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || 'Email hoặc mật khẩu không chính xác.';
-      toast.error(errorMessage);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Email hoặc mật khẩu không chính xác.'));
     } finally {
       setLoading(false);
     }

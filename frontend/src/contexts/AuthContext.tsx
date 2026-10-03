@@ -1,44 +1,32 @@
-import React, { createContext, useState, useEffect, ReactNode } from 'react';
+import React, { ReactNode, useState } from 'react';
 import { User, AuthResponse, LoginRequest, RegisterRequest } from '../types/auth.types';
 import { authService } from '../services/authService';
 import { STORAGE_KEYS } from '../utils/constants';
-
-interface AuthContextType {
-  user: User | null;
-  token: string | null;
-  isLoading: boolean;
-  login: (data: LoginRequest) => Promise<void>;
-  register: (data: RegisterRequest) => Promise<void>;
-  logout: () => void;
-  isAuthenticated: boolean;
-  isLandlord: boolean;
-  isTenant: boolean;
-  isAdmin: boolean;
-}
-
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { AuthContext, AuthContextType } from './AuthContextDefinition';
 
 interface AuthProviderProps {
   children: ReactNode;
 }
 
+const getStoredUser = (): User | null => {
+  const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
+  if (!storedUser) return null;
+
+  try {
+    return JSON.parse(storedUser) as User;
+  } catch {
+    localStorage.removeItem(STORAGE_KEYS.USER);
+    localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    return null;
+  }
+};
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Load user từ localStorage khi app khởi động
-  useEffect(() => {
-    const storedToken = localStorage.getItem(STORAGE_KEYS.TOKEN);
-    const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
-
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-    }
-
-    setIsLoading(false);
-  }, []);
+  const [user, setUser] = useState<User | null>(getStoredUser);
+  const [token, setToken] = useState<string | null>(() => (
+    getStoredUser() ? localStorage.getItem(STORAGE_KEYS.TOKEN) : null
+  ));
+  const [isLoading] = useState(false);
 
   /**
    * Login
