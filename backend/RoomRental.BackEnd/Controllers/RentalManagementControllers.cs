@@ -128,7 +128,7 @@ public class IncidentController : ControllerBase
     public IncidentController(IIncidentService service) => _service = service;
     [HttpPost] public async Task<IActionResult> Tao([FromBody] TaoSuCoDto dto) => Ok(ApiResponse<SuCoDto>.SuccessResponse(await _service.TaoAsync(Id(), dto), "Báo cáo sự cố thành công"));
     [HttpGet("cua-toi")] public async Task<IActionResult> CuaToi() => Ok(ApiResponse<List<SuCoDto>>.SuccessResponse(await _service.LayCuaToiAsync(Id())));
-    [HttpPut("{id:int}/xu-ly")][Authorize(Roles="Landlord,Admin")] public async Task<IActionResult> XuLy(int id, [FromBody] XuLySuCoDto dto) => Ok(ApiResponse<SuCoDto>.SuccessResponse(await _service.XuLyAsync(Id(), id, dto), "Xử lý sự cố thành công"));
+    [HttpPut("{id:int}/xu-ly")][Authorize(Roles="Landlord,Admin")] public async Task<IActionResult> XuLy(int id, [FromBody] XuLySuCoDto dto) => Ok(ApiResponse<SuCoDto>.SuccessResponse(await _service.XuLyAsync(Id(), id, dto, User.IsInRole("Admin")), "Xử lý sự cố thành công"));
     private int Id() => int.Parse(User.FindFirst("UserId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 }
 

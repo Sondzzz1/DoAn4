@@ -24,13 +24,14 @@ public interface IRentalContractService
     Task<HopDongDto> LayChiTietAsync(int taiKhoanId, int id);
     Task<HopDongDto> XacNhanAsync(int taiKhoanId, int id);
     Task<HopDongDto> ChamDutAsync(int taiKhoanId, int id, string? lyDo = null);
+    Task ReconcileContractLifecycleAsync(int pendingSignatureExpiryHours, CancellationToken cancellationToken = default);
 }
 
 public interface IIncidentService
 {
     Task<SuCoDto> TaoAsync(int nguoiThueId, TaoSuCoDto dto);
     Task<List<SuCoDto>> LayCuaToiAsync(int taiKhoanId);
-    Task<SuCoDto> XuLyAsync(int chuTroId, int id, XuLySuCoDto dto);
+    Task<SuCoDto> XuLyAsync(int nguoiXuLyId, int id, XuLySuCoDto dto, bool isAdmin);
 }
 
 public interface IRoomReviewService

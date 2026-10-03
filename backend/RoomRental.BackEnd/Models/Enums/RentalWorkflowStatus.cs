@@ -53,3 +53,11 @@ public static class ReportStatus
     public const int Resolved = 2;
     public const int Rejected = 3;
 }
+
+public static class IncidentStatus
+{
+    public const int Pending = 0;
+    public const int InProgress = 1;
+    public const int Resolved = 2;
+    public const int Rejected = 3;
+}

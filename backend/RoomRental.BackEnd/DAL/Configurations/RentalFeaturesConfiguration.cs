@@ -33,6 +33,10 @@ public class DepositConfiguration : IEntityTypeConfiguration<Deposit>
         builder.Property(x => x.CreatedAt).HasColumnName("NgayTao").HasDefaultValueSql("SYSDATETIME()");
         builder.Property(x => x.UpdatedAt).HasColumnName("NgayCapNhat");
         builder.HasIndex(x => x.RentalRequestId).IsUnique();
+        builder.HasOne<RentalRequest>()
+            .WithMany()
+            .HasForeignKey(x => x.RentalRequestId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -54,6 +58,14 @@ public class RentalContractConfiguration : IEntityTypeConfiguration<RentalContra
         builder.Property(x => x.CreatedAt).HasColumnName("NgayTao").HasDefaultValueSql("SYSDATETIME()");
         builder.Property(x => x.UpdatedAt).HasColumnName("NgayCapNhat");
         builder.HasIndex(x => new { x.TenantAccountId, x.LandlordAccountId });
+        builder.HasOne<RentalRequest>()
+            .WithMany()
+            .HasForeignKey(x => x.RentalRequestId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.Post)
+            .WithMany()
+            .HasForeignKey(x => x.PostId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

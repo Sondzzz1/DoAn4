@@ -257,6 +257,9 @@ public class RoomBLL : IRoomService
         if (hasActiveContract)
             throw BusinessRuleException.Conflict("Phòng đang có hợp đồng hiệu lực nên không thể đổi trạng thái.");
 
+        if (room.Status == RoomStatus.Reserved)
+            throw BusinessRuleException.Conflict("Phòng đang được hệ thống giữ chỗ cho yêu cầu thuê đã duyệt.");
+
         if (status == RoomStatus.Rented || status == RoomStatus.Reserved)
             throw new BusinessRuleException("Trạng thái đã thuê được hệ thống cập nhật từ hợp đồng, không thể đặt thủ công.");
 
@@ -297,6 +300,9 @@ public class RoomBLL : IRoomService
             .AnyAsync(c => c.Post!.RoomId == roomId && c.Status == RentalContractStatus.Active);
         if (hasActiveContract)
             throw BusinessRuleException.Conflict("Phòng đang có hợp đồng hiệu lực nên không thể tạm ngưng.");
+
+        if (room.Status == RoomStatus.Reserved)
+            throw BusinessRuleException.Conflict("Phòng đang được hệ thống giữ chỗ cho yêu cầu thuê đã duyệt.");
 
         // Đánh dấu tạm ngưng / ẩn
         room.Status = RoomStatus.TemporarilyUnavailable;
