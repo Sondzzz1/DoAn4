@@ -20,7 +20,7 @@ export const exportService = {
       link.remove();
       window.URL.revokeObjectURL(url);
       toast.success('Tải hợp đồng PDF thành công!');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Lỗi khi tải PDF hợp đồng:', error);
       toast.error('Không thể xuất file PDF hợp đồng.');
     }
@@ -48,7 +48,7 @@ export const exportService = {
       link.remove();
       window.URL.revokeObjectURL(url);
       toast.success('Xuất file Excel báo cáo doanh thu thành công!');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Lỗi khi xuất Excel doanh thu:', error);
       toast.error('Không thể xuất file báo cáo Excel.');
     }

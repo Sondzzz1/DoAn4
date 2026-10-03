@@ -5,9 +5,6 @@ import {
   FiAlertTriangle,
   FiStar,
   FiCheckCircle,
-  FiClock,
-  FiXCircle,
-  FiPlus,
   FiCalendar,
   FiCheck,
   FiZap,
@@ -76,7 +73,7 @@ const TenantRentalsPage: React.FC = () => {
   const [reviewComment, setReviewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
 
-  const loadData = async () => {
+  async function loadData() {
     setLoading(true);
     try {
       const [reqRes, depRes, conRes, billsRes, incRes, revRes] = await Promise.all([
@@ -94,15 +91,15 @@ const TenantRentalsPage: React.FC = () => {
       setBills(billsRes.data || []);
       setIncidents(incRes.data || []);
       setReviews(revRes.data || []);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể tải dữ liệu thuê phòng.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể tải dữ liệu thuê phòng.'));
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
-    void loadData();
+    void Promise.resolve().then(loadData);
   }, []);
 
   const handleConfirmContract = async (contractId: number) => {
@@ -112,8 +109,8 @@ const TenantRentalsPage: React.FC = () => {
       await rentalService.confirmContract(contractId);
       toast.success('Xác nhận hợp đồng thành công!');
       await loadData();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể xác nhận hợp đồng.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể xác nhận hợp đồng.'));
     }
   };
 
@@ -123,7 +120,7 @@ const TenantRentalsPage: React.FC = () => {
         monthlyBillId: billId,
         orderInfo: `Thanh toan hoa don thang ID ${billId}`,
       });
-      if (res.data?.paymentUrl) window.location.href = res.data.paymentUrl;
+      if (res.data?.paymentUrl) window.location.assign(res.data.paymentUrl);
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Không thể tạo liên kết thanh toán hóa đơn.'));
     }
@@ -148,8 +145,8 @@ const TenantRentalsPage: React.FC = () => {
       setIncidentTitle('');
       setIncidentDesc('');
       await loadData();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể gửi báo cáo sự cố.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể gửi báo cáo sự cố.'));
     } finally {
       setSubmittingIncident(false);
     }
@@ -171,8 +168,8 @@ const TenantRentalsPage: React.FC = () => {
       setReviewComment('');
       setReviewRating(5);
       await loadData();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể gửi đánh giá.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể gửi đánh giá.'));
     } finally {
       setSubmittingReview(false);
     }
@@ -186,10 +183,10 @@ const TenantRentalsPage: React.FC = () => {
       });
       if (res.data?.paymentUrl) {
         toast.info('Đang chuyển hướng sang cổng thanh toán VNPay Sandbox...');
-        window.location.href = res.data.paymentUrl;
+        window.location.assign(res.data.paymentUrl);
       }
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể tạo liên kết thanh toán VNPay.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể tạo liên kết thanh toán VNPay.'));
     }
   };
 

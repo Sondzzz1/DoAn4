@@ -16,6 +16,7 @@ import {
 import { postService } from '../../services/postService';
 import { adminService } from '../../services/adminService';
 import { CreatePostRequest } from '../../types/post.types';
+import { getApiErrorMessage } from '../../utils/apiError';
 import LeafletMapPicker from '../../components/map/LeafletMapPicker';
 
 interface Amenity {
@@ -56,7 +57,7 @@ const CreatePostPage: React.FC = () => {
       try {
         const response = await adminService.getAmenities();
         setAmenities(response.data || []);
-      } catch (error: any) {
+      } catch (error) {
         console.error('Không thể tải danh sách tiện ích:', error);
       }
     };
@@ -87,7 +88,7 @@ const CreatePostPage: React.FC = () => {
             amenityIds: post.amenities.map((a) => a.id),
             imageUrls: post.imageUrls || [],
           });
-        } catch (error: any) {
+        } catch {
           toast.error('Không thể tải thông tin tin đăng');
           navigate('/landlord/posts');
         } finally {
@@ -98,7 +99,7 @@ const CreatePostPage: React.FC = () => {
     }
   }, [id, isEditMode, navigate]);
 
-  const handleInputChange = (field: keyof CreatePostRequest, value: any) => {
+  const handleInputChange = <K extends keyof CreatePostRequest>(field: K, value: CreatePostRequest[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -166,8 +167,8 @@ const CreatePostPage: React.FC = () => {
         toast.success('Đăng tin thành công! Tin của bạn đang chờ Admin duyệt.');
       }
       navigate('/landlord/posts');
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Có lỗi xảy ra khi lưu tin đăng');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Có lỗi xảy ra khi lưu tin đăng'));
     } finally {
       setLoading(false);
     }

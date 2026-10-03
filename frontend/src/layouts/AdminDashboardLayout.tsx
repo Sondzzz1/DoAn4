@@ -6,7 +6,6 @@ import {
   FiCalendar,
   FiCheckCircle,
   FiChevronRight,
-  FiClipboard,
   FiFileText,
   FiGrid,
   FiHome,
@@ -17,7 +16,6 @@ import {
   FiTag,
   FiUsers,
   FiX,
-  FiZap,
 } from 'react-icons/fi';
 import { useAuth } from '../hooks/useAuth';
 import { ROUTES } from '../utils/constants';

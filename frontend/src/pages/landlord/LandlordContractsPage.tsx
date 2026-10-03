@@ -3,7 +3,6 @@ import {
   FiFileText,
   FiZap,
   FiDroplet,
-  FiDollarSign,
   FiDownload,
   FiPlus,
   FiCheckCircle,
@@ -13,7 +12,6 @@ import {
   FiFilter,
   FiUsers,
   FiHome,
-  FiCalendar,
   FiCheck,
   FiAlertCircle,
 } from 'react-icons/fi';
@@ -21,8 +19,6 @@ import { toast } from 'react-toastify';
 import {
   monthlyBillService,
   MonthlyBillDto,
-  CreateMonthlyBillDto,
-  UpdateMonthlyBillDto,
 } from '../../services/monthlyBillService';
 import {
   rentalService,
@@ -41,6 +37,12 @@ const requestStatus = (status: number): { label: string; tone: StatusTone } => (
   0: { label: 'Chờ duyệt', tone: 'pending' }, 1: { label: 'Đã duyệt', tone: 'success' }, 2: { label: 'Đã từ chối', tone: 'danger' },
   3: { label: 'Người thuê đã hủy', tone: 'danger' }, 4: { label: 'Đã tạo hợp đồng', tone: 'info' },
 }[status] as { label: string; tone: StatusTone } || { label: 'Không xác định', tone: 'neutral' });
+
+const dateInputAfterDays = (days: number) => {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+};
 
 const LandlordContractsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'bills' | 'contracts' | 'requests'>('bills');
@@ -74,9 +76,7 @@ const LandlordContractsPage: React.FC = () => {
   const [roomPrice, setRoomPrice] = useState<number>(0);
   const [otherFees, setOtherFees] = useState<number>(0);
   const [otherFeesNote, setOtherFeesNote] = useState<string>('Wifi, rác, dịch vụ');
-  const [billDueDate, setBillDueDate] = useState<string>(
-    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
-  );
+  const [billDueDate, setBillDueDate] = useState<string>(() => dateInputAfterDays(7));
   const [billNote, setBillNote] = useState<string>('');
 
   // Modal Edit Bill State
@@ -95,15 +95,13 @@ const LandlordContractsPage: React.FC = () => {
   // Modal Create Contract State
   const [contractModalOpen, setContractModalOpen] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
-  const [contractStartDate, setContractStartDate] = useState(new Date().toISOString().slice(0, 10));
-  const [contractEndDate, setContractEndDate] = useState(
-    new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
-  );
+  const [contractStartDate, setContractStartDate] = useState(() => dateInputAfterDays(0));
+  const [contractEndDate, setContractEndDate] = useState(() => dateInputAfterDays(180));
   const [contractRent, setContractRent] = useState<number>(3000000);
   const [submittingContract, setSubmittingContract] = useState(false);
 
   // Load all data
-  const loadData = async () => {
+  async function loadData() {
     setLoading(true);
     try {
       const [billsRes, contractsRes, requestsRes, depositsRes] = await Promise.all([
@@ -117,28 +115,26 @@ const LandlordContractsPage: React.FC = () => {
       setContracts(contractsRes.data || []);
       setRequests(requestsRes.data || []);
       setDeposits(depositsRes.data || []);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể tải dữ liệu.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể tải dữ liệu.'));
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
-    void loadData();
+    void Promise.resolve().then(loadData);
   }, []);
 
-  // When selected contract changes in create bill modal, autofill room price
-  useEffect(() => {
-    if (selectedContractId) {
-      const found = contracts.find((c) => c.id === Number(selectedContractId));
-      if (found) {
-        setRoomPrice(found.tienThueHangThang);
-        setPriceElec(found.giaDien || 0);
-        setPriceWater(found.giaNuoc || 0);
-      }
-    }
-  }, [selectedContractId, contracts]);
+  const selectBillContract = (contractId: number | '') => {
+    setSelectedContractId(contractId);
+    const found = contracts.find((contract) => contract.id === Number(contractId));
+    if (!found) return;
+
+    setRoomPrice(found.tienThueHangThang);
+    setPriceElec(found.giaDien || 0);
+    setPriceWater(found.giaNuoc || 0);
+  };
 
   // Real-time calculation for Create Modal
   const calculatedElecUsed = Math.max(0, newElec - oldElec);
@@ -196,8 +192,8 @@ const LandlordContractsPage: React.FC = () => {
       setBillModalOpen(false);
       resetBillForm();
       await loadData();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể tạo hóa đơn.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể tạo hóa đơn.'));
     } finally {
       setSubmittingBill(false);
     }
@@ -249,8 +245,8 @@ const LandlordContractsPage: React.FC = () => {
       toast.success('Cập nhật hóa đơn thành công!');
       setEditModalOpen(false);
       await loadData();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể cập nhật hóa đơn.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể cập nhật hóa đơn.'));
     }
   };
 
@@ -263,8 +259,8 @@ const LandlordContractsPage: React.FC = () => {
       });
       toast.success('Đã ghi nhận thanh toán hóa đơn thành công!');
       await loadData();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể cập nhật trạng thái.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể cập nhật trạng thái.'));
     }
   };
 
@@ -275,8 +271,8 @@ const LandlordContractsPage: React.FC = () => {
       await monthlyBillService.deleteBill(billId);
       toast.success('Hủy hóa đơn thành công!');
       await loadData();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể hủy hóa đơn.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể hủy hóa đơn.'));
     }
   };
 
@@ -286,8 +282,8 @@ const LandlordContractsPage: React.FC = () => {
       await rentalService.updateRentalRequestStatus(requestId, 1);
       toast.success('Đã duyệt yêu cầu thuê phòng! Bạn có thể tạo hợp đồng ngay.');
       await loadData();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể duyệt yêu cầu.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể duyệt yêu cầu.'));
     }
   };
 
@@ -298,8 +294,8 @@ const LandlordContractsPage: React.FC = () => {
       await rentalService.updateRentalRequestStatus(requestId, RENTAL_REQUEST_STATUS.REJECTED, reason.trim() || 'Yêu cầu chưa phù hợp.');
       toast.info('Đã từ chối yêu cầu thuê phòng.');
       await loadData();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể từ chối yêu cầu.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể từ chối yêu cầu.'));
     }
   };
 
@@ -332,8 +328,8 @@ const LandlordContractsPage: React.FC = () => {
       toast.success('Tạo hợp đồng thuê phòng thành công!');
       setContractModalOpen(false);
       await loadData();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể tạo hợp đồng.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể tạo hợp đồng.'));
     } finally {
       setSubmittingContract(false);
     }
@@ -348,8 +344,8 @@ const LandlordContractsPage: React.FC = () => {
       await rentalService.terminateContract(contractId, reason || undefined);
       toast.success('Đã chấm dứt hợp đồng thành công! Trạng thái phòng đã được chuyển về Còn trống.');
       await loadData();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể chấm dứt hợp đồng.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể chấm dứt hợp đồng.'));
     }
   };
 
@@ -720,8 +716,7 @@ const LandlordContractsPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            setSelectedContractId(con.id);
-                            setRoomPrice(con.tienThueHangThang);
+                            selectBillContract(con.id);
                             setBillModalOpen(true);
                           }}
                           className="btn-primary"
@@ -868,7 +863,7 @@ const LandlordContractsPage: React.FC = () => {
                   <label className="block font-bold text-slate-700 mb-1">Chọn Hợp Đồng *</label>
                   <select
                     value={selectedContractId}
-                    onChange={(e) => setSelectedContractId(e.target.value ? Number(e.target.value) : '')}
+                    onChange={(e) => selectBillContract(e.target.value ? Number(e.target.value) : '')}
                     required
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:border-[#0084ff] bg-slate-50 font-semibold"
                   >

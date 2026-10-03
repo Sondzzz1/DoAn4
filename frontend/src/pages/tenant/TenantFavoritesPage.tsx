@@ -4,26 +4,27 @@ import { FiHeart, FiMapPin, FiTrash2, FiExternalLink, FiSearch, FiHome } from 'r
 import { toast } from 'react-toastify';
 import { favoriteService } from '../../services/favoriteService';
 import { PostListItem } from '../../types/post.types';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { formatPrice } from '../../utils/helpers';
 
 const TenantFavoritesPage: React.FC = () => {
   const [favorites, setFavorites] = useState<PostListItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const loadFavorites = async () => {
+  async function loadFavorites() {
     setLoading(true);
     try {
       const response = await favoriteService.getMyFavorites();
       setFavorites(response.data || []);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể tải danh sách phòng yêu thích.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể tải danh sách phòng yêu thích.'));
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
-    void loadFavorites();
+    void Promise.resolve().then(loadFavorites);
   }, []);
 
   const handleRemoveFavorite = async (postId: number, e: React.MouseEvent) => {
@@ -34,8 +35,8 @@ const TenantFavoritesPage: React.FC = () => {
       await favoriteService.removeFavorite(postId);
       toast.info('Đã xóa khỏi danh sách yêu thích');
       setFavorites((prev) => prev.filter((p) => p.id !== postId));
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể xóa phòng yêu thích.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể xóa phòng yêu thích.'));
     }
   };
 

@@ -18,6 +18,7 @@ import {
 } from 'react-icons/fi';
 import { postService } from '../../services/postService';
 import { PostListItem, PostStatus, RoomStatus } from '../../types/post.types';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 const postStatusLabel = (status: PostStatus) => {
   switch (status) {
@@ -54,20 +55,20 @@ const LandlordPostsPage: React.FC = () => {
   const [posts, setPosts] = useState<PostListItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadPosts = async () => {
+  async function loadPosts() {
     setLoading(true);
     try {
       const response = await postService.getMyPosts();
       setPosts(response.data || []);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể tải danh sách tin đăng');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể tải danh sách tin đăng'));
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
-    void loadPosts();
+    void Promise.resolve().then(loadPosts);
   }, []);
 
   const handleDelete = async (id: number) => {
@@ -77,8 +78,8 @@ const LandlordPostsPage: React.FC = () => {
       await postService.deletePost(id);
       toast.success('Đã xóa tin đăng');
       await loadPosts();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể xóa tin đăng');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể xóa tin đăng'));
     }
   };
 

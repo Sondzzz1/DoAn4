@@ -15,13 +15,13 @@ const TenantAppointmentsPage: React.FC = () => {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<number | 'all'>('all');
 
-  const loadAppointments = async () => {
+  async function loadAppointments() {
     setLoading(true); setError('');
     try { setAppointments((await appointmentService.getMyAppointments()).data || []); }
     catch (e) { const message = getApiErrorMessage(e, 'Không thể tải lịch hẹn của bạn.'); setError(message); toast.error(message); }
     finally { setLoading(false); }
-  };
-  useEffect(() => { void loadAppointments(); }, []);
+  }
+  useEffect(() => { void Promise.resolve().then(loadAppointments); }, []);
 
   const visible = useMemo(() => filter === 'all' ? appointments : appointments.filter(x => x.status === filter), [appointments, filter]);
   const cancel = async (id: number) => {

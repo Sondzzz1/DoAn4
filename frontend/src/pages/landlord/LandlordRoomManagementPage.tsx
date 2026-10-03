@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiCheck, FiEdit2, FiHome, FiPlus, FiSearch, FiTrash2, FiX } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { roomService } from '../../services/roomService';
 import { RoomItem } from '../../types/room.types';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 const roomStatusLabel = (status: number) => ({ 0: 'Còn trống', 1: 'Đã thuê', 2: 'Đã giữ chỗ', 3: 'Tạm ngưng' }[status] || 'Không rõ');
 
@@ -31,21 +32,21 @@ const LandlordRoomManagementPage: React.FC = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
 
-  const loadRooms = async () => {
+  const loadRooms = useCallback(async () => {
     setLoading(true);
     try {
       const response = await roomService.getMyRooms(statusFilter ? Number(statusFilter) : undefined);
       setRooms(response.data || []);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể tải danh sách phòng.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể tải danh sách phòng.'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter]);
 
   useEffect(() => {
-    void loadRooms();
-  }, [statusFilter]);
+    void Promise.resolve().then(loadRooms);
+  }, [loadRooms]);
 
   const filteredRooms = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -80,8 +81,8 @@ const LandlordRoomManagementPage: React.FC = () => {
       }
       clearForm();
       await loadRooms();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Có lỗi xảy ra khi lưu phòng.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Có lỗi xảy ra khi lưu phòng.'));
     }
   };
 
@@ -112,8 +113,8 @@ const LandlordRoomManagementPage: React.FC = () => {
       await roomService.deleteRoom(id);
       toast.success('Phòng đã được tạm ngưng');
       await loadRooms();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể tạm ngưng phòng.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể tạm ngưng phòng.'));
     }
   };
 
@@ -124,8 +125,8 @@ const LandlordRoomManagementPage: React.FC = () => {
       await roomService.updateRoomStatus(id, nextStatus);
       toast.success('Cập nhật trạng thái phòng thành công');
       await loadRooms();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể cập nhật trạng thái phòng.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể cập nhật trạng thái phòng.'));
     }
   };
 

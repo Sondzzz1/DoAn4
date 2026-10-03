@@ -3,10 +3,9 @@ import { FiUser, FiMail, FiPhone, FiLock, FiCalendar, FiShield, FiCheckCircle, F
 import { toast } from 'react-toastify';
 import { userService } from '../../services/userService';
 import { UserProfile, UpdateProfileRequest, ChangePasswordRequest } from '../../types/user.types';
-import { useAuth } from '../../hooks/useAuth';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 const TenantProfilePage: React.FC = () => {
-  const { user: authUser } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'profile' | 'password'>('profile');
@@ -23,7 +22,7 @@ const TenantProfilePage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
 
-  const fetchProfile = async () => {
+  async function fetchProfile() {
     setLoading(true);
     try {
       const response = await userService.getProfile();
@@ -33,15 +32,15 @@ const TenantProfilePage: React.FC = () => {
         setPhone(response.data.phone || '');
         setAvatarUrl(response.data.avatarUrl || '');
       }
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể tải thông tin cá nhân.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể tải thông tin cá nhân.'));
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
-    void fetchProfile();
+    void Promise.resolve().then(fetchProfile);
   }, []);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -63,8 +62,8 @@ const TenantProfilePage: React.FC = () => {
         setProfile(response.data);
         toast.success('Cập nhật thông tin thành công!');
       }
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Cập nhật thông tin thất bại.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Cập nhật thông tin thất bại.'));
     } finally {
       setUpdating(false);
     }
@@ -96,8 +95,8 @@ const TenantProfilePage: React.FC = () => {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Đổi mật khẩu thất bại. Vui lòng kiểm tra lại mật khẩu cũ.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Đổi mật khẩu thất bại. Vui lòng kiểm tra lại mật khẩu cũ.'));
     } finally {
       setChangingPassword(false);
     }

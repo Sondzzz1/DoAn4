@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FiActivity, FiCheck, FiCheckCircle, FiEdit2, FiFileText, FiHome, FiPlus, FiSearch, FiSettings, FiTag, FiTrash2, FiUnlock, FiUser, FiUsers, FiX } from 'react-icons/fi';
+import { FiCheck, FiEdit2, FiFileText, FiPlus, FiSearch, FiTrash2, FiUnlock, FiUser, FiX } from 'react-icons/fi';
 import { useAuth } from '../../hooks/useAuth';
 import { adminService, AdminCatalogItem, AdminReport, AdminRoom, AdminUser } from '../../services/adminService';
 import { PostListItem, PostStatus } from '../../types/post.types';
@@ -49,7 +49,9 @@ const AdminManagementContent: React.FC<{ module: AdminModule }> = ({ module }) =
     finally { setLoading(false); }
   }, [module, query, status]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void Promise.resolve().then(load);
+  }, [load]);
 
   const handlePost = async (id: number, action: 'approve' | 'reject' | 'hide') => {
     if (action === 'approve') {
