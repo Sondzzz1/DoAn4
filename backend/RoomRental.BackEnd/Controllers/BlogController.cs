@@ -73,13 +73,13 @@ public class BlogController : ControllerBase
     {
         try
         {
-            var blog = await _blogService.GetBlogPostByIdAsync(id, incrementView: true);
+            var blog = await _blogService.GetPublicBlogPostByIdAsync(id, incrementView: true);
             return Ok(ApiResponse<BlogPostDto>.SuccessResponse(blog, "Lấy chi tiết bài viết thành công"));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy bài viết ID: {Id}", id);
-            return BadRequest(ApiResponse<BlogPostDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<BlogPostDto>(ex);
         }
     }
 
@@ -93,13 +93,13 @@ public class BlogController : ControllerBase
     {
         try
         {
-            var blog = await _blogService.GetBlogPostBySlugAsync(slug, incrementView: true);
+            var blog = await _blogService.GetPublicBlogPostBySlugAsync(slug, incrementView: true);
             return Ok(ApiResponse<BlogPostDto>.SuccessResponse(blog, "Lấy chi tiết bài viết thành công"));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy bài viết slug: {Slug}", slug);
-            return BadRequest(ApiResponse<BlogPostDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<BlogPostDto>(ex);
         }
     }
 

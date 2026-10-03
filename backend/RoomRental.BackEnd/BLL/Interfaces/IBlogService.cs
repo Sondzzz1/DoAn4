@@ -8,6 +8,8 @@ public interface IBlogService
     Task<List<BlogPostDto>> GetAllBlogPostsAsync();
     Task<BlogPostDto> GetBlogPostByIdAsync(int id, bool incrementView = true);
     Task<BlogPostDto> GetBlogPostBySlugAsync(string slug, bool incrementView = true);
+    Task<BlogPostDto> GetPublicBlogPostByIdAsync(int id, bool incrementView = true);
+    Task<BlogPostDto> GetPublicBlogPostBySlugAsync(string slug, bool incrementView = true);
     Task<BlogPostDto> CreateBlogPostAsync(int authorAccountId, CreateBlogPostDto createDto);
     Task<BlogPostDto> UpdateBlogPostAsync(int id, UpdateBlogPostDto updateDto);
     Task DeleteBlogPostAsync(int id);

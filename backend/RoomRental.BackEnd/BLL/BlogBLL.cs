@@ -81,6 +81,40 @@ public class BlogBLL : IBlogService
         return MapToDto(blog, true);
     }
 
+    public async Task<BlogPostDto> GetPublicBlogPostByIdAsync(int id, bool incrementView = true)
+    {
+        var blog = await _context.BlogPosts
+            .Include(b => b.Author)
+            .Include(b => b.Comments).ThenInclude(c => c.Account)
+            .FirstOrDefaultAsync(b => b.Id == id && b.Status == 1)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy bài viết.");
+
+        if (incrementView)
+        {
+            blog.ViewCount++;
+            await _context.SaveChangesAsync();
+        }
+
+        return MapToDto(blog, true);
+    }
+
+    public async Task<BlogPostDto> GetPublicBlogPostBySlugAsync(string slug, bool incrementView = true)
+    {
+        var blog = await _context.BlogPosts
+            .Include(b => b.Author)
+            .Include(b => b.Comments).ThenInclude(c => c.Account)
+            .FirstOrDefaultAsync(b => b.Slug == slug && b.Status == 1)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy bài viết.");
+
+        if (incrementView)
+        {
+            blog.ViewCount++;
+            await _context.SaveChangesAsync();
+        }
+
+        return MapToDto(blog, true);
+    }
+
     public async Task<BlogPostDto> CreateBlogPostAsync(int authorAccountId, CreateBlogPostDto createDto)
     {
         var title = createDto.GetTitle();
