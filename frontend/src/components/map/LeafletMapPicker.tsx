@@ -7,7 +7,9 @@ import TileLayerWithFallback from './TileLayerWithFallback';
 import api from '../../services/api';
 
 // Fix Leaflet icon issue with Webpack/Vite
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+type LeafletDefaultIconPrototype = { _getIconUrl?: unknown };
+const defaultIconPrototype = L.Icon.Default.prototype as unknown as LeafletDefaultIconPrototype;
+delete defaultIconPrototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
@@ -60,7 +62,7 @@ const LeafletMapPicker: React.FC<LeafletMapPickerProps> = ({
     if (latitude && longitude && !isNaN(latitude) && !isNaN(longitude)) {
       const newLat = latitude >= -90 && latitude <= 90 ? latitude : 20.9432;
       const newLng = longitude >= -180 && longitude <= 180 ? longitude : 106.1032;
-      setPosition([newLat, newLng]);
+      void Promise.resolve().then(() => setPosition([newLat, newLng]));
       
       // Move map to new position
       if (mapRef.current) {
@@ -69,36 +71,8 @@ const LeafletMapPicker: React.FC<LeafletMapPickerProps> = ({
     }
   }, [latitude, longitude]);
 
-  // Auto geocoding khi địa chỉ thay đổi (debounced)
-  useEffect(() => {
-    // Clear previous timer
-    if (debounceTimerRef.current) {
-      window.clearTimeout(debounceTimerRef.current);
-    }
-
-    // Build full address
-    const fullAddress = [address, ward, district, province, 'Việt Nam']
-      .filter(Boolean)
-      .join(', ')
-      .trim();
-
-    // Only geocode if we have meaningful address (at least address + province)
-    if (address && province && fullAddress.length > 10) {
-      debounceTimerRef.current = window.setTimeout(() => {
-        handleGeocoding(fullAddress);
-      }, 800); // Debounce 800ms
-    }
-
-    // Cleanup
-    return () => {
-      if (debounceTimerRef.current) {
-        window.clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, [address, ward, district, province]);
-
   // Geocoding function
-  const handleGeocoding = async (fullAddress: string) => {
+  const handleGeocoding = useCallback(async (fullAddress: string) => {
     setIsGeocoding(true);
     try {
       const response = await api.get('/location/search', {
@@ -120,13 +94,37 @@ const LeafletMapPicker: React.FC<LeafletMapPickerProps> = ({
           });
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Geocoding error:', error);
       // Silent fail - không hiện alert để không làm phiền người dùng
     } finally {
       setIsGeocoding(false);
     }
-  };
+  }, [onLocationChange]);
+
+  // Auto geocoding khi địa chỉ thay đổi (debounced)
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      window.clearTimeout(debounceTimerRef.current);
+    }
+
+    const fullAddress = [address, ward, district, province, 'Việt Nam']
+      .filter(Boolean)
+      .join(', ')
+      .trim();
+
+    if (address && province && fullAddress.length > 10) {
+      debounceTimerRef.current = window.setTimeout(() => {
+        void handleGeocoding(fullAddress);
+      }, 800);
+    }
+
+    return () => {
+      if (debounceTimerRef.current) {
+        window.clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [address, district, handleGeocoding, province, ward]);
 
   // Xử lý khi click chọn vị trí trên map
   const handleLocationSelect = useCallback((lat: number, lng: number) => {

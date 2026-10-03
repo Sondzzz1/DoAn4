@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { FiMapPin, FiSearch, FiNavigation, FiAlertCircle, FiLayers, FiCheckCircle } from 'react-icons/fi';
+import { FiMapPin, FiSearch, FiNavigation, FiAlertCircle } from 'react-icons/fi';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './GoogleMapPicker.css';
 
 // Fix Leaflet icons
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+type LeafletDefaultIconPrototype = { _getIconUrl?: unknown };
+const defaultIconPrototype = L.Icon.Default.prototype as unknown as LeafletDefaultIconPrototype;
+delete defaultIconPrototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -20,9 +22,48 @@ interface GoogleMapPickerProps {
   defaultAddress?: string;
 }
 
+type GoogleLatLng = { lat: () => number; lng: () => number };
+type GoogleMapClickEvent = { latLng: GoogleLatLng };
+type GoogleMapInstance = {
+  setCenter: (position: { lat: number; lng: number }) => void;
+  setZoom: (zoom: number) => void;
+  addListener: (event: string, handler: (event: GoogleMapClickEvent) => void) => void;
+};
+type GoogleMarker = {
+  getPosition: () => GoogleLatLng | null;
+  setPosition: (position: { lat: number; lng: number }) => void;
+  addListener: (event: string, handler: () => void) => void;
+};
+type GoogleGeocodeResult = {
+  formatted_address: string;
+  geometry: { location: GoogleLatLng };
+};
+type GoogleGeocoder = {
+  geocode: (
+    request: { location?: { lat: number; lng: number }; address?: string; componentRestrictions?: { country: string } },
+    callback: (results: GoogleGeocodeResult[], status: string) => void,
+  ) => void;
+};
+type GoogleAutocomplete = {
+  addListener: (event: string, handler: () => void) => void;
+  getPlace: () => { geometry?: { location?: GoogleLatLng }; formatted_address?: string; name?: string };
+};
+type GoogleMapsNamespace = {
+  maps: {
+    Geocoder: new () => GoogleGeocoder;
+    Map: new (container: HTMLElement, options: object) => GoogleMapInstance;
+    Marker: new (options: object) => GoogleMarker;
+    InfoWindow: new (options: object) => { open: (map: GoogleMapInstance, marker: GoogleMarker) => void };
+    Animation: { DROP: unknown };
+    places: { Autocomplete: new (input: HTMLInputElement, options: object) => GoogleAutocomplete };
+  };
+};
+type NominatimReverseResult = { display_name?: string };
+type NominatimSearchResult = { lat: string; lon: string; display_name: string };
+
 declare global {
   interface Window {
-    google: any;
+    google?: GoogleMapsNamespace;
     gm_authFailure?: () => void;
   }
 }
@@ -39,25 +80,69 @@ const GoogleMapPicker: React.FC<GoogleMapPickerProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const onLocationChangeRef = useRef(onLocationChange);
 
   // Google Maps refs
-  const gMapInstanceRef = useRef<any>(null);
-  const gMarkerRef = useRef<any>(null);
-  const gGeocoderRef = useRef<any>(null);
-  const gAutocompleteRef = useRef<any>(null);
+  const gMapInstanceRef = useRef<GoogleMapInstance | null>(null);
+  const gMarkerRef = useRef<GoogleMarker | null>(null);
+  const gGeocoderRef = useRef<GoogleGeocoder | null>(null);
+  const gAutocompleteRef = useRef<GoogleAutocomplete | null>(null);
 
   // Leaflet refs
   const lMapInstanceRef = useRef<L.Map | null>(null);
   const lMarkerRef = useRef<L.Marker | null>(null);
 
-  const [mapEngine, setMapEngine] = useState<'google' | 'leaflet'>('google');
+  const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const hasConfiguredGoogleMapsKey = Boolean(API_KEY && API_KEY !== 'YOUR_GOOGLE_MAPS_API_KEY_HERE');
+  const [mapEngine, setMapEngine] = useState<'google' | 'leaflet'>(() => (
+    hasConfiguredGoogleMapsKey ? 'google' : 'leaflet'
+  ));
   const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
   const [googleAuthError, setGoogleAuthError] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState(defaultAddress);
   const [selectedAddress, setSelectedAddress] = useState(defaultAddress);
   const [isSearching, setIsSearching] = useState(false);
 
-  const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const reportLocation = useCallback((lat: number, lng: number, address?: string) => {
+    onLocationChangeRef.current(lat, lng, address);
+  }, []);
+
+  const handleGoogleReverseGeocode = useCallback((lat: number, lng: number) => {
+    if (gGeocoderRef.current) {
+      gGeocoderRef.current.geocode({ location: { lat, lng } }, (results, status) => {
+        if (status === 'OK' && results[0]) {
+          const addr = results[0].formatted_address;
+          setSelectedAddress(addr);
+          setSearchValue(addr);
+          reportLocation(lat, lng, addr);
+        } else {
+          reportLocation(lat, lng);
+        }
+      });
+    } else {
+      reportLocation(lat, lng);
+    }
+  }, [reportLocation]);
+
+  const handleLeafletReverseGeocode = useCallback(async (lat: number, lng: number) => {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=vi`);
+      const data = await res.json() as NominatimReverseResult;
+      if (data.display_name) {
+        setSelectedAddress(data.display_name);
+        setSearchValue(data.display_name);
+        reportLocation(lat, lng, data.display_name);
+      } else {
+        reportLocation(lat, lng);
+      }
+    } catch {
+      reportLocation(lat, lng);
+    }
+  }, [reportLocation]);
+
+  useEffect(() => {
+    onLocationChangeRef.current = onLocationChange;
+  }, [onLocationChange]);
 
   // 1. Listen for Google Maps Auth Failure
   useEffect(() => {
@@ -74,13 +159,10 @@ const GoogleMapPicker: React.FC<GoogleMapPickerProps> = ({
 
   // 2. Load Google Maps Script
   useEffect(() => {
-    if (!API_KEY || API_KEY === 'YOUR_GOOGLE_MAPS_API_KEY_HERE') {
-      setMapEngine('leaflet');
-      return;
-    }
+    if (!hasConfiguredGoogleMapsKey) return;
 
     if (window.google && window.google.maps) {
-      setIsGoogleLoaded(true);
+      void Promise.resolve().then(() => setIsGoogleLoaded(true));
       return;
     }
 
@@ -111,7 +193,7 @@ const GoogleMapPicker: React.FC<GoogleMapPickerProps> = ({
     };
 
     document.head.appendChild(script);
-  }, [API_KEY]);
+  }, [API_KEY, hasConfiguredGoogleMapsKey]);
 
   // 3. Initialize Google Map (ONLY ONCE)
   useEffect(() => {
@@ -158,7 +240,7 @@ const GoogleMapPicker: React.FC<GoogleMapPickerProps> = ({
       });
 
       // Handle map click
-      map.addListener('click', (e: any) => {
+      map.addListener('click', (e) => {
         const lat = e.latLng.lat();
         const lng = e.latLng.lng();
         marker.setPosition({ lat, lng });
@@ -190,7 +272,7 @@ const GoogleMapPicker: React.FC<GoogleMapPickerProps> = ({
 
             setSelectedAddress(addr);
             setSearchValue(addr);
-            onLocationChange(lat, lng, addr);
+            reportLocation(lat, lng, addr);
           });
 
           gAutocompleteRef.current = autocomplete;
@@ -200,9 +282,9 @@ const GoogleMapPicker: React.FC<GoogleMapPickerProps> = ({
       }
     } catch (e) {
       console.warn('Lỗi khởi tạo Google Maps, chuyển sang Leaflet:', e);
-      setMapEngine('leaflet');
+      void Promise.resolve().then(() => setMapEngine('leaflet'));
     }
-  }, [mapEngine, isGoogleLoaded]);
+  }, [handleGoogleReverseGeocode, isGoogleLoaded, latitude, longitude, mapEngine, reportLocation]);
 
   // 4. Initialize Leaflet Map (Fallback Engine)
   useEffect(() => {
@@ -252,42 +334,7 @@ const GoogleMapPicker: React.FC<GoogleMapPickerProps> = ({
       lMapInstanceRef.current = null;
       lMarkerRef.current = null;
     };
-  }, [mapEngine]);
-
-  // Reverse Geocoding via Google
-  const handleGoogleReverseGeocode = (lat: number, lng: number) => {
-    if (gGeocoderRef.current) {
-      gGeocoderRef.current.geocode({ location: { lat, lng } }, (results: any, status: any) => {
-        if (status === 'OK' && results[0]) {
-          const addr = results[0].formatted_address;
-          setSelectedAddress(addr);
-          setSearchValue(addr);
-          onLocationChange(lat, lng, addr);
-        } else {
-          onLocationChange(lat, lng);
-        }
-      });
-    } else {
-      onLocationChange(lat, lng);
-    }
-  };
-
-  // Reverse Geocoding via Nominatim
-  const handleLeafletReverseGeocode = async (lat: number, lng: number) => {
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=vi`);
-      const data = await res.json();
-      if (data && data.display_name) {
-        setSelectedAddress(data.display_name);
-        setSearchValue(data.display_name);
-        onLocationChange(lat, lng, data.display_name);
-      } else {
-        onLocationChange(lat, lng);
-      }
-    } catch {
-      onLocationChange(lat, lng);
-    }
-  };
+  }, [handleLeafletReverseGeocode, latitude, longitude, mapEngine]);
 
   // Search Address handler (supports Nominatim for both engines)
   const handleManualSearch = async () => {
@@ -297,7 +344,7 @@ const GoogleMapPicker: React.FC<GoogleMapPickerProps> = ({
     try {
       // If Google Autocomplete active and Google geocoder available
       if (mapEngine === 'google' && gGeocoderRef.current) {
-        gGeocoderRef.current.geocode({ address: searchValue, componentRestrictions: { country: 'VN' } }, (results: any, status: any) => {
+        gGeocoderRef.current.geocode({ address: searchValue, componentRestrictions: { country: 'VN' } }, (results, status) => {
           setIsSearching(false);
           if (status === 'OK' && results[0]) {
             const loc = results[0].geometry.location;
@@ -311,7 +358,7 @@ const GoogleMapPicker: React.FC<GoogleMapPickerProps> = ({
               gMapInstanceRef.current.setZoom(16);
             }
             setSelectedAddress(addr);
-            onLocationChange(lat, lng, addr);
+            reportLocation(lat, lng, addr);
             return;
           }
           // Fallback to Nominatim search
@@ -330,8 +377,8 @@ const GoogleMapPicker: React.FC<GoogleMapPickerProps> = ({
   const searchWithNominatim = async (query: string) => {
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=vn&limit=1&accept-language=vi`);
-      const results = await res.json();
-      if (results && results.length > 0) {
+      const results = await res.json() as NominatimSearchResult[];
+      if (results.length > 0) {
         const lat = parseFloat(results[0].lat);
         const lng = parseFloat(results[0].lon);
         const addr = results[0].display_name;
@@ -346,7 +393,7 @@ const GoogleMapPicker: React.FC<GoogleMapPickerProps> = ({
         }
 
         setSelectedAddress(addr);
-        onLocationChange(lat, lng, addr);
+        reportLocation(lat, lng, addr);
       } else {
         alert('Không tìm thấy vị trí phù hợp với địa chỉ này. Vui lòng click trực tiếp trên bản đồ.');
       }
@@ -375,14 +422,14 @@ const GoogleMapPicker: React.FC<GoogleMapPickerProps> = ({
         } else if (lMapInstanceRef.current && lMarkerRef.current) {
           lMarkerRef.current.setLatLng([lat, lng]);
           lMapInstanceRef.current.setView([lat, lng], 16);
-          handleLeafletReverseGeocode(lat, lng);
+          void handleLeafletReverseGeocode(lat, lng);
         }
       },
       (err) => {
         alert(`Không thể lấy vị trí hiện tại: ${err.message}`);
       }
     );
-  }, [mapEngine]);
+  }, [handleGoogleReverseGeocode, handleLeafletReverseGeocode, mapEngine]);
 
   return (
     <div className="google-map-picker">
@@ -392,7 +439,15 @@ const GoogleMapPicker: React.FC<GoogleMapPickerProps> = ({
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Chế độ bản đồ:</span>
           <button
             type="button"
-            onClick={() => setMapEngine('google')}
+            onClick={() => {
+              if (hasConfiguredGoogleMapsKey) {
+                setMapEngine('google');
+                setGoogleAuthError(null);
+              } else {
+                setGoogleAuthError('Chưa cấu hình Google Maps API Key.');
+              }
+            }}
+            disabled={!hasConfiguredGoogleMapsKey}
             className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
               mapEngine === 'google'
                 ? 'bg-blue-600 text-white shadow-sm'

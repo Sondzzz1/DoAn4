@@ -5,7 +5,9 @@ import { PostListItem } from '../../types/post.types';
 import { formatPrice } from '../../utils/helpers';
 
 // Fix Leaflet default marker icon in Vite/Webpack
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+type LeafletDefaultIconPrototype = { _getIconUrl?: unknown };
+const defaultIconPrototype = L.Icon.Default.prototype as unknown as LeafletDefaultIconPrototype;
+delete defaultIconPrototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -65,21 +67,28 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const circleLayerRef = useRef<L.Circle | null>(null);
   const pickerMarkerRef = useRef<L.Marker | null>(null);
+  const pickerCallbackRef = useRef(onLocationSelect);
+  const initialMapConfigRef = useRef({ center, enablePicker, radiusCircle, singleRoom, zoom });
+
+  useEffect(() => {
+    pickerCallbackRef.current = onLocationSelect;
+  }, [onLocationSelect]);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
+    const initialConfig = initialMapConfigRef.current;
 
     // Khởi tạo map nếu chưa có
     if (!mapInstanceRef.current) {
-      const initialCenter: [number, number] = singleRoom
-        ? [singleRoom.latitude, singleRoom.longitude]
-        : radiusCircle
-        ? radiusCircle.center
-        : center;
+      const initialCenter: [number, number] = initialConfig.singleRoom
+        ? [initialConfig.singleRoom.latitude, initialConfig.singleRoom.longitude]
+        : initialConfig.radiusCircle
+        ? initialConfig.radiusCircle.center
+        : initialConfig.center;
 
       const map = L.map(mapContainerRef.current, {
         center: initialCenter,
-        zoom: zoom,
+        zoom: initialConfig.zoom,
         scrollWheelZoom: true,
       });
 
@@ -92,7 +101,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       mapInstanceRef.current = map;
 
       // Click to pick location
-      if (enablePicker && onLocationSelect) {
+      if (initialConfig.enablePicker) {
         map.on('click', (e: L.LeafletMouseEvent) => {
           const { lat, lng } = e.latlng;
           if (pickerMarkerRef.current) {
@@ -100,7 +109,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
           } else {
             pickerMarkerRef.current = L.marker([lat, lng], { icon: redIcon }).addTo(map);
           }
-          onLocationSelect(lat, lng);
+          pickerCallbackRef.current?.(lat, lng);
         });
       }
     }

@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FiMapPin, FiExternalLink, FiAlertCircle } from 'react-icons/fi';
+import { FiMapPin, FiExternalLink } from 'react-icons/fi';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './GoogleMapView.css';
 
 // Fix Leaflet icons
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+type LeafletDefaultIconPrototype = { _getIconUrl?: unknown };
+const defaultIconPrototype = L.Icon.Default.prototype as unknown as LeafletDefaultIconPrototype;
+delete defaultIconPrototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -32,10 +34,12 @@ const GoogleMapView: React.FC<GoogleMapViewProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const lMapInstanceRef = useRef<L.Map | null>(null);
 
-  const [mapEngine, setMapEngine] = useState<'google' | 'leaflet'>('google');
-  const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
-
   const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const hasConfiguredGoogleMapsKey = Boolean(API_KEY && API_KEY !== 'YOUR_GOOGLE_MAPS_API_KEY_HERE');
+  const [mapEngine, setMapEngine] = useState<'google' | 'leaflet'>(() => (
+    hasConfiguredGoogleMapsKey ? 'google' : 'leaflet'
+  ));
+  const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
 
   // Validate coordinates
   const isValidCoords =
@@ -64,13 +68,10 @@ const GoogleMapView: React.FC<GoogleMapViewProps> = ({
 
   // 2. Load Google Maps Script
   useEffect(() => {
-    if (!API_KEY || API_KEY === 'YOUR_GOOGLE_MAPS_API_KEY_HERE') {
-      setMapEngine('leaflet');
-      return;
-    }
+    if (!hasConfiguredGoogleMapsKey) return;
 
     if (window.google && window.google.maps) {
-      setIsGoogleLoaded(true);
+      void Promise.resolve().then(() => setIsGoogleLoaded(true));
       return;
     }
 
@@ -99,7 +100,7 @@ const GoogleMapView: React.FC<GoogleMapViewProps> = ({
     };
 
     document.head.appendChild(script);
-  }, [API_KEY]);
+  }, [API_KEY, hasConfiguredGoogleMapsKey]);
 
   // 3. Render Google Maps
   useEffect(() => {
@@ -138,7 +139,7 @@ const GoogleMapView: React.FC<GoogleMapViewProps> = ({
         });
       }
     } catch {
-      setMapEngine('leaflet');
+      void Promise.resolve().then(() => setMapEngine('leaflet'));
     }
   }, [mapEngine, isGoogleLoaded, latitude, longitude, title, address, zoom, isValidCoords]);
 
@@ -217,7 +218,7 @@ const GoogleMapView: React.FC<GoogleMapViewProps> = ({
           <span>Bản đồ:</span>
           <button
             type="button"
-            onClick={() => setMapEngine(mapEngine === 'google' ? 'leaflet' : 'google')}
+            onClick={() => setMapEngine(mapEngine === 'google' || !hasConfiguredGoogleMapsKey ? 'leaflet' : 'google')}
             className="underline hover:text-blue-600 font-medium"
           >
             {mapEngine === 'google' ? 'Đổi sang OpenStreetMap' : 'Đổi sang Google Maps'}

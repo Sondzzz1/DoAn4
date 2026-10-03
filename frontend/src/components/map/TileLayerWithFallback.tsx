@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { TileLayer } from 'react-leaflet';
 
 /**
@@ -36,11 +36,6 @@ const TileLayerWithFallback: React.FC<TileLayerWithFallbackProps> = ({ maxZoom =
   const [error, setError] = useState(false);
 
   const currentProvider = TILE_PROVIDERS[providerIndex];
-
-  useEffect(() => {
-    // Reset error when provider changes
-    setError(false);
-  }, [providerIndex]);
 
   const handleTileError = () => {
     console.error(`Tile provider ${currentProvider.name} failed`);
