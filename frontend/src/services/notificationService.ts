@@ -1,7 +1,7 @@
 import * as signalR from '@microsoft/signalr';
 import api from './api';
 import { ApiResponse } from '../types/common.types';
-import { STORAGE_KEYS } from '../utils/constants';
+import { SIGNALR_BASE_URL, STORAGE_KEYS } from '../utils/constants';
 
 export interface NotificationItem {
   id: number;
@@ -24,8 +24,7 @@ class NotificationService {
    * Khởi tạo kết nối SignalR Hub cho thông báo thời gian thực
    */
   public async startConnection(): Promise<void> {
-    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-    if (!token) return;
+    if (!localStorage.getItem(STORAGE_KEYS.TOKEN)) return;
     this.shouldStayConnected = true;
 
     if (this.hubConnection) {
@@ -37,8 +36,8 @@ class NotificationService {
     }
 
     this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl('http://localhost:5000/hubs/notifications', {
-        accessTokenFactory: () => token,
+      .withUrl(`${SIGNALR_BASE_URL}/hubs/notifications`, {
+        accessTokenFactory: () => localStorage.getItem(STORAGE_KEYS.TOKEN) || '',
       })
       .withAutomaticReconnect()
       .build();

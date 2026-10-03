@@ -12,6 +12,7 @@ const HomePage = lazy(() => import('../pages/public/HomePage'));
 const RoomListPage = lazy(() => import('../pages/public/RoomListPage'));
 const RoomDetailPage = lazy(() => import('../pages/public/RoomDetailPage'));
 const BlogPage = lazy(() => import('../pages/public/BlogPage'));
+const BlogDetailPage = lazy(() => import('../pages/public/BlogDetailPage'));
 const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('../pages/auth/RegisterPage'));
 const DashboardPage = lazy(() => import('../pages/dashboard/DashboardPage'));
@@ -41,7 +42,7 @@ const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
 );
 
 const AppRoutes: React.FC = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   return (
     <Suspense fallback={<PageState type="loading" message="Đang tải trang..." />}>
@@ -52,6 +53,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/rooms" element={<RoomListPage />} />
         <Route path="/rooms/:id" element={<RoomDetailPage />} />
         <Route path="/blog" element={<BlogPage />} />
+        <Route path="/blog/:id" element={<BlogDetailPage />} />
         <Route path="/payment/result" element={<PaymentResultPage />} />
         
         {/* Auth Routes - redirect if already logged in */}

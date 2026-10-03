@@ -48,7 +48,7 @@ const NotificationBell: React.FC = () => {
     };
   }, [isAuthenticated]);
 
-  const fetchNotifications = async () => {
+  async function fetchNotifications() {
     try {
       setLoading(true);
       const res = await notificationService.getMyNotifications();
@@ -60,9 +60,9 @@ const NotificationBell: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const fetchUnreadCount = async () => {
+  async function fetchUnreadCount() {
     try {
       const res = await notificationService.getUnreadCount();
       if (res.success && typeof res.data === 'number') {
@@ -71,7 +71,7 @@ const NotificationBell: React.FC = () => {
     } catch {
       // Ignored
     }
-  };
+  }
 
   const handleToggle = () => {
     if (!isOpen) {

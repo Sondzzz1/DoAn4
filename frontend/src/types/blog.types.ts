@@ -1,19 +1,26 @@
 export interface BlogPost {
   id: number;
   title: string;
-  excerpt: string;
+  slug: string;
+  summary?: string | null;
   content: string;
-  imageUrl: string;
-  author: string;
-  category: string;
-  publishedAt: string;
-  readTime: number; // minutes
-  views?: number;
+  imageUrl?: string | null;
+  authorAccountId: number;
+  authorName: string;
+  viewCount: number;
+  status: number;
+  publishedAt?: string | null;
+  updatedAt?: string | null;
+  commentCount: number;
+  comments?: BlogComment[];
 }
 
-export interface BlogCategory {
+export interface BlogComment {
   id: number;
-  name: string;
-  slug: string;
-  description: string;
+  blogPostId: number;
+  accountId: number;
+  authorName: string;
+  authorAvatar?: string | null;
+  content: string;
+  createdAt: string;
 }

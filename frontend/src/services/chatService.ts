@@ -1,7 +1,7 @@
 import * as signalR from '@microsoft/signalr';
 import api from './api';
 import { ApiResponse } from '../types/common.types';
-import { STORAGE_KEYS } from '../utils/constants';
+import { SIGNALR_BASE_URL, STORAGE_KEYS } from '../utils/constants';
 
 export interface ChatMessage {
   id: number;
@@ -45,8 +45,7 @@ class ChatService {
   private messageListeners: ((msg: ChatMessage) => void)[] = [];
 
   public async startConnection(): Promise<void> {
-    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-    if (!token) return;
+    if (!localStorage.getItem(STORAGE_KEYS.TOKEN)) return;
     this.shouldStayConnected = true;
 
     if (this.hubConnection) {
@@ -58,8 +57,8 @@ class ChatService {
     }
 
     this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl('http://localhost:5000/hubs/chat', {
-        accessTokenFactory: () => token,
+      .withUrl(`${SIGNALR_BASE_URL}/hubs/chat`, {
+        accessTokenFactory: () => localStorage.getItem(STORAGE_KEYS.TOKEN) || '',
       })
       .withAutomaticReconnect()
       .build();

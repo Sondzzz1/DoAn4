@@ -1,32 +1,12 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { FiMessageSquare, FiX, FiSend, FiUser, FiArrowLeft, FiCircle } from 'react-icons/fi';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
+import { FiMessageSquare, FiX, FiSend, FiArrowLeft, FiCircle } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { chatService, ChatMessage, Conversation } from '../../services/chatService';
 import { useAuth } from '../../hooks/useAuth';
 import { formatPrice } from '../../utils/helpers';
+import { DirectChatPayload } from './chatEvents';
 
-export interface DirectChatPayload {
-  partnerId: number;
-  partnerName: string;
-  postId?: number;
-  postTitle?: string;
-  postPrice?: number;
-  postImage?: string;
-}
-
-export const openDirectChat = (payload: DirectChatPayload) => {
-  window.dispatchEvent(new CustomEvent('open-direct-chat', { detail: payload }));
-};
-
-interface ChatDrawerProps {
-  directChatPartner?: DirectChatPayload | null;
-  onCloseDirectChat?: () => void;
-}
-
-const ChatDrawer: React.FC<ChatDrawerProps> = ({
-  directChatPartner,
-  onCloseDirectChat,
-}) => {
+const ChatDrawer: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -47,15 +27,41 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({
     activePartnerRef.current = activePartner;
   }, [activePartner]);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
+
+  const loadConversations = useCallback(async () => {
+    try {
+      const res = await chatService.getConversations();
+      setConversations(res.data || []);
+      const countRes = await chatService.getUnreadCount();
+      setTotalUnread(countRes.data || 0);
+    } catch {
+      // Ignore if offline
+    }
+  }, []);
+
+  const loadMessages = useCallback(async (partnerId: number) => {
+    setLoading(true);
+    try {
+      const res = await chatService.getMessages(partnerId);
+      setMessages(res.data || []);
+      scrollToBottom();
+      void chatService.markAsRead(partnerId);
+      void loadConversations();
+    } catch {
+      toast.error('Không thể tải lịch sử tin nhắn.');
+    } finally {
+      setLoading(false);
+    }
+  }, [loadConversations, scrollToBottom]);
 
   // Khởi tạo kết nối SignalR khi đã đăng nhập
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    void chatService.startConnection();
+    void chatService.startConnection().then(() => loadConversations());
 
     // Lắng nghe tin nhắn mới từ SignalR
     const unsubscribe = chatService.onReceiveMessage((msg) => {
@@ -76,13 +82,11 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({
       void loadConversations();
     });
 
-    void loadConversations();
-
     return () => {
       unsubscribe();
       void chatService.stopConnection();
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, loadConversations, scrollToBottom]);
 
   // Xử lý khi nhận sự kiện open-direct-chat từ bất kỳ đâu trên ứng dụng
   useEffect(() => {
@@ -110,53 +114,7 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({
     return () => {
       window.removeEventListener('open-direct-chat', handleOpenDirectChatEvent);
     };
-  }, []);
-
-  // Xử lý khi có directChatPartner từ props
-  useEffect(() => {
-    if (directChatPartner) {
-      setIsOpen(true);
-      setActivePartner({
-        id: directChatPartner.partnerId,
-        name: directChatPartner.partnerName,
-      });
-      if (directChatPartner.postId) {
-        setActivePost({
-          id: directChatPartner.postId,
-          title: directChatPartner.postTitle,
-          price: directChatPartner.postPrice,
-          image: directChatPartner.postImage,
-        });
-      }
-      void loadMessages(directChatPartner.partnerId);
-    }
-  }, [directChatPartner]);
-
-  const loadConversations = async () => {
-    try {
-      const res = await chatService.getConversations();
-      setConversations(res.data || []);
-      const countRes = await chatService.getUnreadCount();
-      setTotalUnread(countRes.data || 0);
-    } catch {
-      // Ignore if offline
-    }
-  };
-
-  const loadMessages = async (partnerId: number) => {
-    setLoading(true);
-    try {
-      const res = await chatService.getMessages(partnerId);
-      setMessages(res.data || []);
-      scrollToBottom();
-      void chatService.markAsRead(partnerId);
-      void loadConversations();
-    } catch (err) {
-      toast.error('Không thể tải lịch sử tin nhắn.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [loadMessages]);
 
   const handleSelectConversation = (conv: Conversation) => {
     setActivePartner({
@@ -194,8 +152,8 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({
         scrollToBottom();
         void loadConversations();
       }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Không thể gửi tin nhắn.');
+    } catch {
+      toast.error('Không thể gửi tin nhắn.');
     }
   };
 
@@ -230,7 +188,6 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({
                   type="button"
                   onClick={() => {
                     setActivePartner(null);
-                    onCloseDirectChat?.();
                   }}
                   className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center border-none cursor-pointer transition-colors"
                 >
@@ -253,7 +210,6 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({
             <button
               onClick={() => {
                 setIsOpen(false);
-                onCloseDirectChat?.();
               }}
               className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center border-none cursor-pointer transition-colors"
             >
