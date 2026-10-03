@@ -16,7 +16,7 @@ const RoomReviews: React.FC<RoomReviewsProps> = ({ postId }) => {
       try {
         const res = await rentalService.getReviewsByPost(postId);
         setReviews(res.data || []);
-      } catch (err) {
+      } catch {
         // Silently handle if no reviews or offline
         setReviews([]);
       } finally {

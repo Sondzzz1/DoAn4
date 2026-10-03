@@ -3,6 +3,7 @@ import { FiX, FiSend, FiFileText, FiInfo } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { rentalService } from '../../services/rentalService';
 import { formatPrice } from '../../utils/helpers';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 interface RentalRequestModalProps {
   isOpen: boolean;
@@ -38,8 +39,8 @@ const RentalRequestModal: React.FC<RentalRequestModalProps> = ({
       toast.success('Gửi yêu cầu thuê phòng thành công! Chủ trọ sẽ liên hệ sớm nhất.');
       onClose();
       setNote('');
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể gửi yêu cầu thuê phòng.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể gửi yêu cầu thuê phòng.'));
     } finally {
       setLoading(false);
     }

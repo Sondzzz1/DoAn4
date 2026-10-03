@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PostListItem } from '../../types/post.types';
-import { formatPrice, getFullAddress } from '../../utils/helpers';
+import { formatPrice } from '../../utils/helpers';
 import Card from '../common/Card';
 
 interface RoomCardProps {

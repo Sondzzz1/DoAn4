@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { postService } from '../../services/postService';
 import { favoriteService } from '../../services/favoriteService';
-import { Post, RoomStatus, PostStatus } from '../../types/post.types';
+import { Post } from '../../types/post.types';
 import { ROUTES, ROLES } from '../../utils/constants';
 import { toast } from 'react-toastify';
 import { FiChevronRight, FiAlertCircle, FiRefreshCw, FiArrowLeft } from 'react-icons/fi';
@@ -18,56 +18,10 @@ import BookingModal from '../../components/room/BookingModal';
 import RentalRequestModal from '../../components/room/RentalRequestModal';
 import RoomReviews from '../../components/room/RoomReviews';
 import SimilarRooms from '../../components/room/SimilarRooms';
-import { openDirectChat } from '../../components/chat/ChatDrawer';
+import { openDirectChat } from '../../components/chat/chatEvents';
 
 // Import CSS
 import './RoomDetailPage.css';
-
-// Realistic fallback data for frontend preview when backend server is offline
-const FALLBACK_POSTS: Record<number, Post> = {
-  1: {
-    id: 1,
-    title: 'Cho nữ thuê phòng trong nhà riêng 4 tầng, ngõ 254D Minh Khai, giá 2,4 tr',
-    description: `Phòng trọ nằm trong nhà riêng 4 tầng cao cấp, khu vực yên tĩnh, dân trí cao, an ninh tốt.
-- Phòng rộng rãi 25m², có ban công thoáng mát và cửa sổ đón ánh sáng tự nhiên.
-- Đã trang bị đầy đủ: Điều hòa nhiệt độ, bình nóng lạnh, giường nệm cao cấp, tủ quần áo lớn, bàn học/làm việc.
-- Không chung chủ, giờ giấc hoàn toàn tự do, chìa khóa trao tay.
-- Gần các trường đại học lớn: ĐH Bách Khoa, ĐH Kinh Tế Quốc Dân, ĐH Xây Dựng, ĐH Kinh Doanh & Công Nghệ.
-- Điện nước giá dân công tơ riêng, internet cáp quang tốc độ cao.`,
-    price: 2400000,
-    status: PostStatus.Approved,
-    rejectionReason: null,
-    landlordId: 101,
-    landlordName: 'Phương',
-    landlordPhone: '0914362888',
-    roomId: 201,
-    area: 25,
-    maxOccupants: 2,
-    roomStatus: RoomStatus.Available,
-    province: 'Hà Nội',
-    district: 'Hoàng Mai',
-    ward: 'Bạch Mai',
-    address: 'Số 254D Ngõ Minh Khai',
-    amenities: [
-      { id: 1, name: 'WiFi tốc độ cao', icon: '', description: '' },
-      { id: 2, name: 'Điều hòa nhiệt độ', icon: '', description: '' },
-      { id: 3, name: 'Bình nóng lạnh', icon: '', description: '' },
-      { id: 4, name: 'Giường ngủ & nệm', icon: '', description: '' },
-      { id: 5, name: 'Tủ quần áo lớn', icon: '', description: '' },
-      { id: 6, name: 'Camera an ninh 24/7', icon: '', description: '' },
-      { id: 7, name: 'Chỗ để xe tầng 1 an toàn', icon: '', description: '' },
-      { id: 8, name: 'Giờ giấc tự do, không chung chủ', icon: '', description: '' },
-    ],
-    imageUrls: [
-      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200&h=800&fit=crop',
-      'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200&h=800&fit=crop',
-      'https://images.unsplash.com/photo-1556020685-ae41abfc9365?w=1200&h=800&fit=crop',
-      'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&h=800&fit=crop',
-    ],
-    createdAt: '2026-09-15T08:00:00Z',
-    updatedAt: '2026-09-15T08:00:00Z',
-  },
-};
 
 const RoomDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -91,16 +45,16 @@ const RoomDetailPage: React.FC = () => {
     }
   }, [id, isAuthenticated, user]);
 
-  const checkFavoriteStatus = async (postId: number) => {
+  async function checkFavoriteStatus(postId: number) {
     try {
       const res = await favoriteService.checkFavorite(postId);
       setIsFavorite(!!res.data);
     } catch {
       // Ignore if offline
     }
-  };
+  }
 
-  const fetchPostDetail = async (postId: number) => {
+  async function fetchPostDetail(postId: number) {
     if (isNaN(postId)) {
       setError('ID phòng không hợp lệ');
       setLoading(false);
@@ -115,22 +69,16 @@ const RoomDetailPage: React.FC = () => {
       if (response && response.data) {
         setPost(response.data);
       } else {
-        if (FALLBACK_POSTS[postId] || FALLBACK_POSTS[1]) {
-          setPost(FALLBACK_POSTS[postId] || { ...FALLBACK_POSTS[1], id: postId });
-        } else {
-          setError('Không tìm thấy phòng trọ');
-        }
+        setPost(null);
+        setError('Không tìm thấy phòng trọ.');
       }
-    } catch (err: unknown) {
-      if (FALLBACK_POSTS[postId] || FALLBACK_POSTS[1]) {
-        setPost(FALLBACK_POSTS[postId] || { ...FALLBACK_POSTS[1], id: postId });
-      } else {
-        setError('Không thể tải thông tin phòng.');
-      }
+    } catch {
+      setPost(null);
+      setError('Không thể tải thông tin phòng.');
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   // Toggle favorite handler with Real API
   const handleToggleFavorite = async () => {
@@ -157,8 +105,8 @@ const RoomDetailPage: React.FC = () => {
         setIsFavorite(true);
         toast.success('Đã lưu tin vào danh sách yêu thích!');
       }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Thao tác yêu thích thất bại.');
+    } catch {
+      toast.error('Thao tác yêu thích thất bại.');
     }
   };
 
@@ -395,7 +343,7 @@ const RoomDetailPage: React.FC = () => {
               Xem tất cả <FiChevronRight />
             </Link>
           </div>
-          <SimilarRooms currentPostId={post.id} />
+          <SimilarRooms currentPostId={post.id} categoryId={post.categoryId} />
         </section>
       </main>
 

@@ -49,6 +49,8 @@ export interface PostListItem {
   longitude?: number;
   distanceInKm?: number;
   thumbnailUrl: string | null;
+  categoryId: number;
+  categoryName: string;
   landlordName?: string;
   landlordPhone?: string | null;
   createdAt: string;
@@ -74,6 +76,7 @@ export interface Post {
   
   // Room Info
   roomId: number;
+  categoryId: number;
   area: number;
   maxOccupants: number;
   roomStatus: RoomStatus;
@@ -143,6 +146,7 @@ export interface PostSearchParams {
   maxPrice?: number;
   minArea?: number;
   maxArea?: number;
+  categoryId?: number;
   latitude?: number;
   longitude?: number;
   radiusInKm?: number;

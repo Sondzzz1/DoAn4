@@ -3,6 +3,7 @@ import { Post } from '../../types/post.types';
 import { FiX, FiCalendar, FiClock, FiPhone, FiMessageSquare, FiCheck } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { appointmentService } from '../../services/appointmentService';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -61,8 +62,10 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, post }) =>
         phone: '',
         message: '',
       });
-    } catch (error: any) {
-      const message = error?.response?.data?.message || error?.message || 'Có lỗi xảy ra. Vui lòng thử lại sau.';
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : getApiErrorMessage(error, 'Có lỗi xảy ra. Vui lòng thử lại sau.');
       toast.error(message);
     } finally {
       setIsSubmitting(false);

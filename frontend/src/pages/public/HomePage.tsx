@@ -1,78 +1,114 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FiSearch, FiMapPin, FiHeart, FiChevronRight, FiChevronDown } from 'react-icons/fi';
+import { categoryService, RoomCategory } from '../../services/categoryService';
+import { postService } from '../../services/postService';
+import { PostListItem } from '../../types/post.types';
+import { formatPrice } from '../../utils/helpers';
 
-const FEATURED = [
-  { 
-    id: 1, 
-    title: 'Cho thuê phòng Duplex – Gần Etown Cộng Hòa – Gần ĐH Văn Hiến & ĐH Công Thương', 
-    price: '5.5 Triệu/tháng', 
-    area: '25', 
-    address: 'Phường 13, Quận Tân Bình, Tp Hồ Chí Minh', 
-    date: '15/09/2026', 
-    img: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop', 
-    badge: 'Nổi bật', 
-    badgeColor: 'bg-orange-500' 
-  },
-  { 
-    id: 2, 
-    title: 'Cho thuê Chung Cư Gia Phúc, Linh Chiểu, Thủ Đức – 2PN 1WC, full nội thất', 
-    price: '8 Triệu/tháng', 
-    area: '67', 
-    address: 'Linh Chiểu, Thủ Đức, Tp Hồ Chí Minh', 
-    date: '04/07/2026', 
-    img: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&h=400&fit=crop', 
-    badge: 'HD', 
-    badgeColor: 'bg-[#0084ff]' 
-  },
-  { 
-    id: 3, 
-    title: 'Studio full nội thất – Vào ở ngay, vị trí trung tâm tiện đi lại các quận', 
-    price: '6.6 Triệu/tháng', 
-    area: '25', 
-    address: 'Linh Trung, Thủ Đức, Tp Hồ Chí Minh', 
-    date: '30/06/2026', 
-    img: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&h=400&fit=crop', 
-    badge: 'HD', 
-    badgeColor: 'bg-[#0084ff]' 
-  },
-  { 
-    id: 4, 
-    title: 'Cho thuê phòng 4S LINH ĐÔNG, Full Nội Thất 2PN, 2WC view thoáng mát', 
-    price: '3.2 Triệu/tháng', 
-    area: '18', 
-    address: 'Quận 12, Tp Hồ Chí Minh', 
-    date: '12/09/2026', 
-    img: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&h=400&fit=crop', 
-    badge: '', 
-    badgeColor: '' 
-  },
+const PRICE_RANGES = [
+  { label: 'Dưới 2 triệu', value: ':2000000' },
+  { label: '2 - 3 triệu', value: '2000000:3000000' },
+  { label: '3 - 5 triệu', value: '3000000:5000000' },
+  { label: '5 - 10 triệu', value: '5000000:10000000' },
+  { label: 'Trên 10 triệu', value: '10000000:' },
 ];
 
-const RECENT = [
-  { id: 5, title: 'Cho thuê phòng trọ 20m² full nội thất, gần ĐH Kinh Tế, Q.3', price: '4.5 Triệu/tháng', area: '20', address: 'Quận 3, TP.HCM', date: 'Hôm nay', img: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=300&h=200&fit=crop' },
-  { id: 6, title: 'Nhà nguyên căn 3 phòng ngủ, hẻm xe hơi, Q.Bình Thạnh', price: '12 Triệu/tháng', area: '80', address: 'Bình Thạnh, TP.HCM', date: 'Hôm qua', img: 'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=300&h=200&fit=crop' },
-  { id: 7, title: 'Phòng ở ghép nữ sinh, sạch sẽ, an ninh, Gò Vấp', price: '1.8 Triệu/tháng', area: '15', address: 'Gò Vấp, TP.HCM', date: '13/09', img: 'https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=300&h=200&fit=crop' },
-  { id: 8, title: 'Căn hộ 1PN cao cấp view đẹp, Vinhomes Grand Park, Q.9', price: '9 Triệu/tháng', area: '45', address: 'Quận 9, TP.HCM', date: '12/09', img: 'https://images.unsplash.com/photo-1571508601891-ca5e7a713859?w=300&h=200&fit=crop' },
+const AREA_RANGES = [
+  { label: 'Dưới 20 m²', value: ':20' },
+  { label: '20 - 30 m²', value: '20:30' },
+  { label: '30 - 50 m²', value: '30:50' },
+  { label: 'Trên 50 m²', value: '50:' },
 ];
+
+const PROVINCES = ['Hồ Chí Minh', 'Hà Nội', 'Đà Nẵng', 'Cần Thơ'];
+
+const setRangeParameters = (params: URLSearchParams, value: string, minKey: string, maxKey: string) => {
+  if (!value) return;
+
+  const [min, max] = value.split(':');
+  if (min) params.set(minKey, min);
+  if (max) params.set(maxKey, max);
+};
+
+const formatPostedDate = (dateString: string) => {
+  const date = new Date(dateString);
+  const difference = Math.floor((Date.now() - date.getTime()) / 86_400_000);
+
+  if (difference <= 0) return 'Hôm nay';
+  if (difference === 1) return 'Hôm qua';
+  if (difference < 7) return `${difference} ngày trước`;
+  return date.toLocaleDateString('vi-VN');
+};
+
+const RoomImage: React.FC<{ room: PostListItem; className: string }> = ({ room, className }) => (
+  <div className={className}>
+    {room.thumbnailUrl ? (
+      <img src={room.thumbnailUrl} alt={room.title} />
+    ) : (
+      <div className="flex h-full items-center justify-center bg-slate-100 text-sm text-slate-500">Chưa có ảnh</div>
+    )}
+  </div>
+);
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
-  const [filters, setFilters] = useState({ province: '', price: '', area: '', type: '' });
+  const [filters, setFilters] = useState({ province: '', price: '', area: '', categoryId: '' });
+  const [categories, setCategories] = useState<RoomCategory[]>([]);
+  const [featuredPosts, setFeaturedPosts] = useState<PostListItem[]>([]);
+  const [recentPosts, setRecentPosts] = useState<PostListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const p = new URLSearchParams();
-    if (query) p.set('search', query);
-    if (filters.province) p.set('province', filters.province);
-    navigate('/rooms?' + p.toString());
+  useEffect(() => {
+    let active = true;
+
+    const loadHomeData = async () => {
+      setLoading(true);
+      setLoadError(false);
+
+      try {
+        const [categoryResponse, featuredResponse, recentResponse] = await Promise.all([
+          categoryService.getActiveCategories(),
+          postService.getPosts({ sortBy: 'views', pageSize: 4 }),
+          postService.getPosts({ sortBy: 'new', pageSize: 4 }),
+        ]);
+
+        if (!active) return;
+        setCategories(categoryResponse.data ?? []);
+        setFeaturedPosts(featuredResponse.data ?? []);
+        setRecentPosts(recentResponse.data ?? []);
+      } catch {
+        if (active) setLoadError(true);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    void loadHomeData();
+    return () => { active = false; };
+  }, []);
+
+  const handleSearch = (event: React.FormEvent) => {
+    event.preventDefault();
+    const params = new URLSearchParams();
+
+    if (query.trim()) params.set('keyword', query.trim());
+    if (filters.province) params.set('province', filters.province);
+    if (filters.categoryId) params.set('categoryId', filters.categoryId);
+    setRangeParameters(params, filters.price, 'minPrice', 'maxPrice');
+    setRangeParameters(params, filters.area, 'minArea', 'maxArea');
+
+    navigate(`/rooms?${params.toString()}`);
+  };
+
+  const updateFilter = (key: keyof typeof filters, value: string) => {
+    setFilters(current => ({ ...current, [key]: value }));
   };
 
   return (
     <div className="bg-[#f7f8fa] min-h-screen">
-      
-      {/* ── HERO ── */}
       <section className="home-hero">
         <img
           src="https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=1920&h=700&fit=crop"
@@ -82,12 +118,8 @@ const HomePage: React.FC = () => {
         <div className="home-hero-overlay" />
 
         <div className="home-hero-content">
-          <h1 className="home-hero-title">
-            Tìm phòng trọ tốt
-          </h1>
-          <p className="home-hero-subtitle">
-            Đăng tin miễn phí — phòng trọ, căn hộ mini trên toàn quốc
-          </p>
+          <h1 className="home-hero-title">Tìm phòng trọ tốt</h1>
+          <p className="home-hero-subtitle">Đăng tin miễn phí - phòng trọ, căn hộ mini trên toàn quốc</p>
 
           <form onSubmit={handleSearch} className="hero-search">
             <div className="hero-search-main">
@@ -95,134 +127,92 @@ const HomePage: React.FC = () => {
               <input
                 type="text"
                 value={query}
-                onChange={e => setQuery(e.target.value)}
+                onChange={event => setQuery(event.target.value)}
                 placeholder="Tìm theo khu vực, đường, quận hoặc từ khóa..."
                 className="hero-search-input"
               />
-              <button type="submit" className="hero-search-button">
-                Tìm kiếm
-              </button>
+              <button type="submit" className="hero-search-button">Tìm kiếm</button>
             </div>
 
             <div className="hero-filters">
-              {[
-                { key: 'province', ph: 'Toàn quốc', opts: ['Hồ Chí Minh', 'Hà Nội', 'Đà Nẵng', 'Cần Thơ'] },
-                { key: 'price', ph: 'Giá phòng', opts: ['Dưới 2 triệu', '2 – 3 triệu', '3 – 5 triệu', '5 – 10 triệu', 'Trên 10 triệu'] },
-                { key: 'area', ph: 'Diện tích', opts: ['Dưới 20 m²', '20 – 30 m²', '30 – 50 m²', 'Trên 50 m²'] },
-                { key: 'type', ph: 'Loại phòng', opts: ['Phòng trọ', 'Nhà nguyên căn', 'Căn hộ', 'Ở ghép'] },
-              ].map(f => (
-                <div key={f.key} className="hero-filter">
-                  <select
-                    value={(filters as any)[f.key]}
-                    onChange={e => setFilters({ ...filters, [f.key]: e.target.value })}
-                  >
-                    <option value="">{f.ph}</option>
-                    {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                  <FiChevronDown className="hero-filter-icon" />
-                </div>
-              ))}
+              <div className="hero-filter">
+                <select value={filters.province} onChange={event => updateFilter('province', event.target.value)}>
+                  <option value="">Toàn quốc</option>
+                  {PROVINCES.map(province => <option key={province} value={province}>{province}</option>)}
+                </select>
+                <FiChevronDown className="hero-filter-icon" />
+              </div>
+              <div className="hero-filter">
+                <select value={filters.price} onChange={event => updateFilter('price', event.target.value)}>
+                  <option value="">Giá phòng</option>
+                  {PRICE_RANGES.map(range => <option key={range.value} value={range.value}>{range.label}</option>)}
+                </select>
+                <FiChevronDown className="hero-filter-icon" />
+              </div>
+              <div className="hero-filter">
+                <select value={filters.area} onChange={event => updateFilter('area', event.target.value)}>
+                  <option value="">Diện tích</option>
+                  {AREA_RANGES.map(range => <option key={range.value} value={range.value}>{range.label}</option>)}
+                </select>
+                <FiChevronDown className="hero-filter-icon" />
+              </div>
+              <div className="hero-filter">
+                <select value={filters.categoryId} onChange={event => updateFilter('categoryId', event.target.value)}>
+                  <option value="">Loại phòng</option>
+                  {categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
+                </select>
+                <FiChevronDown className="hero-filter-icon" />
+              </div>
             </div>
           </form>
         </div>
       </section>
 
-      {/* ── TIN NỔI BẬT ── */}
       <section className="home-section">
         <div className="section-heading">
           <h2 className="section-title">Tin nổi bật</h2>
-          <Link to="/rooms" className="section-more">
-            Xem thêm
-            <FiChevronRight />
-          </Link>
+          <Link to="/rooms?sortBy=views" className="section-more">Xem thêm<FiChevronRight /></Link>
         </div>
-
-        <div className="room-grid">
-          {FEATURED.map(room => (
-            <div
-              key={room.id}
-              onClick={() => navigate('/rooms/' + room.id)}
-              className="room-card"
-            >
-              <div className="room-card-image">
-                <img src={room.img} alt={room.title} />
-                {room.badge && (
-                  <span className={'room-card-badge ' + room.badgeColor}>
-                    {room.badge}
-                  </span>
-                )}
-                <button
-                  className="room-card-heart"
-                  onClick={e => e.stopPropagation()}
-                >
-                  <FiHeart size={16} />
-                </button>
-              </div>
-
-              <div className="room-card-content">
-                <div className="room-card-meta">
-                  <span className="room-card-price">{room.price}</span>
-                  <span className="room-card-area">{room.area} m²</span>
+        {loadError ? (
+          <p className="text-sm text-slate-600">Không thể tải tin đăng. Vui lòng thử lại sau.</p>
+        ) : (
+          <div className="room-grid">
+            {loading ? Array.from({ length: 4 }, (_, index) => <div key={index} className="room-card animate-pulse bg-slate-200" />) : featuredPosts.map(room => (
+              <div key={room.id} onClick={() => navigate(`/rooms/${room.id}`)} className="room-card">
+                <RoomImage room={room} className="room-card-image" />
+                <span className="room-card-badge bg-orange-500">Xem nhiều</span>
+                <button className="room-card-heart" onClick={event => event.stopPropagation()} aria-label="Lưu tin"><FiHeart size={16} /></button>
+                <div className="room-card-content">
+                  <div className="room-card-meta"><span className="room-card-price">{formatPrice(room.price)}/tháng</span><span className="room-card-area">{room.area} m²</span></div>
+                  <h3 className="room-card-title">{room.title}</h3>
+                  <p className="room-card-address"><FiMapPin size={13} className="flex-shrink-0" /><span>{room.address}, {room.district}, {room.province}</span></p>
+                  <p className="room-card-date">{formatPostedDate(room.createdAt)}</p>
                 </div>
-
-                <h3 className="room-card-title">
-                  {room.title}
-                </h3>
-
-                <p className="room-card-address">
-                  <FiMapPin size={13} className="flex-shrink-0" />
-                  <span>{room.address}</span>
-                </p>
-
-                <p className="room-card-date">
-                  {room.date}
-                </p>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
-      {/* ── TIN MỚI ĐĂNG ── */}
       <section className="home-section">
         <div className="section-heading">
           <h2 className="section-title">Tin mới đăng</h2>
-          <Link to="/rooms" className="section-more">
-            Xem thêm
-            <FiChevronRight />
-          </Link>
+          <Link to="/rooms" className="section-more">Xem thêm<FiChevronRight /></Link>
         </div>
-
-        <div className="recent-grid">
-          {RECENT.map(room => (
-            <div
-              key={room.id}
-              onClick={() => navigate('/rooms/' + room.id)}
-              className="recent-card"
-            >
-              <div className="recent-image">
-                <img src={room.img} alt={room.title} />
-              </div>
-
-              <div className="recent-content">
-                <div>
-                  <h3 className="recent-title">{room.title}</h3>
-                  <div className="recent-price">{room.price}</div>
-                </div>
-
-                <div className="recent-footer">
-                  <span className="flex items-center gap-1">
-                    <FiMapPin size={13} />
-                    {room.area} m² - {room.address}
-                  </span>
-                  <span>{room.date}</span>
+        {!loadError && (
+          <div className="recent-grid">
+            {loading ? Array.from({ length: 4 }, (_, index) => <div key={index} className="recent-card animate-pulse bg-slate-200" />) : recentPosts.map(room => (
+              <div key={room.id} onClick={() => navigate(`/rooms/${room.id}`)} className="recent-card">
+                <RoomImage room={room} className="recent-image" />
+                <div className="recent-content">
+                  <div><h3 className="recent-title">{room.title}</h3><div className="recent-price">{formatPrice(room.price)}/tháng</div></div>
+                  <div className="recent-footer"><span className="flex items-center gap-1"><FiMapPin size={13} />{room.area} m² - {room.address}, {room.district}</span><span>{formatPostedDate(room.createdAt)}</span></div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
-
     </div>
   );
 };
