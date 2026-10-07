@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 using RoomRental.BackEnd.DTO.Amenity;
 using RoomRental.BackEnd.DTO.Post;
 using RoomRental.BackEnd.BLL.Interfaces;
@@ -23,8 +24,21 @@ public class PostBLL : IPostService
     /// <summary>
     /// Tìm kiếm và lọc bài đăng công khai
     /// </summary>
-    public async Task<List<PostListDto>> SearchPostsAsync(PostQueryParameters q)
+    public async Task<List<PostListDto>> SearchPostsAsync(PostQueryParameters q) =>
+        (await SearchPageAsync(q)).Items;
+
+    public async Task<PostSearchResult> SearchPageAsync(PostQueryParameters q)
     {
+        if (q.Latitude.HasValue != q.Longitude.HasValue ||
+            q.Latitude is < -90 or > 90 || q.Longitude is < -180 or > 180)
+            throw new BusinessRuleException("Cần tọa độ hợp lệ: latitude [-90,90], longitude [-180,180].");
+        if (q.RadiusInKm.HasValue && (!double.IsFinite(q.RadiusInKm.Value) || q.RadiusInKm.Value <= 0 || q.RadiusInKm.Value > 500))
+            throw new BusinessRuleException("Bán kính phải lớn hơn 0 và không quá 500 km.");
+        if ((q.RadiusInKm.HasValue || q.SortBy == "distance") && !q.Latitude.HasValue)
+            throw new BusinessRuleException("Cần chọn vị trí khi tìm theo bán kính hoặc khoảng cách.");
+        if (q.MinPrice is < 0 || q.MaxPrice is < 0 || q.MinArea is < 0 || q.MaxArea is < 0 ||
+            q.MinPrice > q.MaxPrice || q.MinArea > q.MaxArea)
+            throw new BusinessRuleException("Khoảng giá hoặc diện tích không hợp lệ.");
         var query = _context.Posts
             .Include(p => p.Room)
                 .ThenInclude(r => r.Category)
@@ -36,9 +50,8 @@ public class PostBLL : IPostService
                 .ThenInclude(l => l.Account)
             .AsNoTracking();
 
-        // Moderated posts remain visible when rented or reserved; booking checks availability separately.
-        query = query.Where(p => p.Status == PostStatus.Approved &&
-            (p.Room.Status == RoomStatus.Available || p.Room.Status == RoomStatus.Rented || p.Room.Status == RoomStatus.Reserved));
+        // Core search only includes rooms that can currently be rented.
+        query = query.Where(p => p.Status == PostStatus.Approved && p.Room.Status == RoomStatus.Available);
 
         // Lọc theo Landlord
         if (q.LandlordId.HasValue)
@@ -81,12 +94,12 @@ public class PostBLL : IPostService
         // Lọc theo khoảng giá
         if (q.MinPrice.HasValue)
         {
-            query = query.Where(p => p.DisplayPrice >= q.MinPrice.Value);
+            query = query.Where(p => p.Room.Price >= q.MinPrice.Value);
         }
 
         if (q.MaxPrice.HasValue)
         {
-            query = query.Where(p => p.DisplayPrice <= q.MaxPrice.Value);
+            query = query.Where(p => p.Room.Price <= q.MaxPrice.Value);
         }
 
         // Lọc theo diện tích
@@ -121,15 +134,26 @@ public class PostBLL : IPostService
             }
         }
 
+        if (q.Latitude.HasValue)
+        {
+            var delta = (decimal)((q.RadiusInKm ?? 50) / 6371.0 * 180 / Math.PI);
+            var lower = q.Latitude.Value - delta;
+            var upper = q.Latitude.Value + delta;
+            // Latitude band is a conservative bounding box, including polar/dateline searches.
+            query = query.Where(p => p.Room.Latitude != null && p.Room.Longitude != null &&
+                p.Room.Latitude >= lower && p.Room.Latitude <= upper &&
+                p.Room.Latitude >= -90 && p.Room.Latitude <= 90 && p.Room.Longitude >= -180 && p.Room.Longitude <= 180);
+        }
+
         // Sắp xếp
         query = q.SortBy?.ToLowerInvariant() switch
         {
-            "price_asc" => query.OrderBy(p => p.DisplayPrice),
-            "price_desc" => query.OrderByDescending(p => p.DisplayPrice),
+            "price_asc" => query.OrderBy(p => p.Room.Price).ThenBy(p => p.Id),
+            "price_desc" => query.OrderByDescending(p => p.Room.Price).ThenBy(p => p.Id),
             "area_asc" => query.OrderBy(p => p.Room.Area),
             "area_desc" => query.OrderByDescending(p => p.Room.Area),
             "views" => query.OrderByDescending(p => p.ViewCount),
-            _ => query.OrderByDescending(p => p.CreatedAt)
+            _ => query.OrderByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id)
         };
 
         // Phân trang
@@ -141,7 +165,7 @@ public class PostBLL : IPostService
             {
                 Id = p.Id,
                 Title = p.Title,
-                Price = p.DisplayPrice,
+                Price = p.Room.Price,
                 Status = p.Status,
                 Area = p.Room.Area,
                 MaxOccupants = p.Room.MaxOccupants,
@@ -169,6 +193,7 @@ public class PostBLL : IPostService
             });
 
         List<PostListDto> posts;
+        int totalCount;
 
         // Nếu có tìm kiếm theo tọa độ và bán kính (Geolocation / Radius Search)
         if (q.Latitude.HasValue && q.Longitude.HasValue)
@@ -183,17 +208,18 @@ public class PostBLL : IPostService
             {
                 if (post.Latitude.HasValue && post.Longitude.HasValue)
                 {
-                    post.DistanceInKm = Math.Round(CalculateDistance(targetLat, targetLng, (double)post.Latitude.Value, (double)post.Longitude.Value), 2);
+                    post.DistanceInKm = CalculateDistance(targetLat, targetLng, (double)post.Latitude.Value, (double)post.Longitude.Value);
                 }
             }
 
-            var filtered = allCandidates.Where(p => !p.DistanceInKm.HasValue || p.DistanceInKm.Value <= maxRadius);
+            var filtered = allCandidates.Where(p => p.DistanceInKm.HasValue && p.DistanceInKm.Value <= maxRadius);
 
             if (q.SortBy?.ToLowerInvariant() == "distance" || string.IsNullOrWhiteSpace(q.SortBy))
             {
-                filtered = filtered.OrderBy(p => p.DistanceInKm ?? double.MaxValue);
+                filtered = filtered.OrderBy(p => p.DistanceInKm).ThenBy(p => p.Id);
             }
 
+            totalCount = filtered.Count();
             posts = filtered
                 .Skip((page - 1) * size)
                 .Take(size)
@@ -201,13 +227,16 @@ public class PostBLL : IPostService
         }
         else
         {
+            totalCount = await query.CountAsync();
             posts = await postQuery
                 .Skip((page - 1) * size)
                 .Take(size)
                 .ToListAsync();
         }
 
-        return posts;
+        foreach (var post in posts)
+            if (post.DistanceInKm.HasValue) post.DistanceInKm = Math.Round(post.DistanceInKm.Value, 2);
+        return new PostSearchResult { Items = posts, TotalCount = totalCount, PageNumber = page, PageSize = size };
     }
 
     /// <summary>
@@ -269,7 +298,7 @@ public class PostBLL : IPostService
         if (incrementView)
         {
             post.ViewCount++;
-            await _context.SaveChangesAsync();
+            await RoomPublicationPolicy.SaveAsync(_context);
         }
 
         return new PostDto
@@ -277,7 +306,7 @@ public class PostBLL : IPostService
             Id = post.Id,
             Title = post.Title,
             Description = post.Content,
-            Price = post.DisplayPrice,
+            Price = post.Room.Price,
             Status = post.Status,
             RejectionReason = post.RejectionReason,
             ViewCount = post.ViewCount,
@@ -341,87 +370,28 @@ public class PostBLL : IPostService
     {
         var landlord = await GetOrCreateLandlordProfileAsync(accountId);
 
-        var title = createDto.GetTitle();
-        var description = createDto.GetDescription();
-        var price = createDto.GetPrice();
-
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            throw new Exception("Tiêu đề không được để trống");
-        }
-
-        if (price <= 0)
-        {
-            throw new Exception("Giá thuê phòng phải lớn hơn 0");
-        }
-
-        // Tạo Room tương ứng
-        var room = new Room
-        {
-            LandlordId = landlord.Id,
-            CategoryId = createDto.GetCategoryId(),
-            RoomName = title,
-            Description = description,
-            Price = price,
-            Area = createDto.GetArea() > 0 ? createDto.GetArea() : 20,
-            MaxOccupants = createDto.GetMaxOccupants() > 0 ? createDto.GetMaxOccupants() : 2,
-            CurrentOccupants = 0,
-            Address = createDto.GetAddress(),
-            Ward = createDto.GetWard(),
-            District = createDto.GetDistrict(),
-            Province = createDto.GetProvince(),
-            Latitude = createDto.GetLatitude(),
-            Longitude = createDto.GetLongitude(),
-            ElectricityPrice = createDto.ElectricityPrice ?? createDto.TienDien,
-            WaterPrice = createDto.WaterPrice ?? createDto.TienNuoc,
-            ServiceFee = createDto.ServiceFee ?? createDto.PhiDichVu,
-            Status = RoomStatus.Available,
-            CreatedAt = DateTime.Now
-        };
-
-        _context.Rooms.Add(room);
-        await _context.SaveChangesAsync();
-
-        // Thêm Amenities
-        if (createDto.AmenityIds != null && createDto.AmenityIds.Any())
-        {
-            var amenities = createDto.AmenityIds.Distinct().Select(aId => new PostAmenity
-            {
-                RoomId = room.Id,
-                AmenityId = aId
-            });
-            _context.PostAmenities.AddRange(amenities);
-        }
-
-        // Thêm Images
-        if (createDto.ImageUrls != null && createDto.ImageUrls.Any())
-        {
-            var images = createDto.ImageUrls.Select((url, index) => new PostImage
-            {
-                RoomId = room.Id,
-                ImageUrl = url,
-                IsThumbnail = index == 0,
-                DisplayOrder = index,
-                CreatedAt = DateTime.Now
-            });
-            _context.PostImages.AddRange(images);
-        }
-
-        // Tạo Post ở trạng thái Pending
+        await using var transaction = _context.Database.IsRelational()
+            ? await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable) : null;
+        if (transaction != null) await WorkflowLock.AcquireAsync(_context);
+        var room = await _context.Rooms.FirstOrDefaultAsync(r => r.Id == createDto.RoomId)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy phòng.");
+        if (room.LandlordId != landlord.Id)
+            throw BusinessRuleException.Forbidden("Bạn không thể đăng tin cho phòng của chủ trọ khác.");
+        if (room.Status != RoomStatus.Available)
+            throw BusinessRuleException.Conflict("Chỉ có thể đăng tin cho phòng còn trống.");
+        await RoomPublicationPolicy.EnsureSlotAsync(_context, room.Id);
+        var title = createDto.GetTitle().Trim();
+        if (string.IsNullOrWhiteSpace(title) || title.Length > 300)
+            throw new BusinessRuleException("Tiêu đề phải có từ 1 đến 300 ký tự.");
         var post = new Post
         {
-            RoomId = room.Id,
-            LandlordId = landlord.Id,
-            Title = title,
-            Content = description,
-            DisplayPrice = price,
-            Status = PostStatus.Pending, // Chờ Admin duyệt
-            ViewCount = 0,
-            CreatedAt = DateTime.Now
+            RoomId = room.Id, LandlordId = landlord.Id, Title = title,
+            Content = createDto.GetDescription().Trim(), DisplayPrice = room.Price,
+            Status = PostStatus.Pending, CreatedAt = DateTime.Now
         };
-
         _context.Posts.Add(post);
-        await _context.SaveChangesAsync();
+        await RoomPublicationPolicy.SaveAsync(_context);
+        if (transaction != null) await transaction.CommitAsync();
 
         return await GetPostByIdAsync(post.Id, incrementView: false);
     }
@@ -446,7 +416,7 @@ public class PostBLL : IPostService
             {
                 Id = p.Id,
                 Title = p.Title,
-                Price = p.DisplayPrice,
+                Price = p.Room.Price,
                 Status = p.Status,
                 Area = p.Room.Area,
                 MaxOccupants = p.Room.MaxOccupants,
@@ -501,113 +471,30 @@ public class PostBLL : IPostService
             throw new Exception("Bạn không có quyền chỉnh sửa tin đăng này");
         }
 
-        // Cập nhật Post
-        var title = updateDto.GetTitle();
-        if (!string.IsNullOrWhiteSpace(title))
+        // Room fields are edited through RoomBLL so every publication follows the same moderation policy.
+        if (updateDto.GetPrice().HasValue || updateDto.GetArea().HasValue || updateDto.GetCategoryId().HasValue ||
+            updateDto.GetMaxOccupants().HasValue || updateDto.Address != null || updateDto.DiaChi != null ||
+            updateDto.Province != null || updateDto.ThanhPho != null || updateDto.District != null || updateDto.Quan != null ||
+            updateDto.Ward != null || updateDto.Phuong != null || updateDto.GetLatitude().HasValue ||
+            updateDto.GetLongitude().HasValue || updateDto.ElectricityPrice.HasValue || updateDto.WaterPrice.HasValue ||
+            updateDto.ServiceFee.HasValue || updateDto.AmenityIds != null || updateDto.ImageUrls != null)
+            throw new BusinessRuleException("Vui lòng chỉnh sửa dữ liệu phòng tại Quản lý phòng.");
+        var title = updateDto.GetTitle()?.Trim() ?? post.Title;
+        var content = updateDto.GetDescription()?.Trim() ?? post.Content;
+        if (string.IsNullOrWhiteSpace(title) || title.Length > 300)
+            throw new BusinessRuleException("Tiêu đề phải có từ 1 đến 300 ký tự.");
+        if (title != post.Title || content != post.Content)
         {
+            await RoomPublicationPolicy.EnsureSlotAsync(_context, post.RoomId, post.Id);
             post.Title = title;
-            post.Room.RoomName = title;
+            post.Content = content;
+            post.DisplayPrice = post.Room.Price;
+            post.Status = PostStatus.Pending;
+            post.ApprovedAt = null;
+            post.RejectionReason = null;
+            post.UpdatedAt = DateTime.Now;
+            await RoomPublicationPolicy.SaveAsync(_context);
         }
-
-        var description = updateDto.GetDescription();
-        if (description != null)
-        {
-            post.Content = description;
-            post.Room.Description = description;
-        }
-
-        var price = updateDto.GetPrice();
-        if (price.HasValue && price.Value > 0)
-        {
-            post.DisplayPrice = price.Value;
-            post.Room.Price = price.Value;
-        }
-
-        var area = updateDto.GetArea();
-        if (area.HasValue && area.Value > 0)
-        {
-            post.Room.Area = area.Value;
-        }
-
-        var maxOccupants = updateDto.GetMaxOccupants();
-        if (maxOccupants.HasValue && maxOccupants.Value > 0)
-        {
-            post.Room.MaxOccupants = maxOccupants.Value;
-        }
-
-        var categoryId = updateDto.GetCategoryId();
-        if (categoryId.HasValue && categoryId.Value > 0)
-        {
-            post.Room.CategoryId = categoryId.Value;
-        }
-
-        var oldLocation = (post.Room.Address, post.Room.Province, post.Room.District, post.Room.Ward);
-        var address = updateDto.GetAddress();
-        if (!string.IsNullOrWhiteSpace(address))
-        {
-            post.Room.Address = address;
-        }
-
-        var province = updateDto.GetProvince();
-        if (!string.IsNullOrWhiteSpace(province))
-        {
-            post.Room.Province = province;
-        }
-
-        var district = updateDto.District ?? updateDto.Quan;
-        if (district != null)
-        {
-            post.Room.District = district;
-        }
-
-        var ward = updateDto.Ward ?? updateDto.Phuong;
-        if (ward != null)
-        {
-            post.Room.Ward = ward;
-        }
-
-        var locationChanged = oldLocation != (post.Room.Address, post.Room.Province, post.Room.District, post.Room.Ward);
-        post.Room.Latitude = updateDto.GetLatitude() ?? (locationChanged ? null : post.Room.Latitude);
-        post.Room.Longitude = updateDto.GetLongitude() ?? (locationChanged ? null : post.Room.Longitude);
-
-        if (updateDto.ElectricityPrice.HasValue) post.Room.ElectricityPrice = updateDto.ElectricityPrice;
-        if (updateDto.WaterPrice.HasValue) post.Room.WaterPrice = updateDto.WaterPrice;
-        if (updateDto.ServiceFee.HasValue) post.Room.ServiceFee = updateDto.ServiceFee;
-
-        // Nếu bài đăng đang Rejected hoặc Approved, cập nhật sẽ đưa về Pending để Admin kiểm duyệt lại
-        post.Status = PostStatus.Pending;
-        post.RejectionReason = null;
-        post.UpdatedAt = DateTime.Now;
-        post.Room.UpdatedAt = DateTime.Now;
-
-        // Cập nhật Amenities
-        if (updateDto.AmenityIds != null)
-        {
-            _context.PostAmenities.RemoveRange(post.Room.RoomAmenities);
-            var newAmenities = updateDto.AmenityIds.Distinct().Select(aId => new PostAmenity
-            {
-                RoomId = post.Room.Id,
-                AmenityId = aId
-            });
-            _context.PostAmenities.AddRange(newAmenities);
-        }
-
-        // Cập nhật Images
-        if (updateDto.ImageUrls != null)
-        {
-            _context.PostImages.RemoveRange(post.Room.Images);
-            var newImages = updateDto.ImageUrls.Select((url, index) => new PostImage
-            {
-                RoomId = post.Room.Id,
-                ImageUrl = url,
-                IsThumbnail = index == 0,
-                DisplayOrder = index,
-                CreatedAt = DateTime.Now
-            });
-            _context.PostImages.AddRange(newImages);
-        }
-
-        await _context.SaveChangesAsync();
 
         return await GetPostByIdAsync(postId, incrementView: false);
     }
@@ -635,7 +522,7 @@ public class PostBLL : IPostService
         post.Status = PostStatus.Hidden;
         post.UpdatedAt = DateTime.Now;
 
-        await _context.SaveChangesAsync();
+        await RoomPublicationPolicy.SaveAsync(_context);
     }
 
     /// <summary>
@@ -663,10 +550,18 @@ public class PostBLL : IPostService
             throw new Exception("Chủ trọ chỉ có thể ẩn tin hoặc gửi yêu cầu duyệt lại");
         }
 
+        if (status == PostStatus.Pending)
+        {
+            if (!await _context.Rooms.AnyAsync(r => r.Id == post.RoomId && r.Status == RoomStatus.Available))
+                throw BusinessRuleException.Conflict("Chỉ gửi duyệt tin khi phòng còn trống.");
+            await RoomPublicationPolicy.EnsureSlotAsync(_context, post.RoomId, post.Id);
+            post.ApprovedAt = null;
+            post.RejectionReason = null;
+        }
         post.Status = status;
         post.UpdatedAt = DateTime.Now;
 
-        await _context.SaveChangesAsync();
+        await RoomPublicationPolicy.SaveAsync(_context);
 
         return await GetPostByIdAsync(postId, incrementView: false);
     }
@@ -682,9 +577,9 @@ public class PostBLL : IPostService
             throw new Exception("Người dùng không tồn tại");
         }
 
-        if (user.RoleId != 2 && user.RoleId != 0) // 2: Landlord, 0: Admin
+        if (user.RoleId != 2)
         {
-            throw new Exception("Chỉ tài khoản Chủ trọ (Landlord) mới có quyền thực hiện thao tác này");
+            throw BusinessRuleException.Forbidden("Chỉ chủ trọ mới có quyền thực hiện thao tác này.");
         }
 
         if (user.IsBlocked)
@@ -703,7 +598,7 @@ public class PostBLL : IPostService
         };
 
         _context.LandlordProfiles.Add(profile);
-        await _context.SaveChangesAsync();
+        await RoomPublicationPolicy.SaveAsync(_context);
 
         return profile;
     }

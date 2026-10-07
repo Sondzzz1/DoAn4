@@ -1,0 +1,46 @@
+.rental-search { max-width: 1280px; margin: auto; padding: 28px 24px 48px; color: #17212b; }
+.rental-search-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; }
+.rental-search-heading h1 { font-size: 28px; font-weight: 700; margin: 0 0 8px; }
+.rental-search-heading p { color: #52616c; }
+.rental-search-layout { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 28px; }
+.search-desktop-filter { border-right: 1px solid #dae2e7; padding-right: 24px; }
+.search-filter-form { display: grid; gap: 18px; }
+.search-filter-form h2 { font-size: 18px; font-weight: 600; }
+.search-filter-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.search-filter-fields label:nth-child(-n+4) { grid-column: 1 / -1; }
+.search-filter-form label:not(.search-amenity) { display: grid; gap: 6px; font-size: 13px; min-width: 0; }
+.search-filter-form input:not([type=checkbox]), .search-filter-form select, .search-result-toolbar select { width: 100%; min-width: 0; height: 42px; border: 1px solid #c8d3db; border-radius: 6px; background: white; padding: 8px; }
+.search-filter-form input:focus, .search-filter-form select:focus { outline: 2px solid #1673cb; outline-offset: 1px; }
+.search-amenity { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 14px; }
+.search-filter-form legend { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.search-filter-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.search-primary, .search-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-radius: 6px; padding: 10px 14px; font-size: 14px; border: 1px solid #c8d3db; }
+.search-primary { background: #096ec8; color: white; border-color: #096ec8; }
+.search-secondary { background: white; color: #17212b; }
+.search-secondary:disabled { opacity: .4; cursor: default; }
+.search-mobile-filter { display: none; }
+.rental-search-results { min-width: 0; }
+.search-result-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+.search-result-toolbar select { width: auto; max-width: 200px; }
+.search-room-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.rental-search .room-card-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; padding-top: 12px; font-size: 13px; color: #52616c; }
+.rental-search .room-card-foot svg { flex-shrink: 0; }
+.rental-search .room-card-foot span:last-child { margin-left: auto; }
+.rental-search .room-card-title { margin: 8px 0; font-size: 16px; line-height: 1.5; font-weight: 600; }
+.rental-search .room-card-price { font-size: 18px; }
+.search-distance { font-size: 13px; color: #4f6660; margin-top: 5px; }
+.search-pagination { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 28px; }
+.search-empty { padding: 48px 16px; text-align: center; color: #52616c; }
+.search-empty svg { margin: 0 auto 12px; }
+@media (max-width: 900px) {
+  .rental-search-layout { grid-template-columns: minmax(0, 1fr); }
+  .search-desktop-filter { display: none; }
+  .search-mobile-filter { display: inline-flex; }
+}
+@media (max-width: 540px) {
+  .rental-search { padding: 20px 16px 36px; }
+  .rental-search-heading { align-items: flex-start; }
+  .rental-search-heading h1 { font-size: 22px; }
+  .search-room-grid { grid-template-columns: minmax(0, 1fr); }
+  .search-result-toolbar { font-size: 13px; }
+}

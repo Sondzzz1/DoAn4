@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using RoomRental.BackEnd.Models.Enums;
 using RoomRental.BackEnd.BLL.Interfaces;
 using RoomRental.BackEnd.DAL;
 using RoomRental.BackEnd.DTO.Chat;
@@ -94,7 +95,7 @@ public class ChatBLL : IChatService
                 ReceiverAvatar = m.Receiver.AvatarUrl,
                 PostId = m.PostId,
                 PostTitle = m.Post != null ? m.Post.Title : null,
-                PostPrice = m.Post != null ? m.Post.DisplayPrice : null,
+                PostPrice = m.Post != null ? m.Post.Room.Price : null,
                 PostImage = m.Post != null && m.Post.Room.Images.Any() ? m.Post.Room.Images.First().ImageUrl : null,
                 Message = m.Message,
                 IsRead = m.IsRead,
@@ -173,7 +174,7 @@ public class ChatBLL : IChatService
             ReceiverAvatar = receiver.AvatarUrl,
             PostId = msg.PostId,
             PostTitle = post?.Title,
-            PostPrice = post?.DisplayPrice,
+            PostPrice = post?.Room.Price,
             PostImage = post?.Room.Images.FirstOrDefault()?.ImageUrl,
             Message = msg.Message,
             IsRead = false,
@@ -217,15 +218,10 @@ public class ChatBLL : IChatService
 
     private async Task<bool> CanCommunicateAsync(int senderId, int receiverId, int? postId)
     {
-        if (await _context.ChatMessages.AnyAsync(m =>
-            (m.SenderId == senderId && m.ReceiverId == receiverId) ||
-            (m.SenderId == receiverId && m.ReceiverId == senderId)))
-            return true;
-
         if (postId.HasValue)
         {
             var postLandlordAccountId = await _context.Posts
-                .Where(p => p.Id == postId.Value)
+                .Where(p => p.Id == postId.Value && p.Status == PostStatus.Approved && p.Room.Status != RoomStatus.TemporarilyUnavailable)
                 .Select(p => (int?)p.Landlord.AccountId)
                 .FirstOrDefaultAsync();
             if (!postLandlordAccountId.HasValue)
@@ -237,6 +233,9 @@ public class ChatBLL : IChatService
                 return true;
         }
 
+        if (!postId.HasValue && await _context.ChatMessages.AnyAsync(m =>
+            (m.SenderId == senderId && m.ReceiverId == receiverId) ||
+            (m.SenderId == receiverId && m.ReceiverId == senderId))) return true;
         return await _context.RentalRequests.AnyAsync(r =>
                    (r.TenantAccountId == senderId && r.LandlordAccountId == receiverId) ||
                    (r.TenantAccountId == receiverId && r.LandlordAccountId == senderId)) ||

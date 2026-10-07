@@ -418,7 +418,7 @@ const TenantRentalsPage: React.FC = () => {
                           item.trangThai === CONTRACT_STATUS.ACTIVE ? 'bg-emerald-100 text-emerald-700' : (item.trangThai >= CONTRACT_STATUS.TERMINATED ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-700')
                         }`}
                       >
-                        {item.trangThai === CONTRACT_STATUS.ACTIVE ? 'Đang hiệu lực' : item.trangThai === CONTRACT_STATUS.TERMINATED ? 'Đã chấm dứt' : item.trangThai === CONTRACT_STATUS.EXPIRED ? 'Đã hết hạn' : 'Chờ 2 bên xác nhận'}
+                        {item.trangThai === CONTRACT_STATUS.ACTIVE ? 'Đang hiệu lực' : item.trangThai === CONTRACT_STATUS.TERMINATED ? 'Đã chấm dứt' : item.trangThai === CONTRACT_STATUS.EXPIRED ? 'Đã hết hạn' : item.trangThai === CONTRACT_STATUS.PENDING_START ? 'Chờ ngày bắt đầu' : item.trangThai === CONTRACT_STATUS.CANCELLED ? 'Đã hủy' : 'Chờ 2 bên xác nhận'}
                       </span>
                     </div>
                     <h3 className="text-lg font-bold text-slate-900 mt-1 mb-0.5">
@@ -446,11 +446,11 @@ const TenantRentalsPage: React.FC = () => {
                       >
                         <FiCheck /> Xác nhận hợp đồng
                       </button>
-                    ) : (
+                    ) : item.nguoiThueDaXacNhan ? (
                       <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 font-bold bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">
                         <FiCheckCircle /> Bạn đã xác nhận
                       </span>
-                    )}
+                    ) : null}
 
                     {item.trangThai === CONTRACT_STATUS.ACTIVE && (
                       <>

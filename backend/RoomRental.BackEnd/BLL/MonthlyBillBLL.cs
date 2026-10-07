@@ -25,8 +25,9 @@ public class MonthlyBillBLL : IMonthlyBillService
 
     public async Task<HoaDonDto> TaoAsync(int chuTroId, TaoHoaDonDto dto)
     {
+        await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        await WorkflowLock.AcquireAsync(_db);
         ValidatePeriod(dto.Thang, dto.Nam);
-        ValidateReadings(dto.SoDienCu, dto.SoDienMoi, dto.SoNuocCu, dto.SoNuocMoi);
         if (dto.ChiPhiKhac < 0) throw new BusinessRuleException("Chi phí khác không được âm.");
 
         var contract = await _db.RentalContracts
@@ -41,22 +42,33 @@ public class MonthlyBillBLL : IMonthlyBillService
         if (await _db.MonthlyBills.AnyAsync(b => b.ContractId == dto.HopDongId && b.Month == dto.Thang && b.Year == dto.Nam))
             throw BusinessRuleException.Conflict($"Hóa đơn tháng {dto.Thang}/{dto.Nam} cho hợp đồng này đã tồn tại.");
 
+        var periodStart = new DateTime(dto.Nam, dto.Thang, 1);
+        if (periodStart > contract.EndDate || periodStart.AddMonths(1) <= contract.StartDate)
+            throw new BusinessRuleException("Kỳ hóa đơn phải thuộc thời hạn hợp đồng.");
+        if (await _db.MonthlyBills.AnyAsync(b => b.ContractId == contract.Id && b.Status != MonthlyBillStatus.Cancelled &&
+            b.Year * 12 + b.Month > dto.Nam * 12 + dto.Thang))
+            throw BusinessRuleException.Conflict("Cần lập hóa đơn theo thứ tự thời gian.");
+        var previous = await PreviousBillAsync(contract.Id, dto.Nam, dto.Thang);
+        var oldElectricity = previous?.NewElectricity ?? dto.SoDienCu;
+        var oldWater = previous?.NewWater ?? dto.SoNuocCu;
+        ValidateReadings(oldElectricity, dto.SoDienMoi, oldWater, dto.SoNuocMoi);
+
         var bill = new MonthlyBill
         {
             ContractId = contract.Id,
             Month = dto.Thang,
             Year = dto.Nam,
-            OldElectricity = dto.SoDienCu,
+            OldElectricity = oldElectricity,
             NewElectricity = dto.SoDienMoi,
             ElectricityPrice = contract.ElectricityPrice,
-            OldWater = dto.SoNuocCu,
+            OldWater = oldWater,
             NewWater = dto.SoNuocMoi,
             WaterPrice = contract.WaterPrice,
             RoomPrice = contract.MonthlyRent,
             ServiceFee = contract.ServiceFee,
             OtherFees = dto.ChiPhiKhac,
             OtherFeesNote = dto.GhiChuChiPhiKhac?.Trim(),
-            Status = MonthlyBillStatus.Unpaid,
+            Status = (dto.HanThanhToan ?? DateTime.Now.AddDays(7)) < DateTime.Now ? MonthlyBillStatus.Overdue : MonthlyBillStatus.Unpaid,
             DueDate = dto.HanThanhToan ?? DateTime.Now.AddDays(7),
             Note = dto.GhiChu?.Trim(),
             CreatedAt = DateTime.Now
@@ -65,6 +77,7 @@ public class MonthlyBillBLL : IMonthlyBillService
 
         _db.MonthlyBills.Add(bill);
         await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         try
         {
@@ -80,7 +93,7 @@ public class MonthlyBillBLL : IMonthlyBillService
             _logger.LogWarning(ex, "Không thể gửi thông báo cho hóa đơn {BillId}", bill.Id);
         }
 
-        return await LayChiTietAsync(chuTroId, bill.Id);
+        return await MapToDtoAsync(bill, contract);
     }
 
     public async Task<List<HoaDonDto>> LayTheoHopDongAsync(int taiKhoanId, int hopDongId)
@@ -126,6 +139,8 @@ public class MonthlyBillBLL : IMonthlyBillService
 
     public async Task<HoaDonDto> CapNhatAsync(int chuTroId, int id, CapNhatHoaDonDto dto)
     {
+        await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        await WorkflowLock.AcquireAsync(_db);
         ValidateReadings(dto.SoDienCu, dto.SoDienMoi, dto.SoNuocCu, dto.SoNuocMoi);
         if (dto.ChiPhiKhac < 0) throw new BusinessRuleException("Chi phí khác không được âm.");
 
@@ -136,9 +151,17 @@ public class MonthlyBillBLL : IMonthlyBillService
         if (bill.Status is MonthlyBillStatus.Paid or MonthlyBillStatus.PendingPayment or MonthlyBillStatus.Cancelled)
             throw BusinessRuleException.Conflict("Không thể chỉnh sửa hóa đơn đã thanh toán, đang thanh toán hoặc đã hủy.");
 
-        bill.OldElectricity = dto.SoDienCu;
+        var previous = await PreviousBillAsync(bill.ContractId, bill.Year, bill.Month);
+        var oldElectricity = previous?.NewElectricity ?? bill.OldElectricity;
+        var oldWater = previous?.NewWater ?? bill.OldWater;
+        ValidateReadings(oldElectricity, dto.SoDienMoi, oldWater, dto.SoNuocMoi);
+        if ((dto.SoDienMoi != bill.NewElectricity || dto.SoNuocMoi != bill.NewWater) &&
+            await _db.MonthlyBills.AnyAsync(b => b.ContractId == bill.ContractId && b.Status != MonthlyBillStatus.Cancelled &&
+                b.Year * 12 + b.Month > bill.Year * 12 + bill.Month))
+            throw BusinessRuleException.Conflict("Không thể thay đổi chỉ số đã được dùng làm đầu kỳ của hóa đơn sau.");
+        bill.OldElectricity = oldElectricity;
         bill.NewElectricity = dto.SoDienMoi;
-        bill.OldWater = dto.SoNuocCu;
+        bill.OldWater = oldWater;
         bill.NewWater = dto.SoNuocMoi;
         bill.OtherFees = dto.ChiPhiKhac;
         bill.OtherFeesNote = dto.GhiChuChiPhiKhac?.Trim();
@@ -149,11 +172,14 @@ public class MonthlyBillBLL : IMonthlyBillService
         bill.UpdatedAt = DateTime.Now;
 
         await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
         return await MapToDtoAsync(bill, bill.Contract);
     }
 
     public async Task<HoaDonDto> ThanhToanAsync(int taiKhoanId, int id, XacNhanThanhToanHoaDonDto? dto = null)
     {
+        await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        await WorkflowLock.AcquireAsync(_db);
         var bill = await _db.MonthlyBills.Include(b => b.Contract).FirstOrDefaultAsync(b => b.Id == id)
             ?? throw BusinessRuleException.NotFound("Không tìm thấy hóa đơn.");
         if (bill.Contract.LandlordAccountId != taiKhoanId)
@@ -162,6 +188,8 @@ public class MonthlyBillBLL : IMonthlyBillService
             throw BusinessRuleException.Conflict("Hóa đơn đã được thanh toán.");
         if (bill.Status == MonthlyBillStatus.Cancelled)
             throw BusinessRuleException.Conflict("Hóa đơn đã bị hủy.");
+        if (bill.Status == MonthlyBillStatus.PendingPayment)
+            throw BusinessRuleException.Conflict("Hóa đơn đang được thanh toán trực tuyến, không thể xác nhận thủ công.");
 
         bill.Status = MonthlyBillStatus.Paid;
         bill.PaidAt = DateTime.Now;
@@ -170,6 +198,7 @@ public class MonthlyBillBLL : IMonthlyBillService
             bill.Note = string.IsNullOrWhiteSpace(bill.Note) ? dto.GhiChu.Trim() : $"{bill.Note} | {dto.GhiChu.Trim()}";
         bill.UpdatedAt = DateTime.Now;
         await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         try
         {
@@ -190,6 +219,8 @@ public class MonthlyBillBLL : IMonthlyBillService
 
     public async Task<bool> XoaAsync(int chuTroId, int id)
     {
+        await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        await WorkflowLock.AcquireAsync(_db);
         var bill = await _db.MonthlyBills.Include(b => b.Contract).FirstOrDefaultAsync(b => b.Id == id)
             ?? throw BusinessRuleException.NotFound("Không tìm thấy hóa đơn.");
         if (bill.Contract.LandlordAccountId != chuTroId)
@@ -201,21 +232,33 @@ public class MonthlyBillBLL : IMonthlyBillService
         if (bill.Status == MonthlyBillStatus.Cancelled)
             throw BusinessRuleException.Conflict("Hóa đơn đã được hủy trước đó.");
 
+        if (await _db.MonthlyBills.AnyAsync(b => b.ContractId == bill.ContractId && b.Status != MonthlyBillStatus.Cancelled &&
+            b.Year * 12 + b.Month > bill.Year * 12 + bill.Month))
+            throw BusinessRuleException.Conflict("Không thể hủy hóa đơn đã có kỳ sau sử dụng chỉ số điện nước.");
         bill.Status = MonthlyBillStatus.Cancelled;
         bill.UpdatedAt = DateTime.Now;
         await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
         return true;
     }
 
-    private async Task ReconcileOverdueAsync()
+    public async Task ReconcileOverdueAsync()
     {
+        await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        await WorkflowLock.AcquireAsync(_db);
         var overdue = await _db.MonthlyBills
             .Where(b => b.Status == MonthlyBillStatus.Unpaid && b.DueDate < DateTime.Now)
             .ToListAsync();
         if (overdue.Count == 0) return;
         foreach (var bill in overdue) bill.Status = MonthlyBillStatus.Overdue;
         await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
     }
+
+    private Task<MonthlyBill?> PreviousBillAsync(int contractId, int year, int month) =>
+        _db.MonthlyBills.Where(b => b.ContractId == contractId && b.Status != MonthlyBillStatus.Cancelled &&
+            b.Year * 12 + b.Month < year * 12 + month)
+        .OrderByDescending(b => b.Year).ThenByDescending(b => b.Month).FirstOrDefaultAsync();
 
     private static decimal CalculateTotal(MonthlyBill bill) =>
         bill.RoomPrice +

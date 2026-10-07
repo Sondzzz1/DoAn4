@@ -292,7 +292,7 @@ public class AdminBLL : IAdminService
             {
                 Id = p.Id,
                 Title = p.Title,
-                Price = p.DisplayPrice,
+                Price = p.Room.Price,
                 Status = p.Status,
                 Area = p.Room.Area,
                 MaxOccupants = p.Room.MaxOccupants,
@@ -326,7 +326,9 @@ public class AdminBLL : IAdminService
     /// </summary>
     public async Task<PostDto> ApprovePostAsync(int postId)
     {
-        var post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == postId);
+        await using var transaction = _context.Database.IsRelational() ? await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable) : null;
+        if (transaction != null) await WorkflowLock.AcquireAsync(_context);
+        var post = await _context.Posts.Include(p => p.Room).FirstOrDefaultAsync(p => p.Id == postId);
         if (post == null)
         {
             throw new Exception("Không tìm thấy bài đăng");
@@ -335,13 +337,18 @@ public class AdminBLL : IAdminService
         if (post.Status != PostStatus.Pending)
             throw BusinessRuleException.Conflict("Chỉ bài đăng đang chờ duyệt mới có thể được duyệt.");
 
+        if (post.Room.Status != RoomStatus.Available)
+            throw BusinessRuleException.Conflict("Chỉ duyệt tin cho phòng còn trống.");
+        await RoomPublicationPolicy.EnsureSlotAsync(_context, post.RoomId, post.Id);
+        post.DisplayPrice = post.Room.Price;
         post.Status = PostStatus.Approved;
         post.ApprovedAt = DateTime.Now;
         post.PostedAt = DateTime.Now;
         post.RejectionReason = null;
         post.UpdatedAt = DateTime.Now;
 
-        await _context.SaveChangesAsync();
+        await RoomPublicationPolicy.SaveAsync(_context);
+        if (transaction != null) await transaction.CommitAsync();
 
         return await _postService.GetPostByIdAsync(postId, incrementView: false);
     }

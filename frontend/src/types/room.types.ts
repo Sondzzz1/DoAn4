@@ -51,6 +51,10 @@ export interface RoomItem {
 
 export interface CreateRoomRequest {
   tenPhong: string;
+  danhMucId?: number;
+  tienDien?: number;
+  tienNuoc?: number;
+  phiDichVu?: number;
   moTa?: string;
   gia: number;
   dienTich: number;

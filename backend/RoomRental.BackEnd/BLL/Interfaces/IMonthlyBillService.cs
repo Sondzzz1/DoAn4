@@ -10,5 +10,6 @@ public interface IMonthlyBillService
     Task<HoaDonDto> LayChiTietAsync(int taiKhoanId, int id);
     Task<HoaDonDto> CapNhatAsync(int chuTroId, int id, CapNhatHoaDonDto dto);
     Task<HoaDonDto> ThanhToanAsync(int taiKhoanId, int id, XacNhanThanhToanHoaDonDto? dto = null);
+    Task ReconcileOverdueAsync();
     Task<bool> XoaAsync(int chuTroId, int id);
 }

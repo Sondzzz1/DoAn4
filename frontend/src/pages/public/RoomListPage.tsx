@@ -1,383 +1,137 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { FiChevronRight, FiMapPin, FiSearch, FiClock } from 'react-icons/fi';
-import { toast } from 'react-toastify';
-import { categoryService, RoomCategory } from '../../services/categoryService';
-import { postService, PostQueryParams } from '../../services/postService';
-import { PostListItem } from '../../types/post.types';
-import RoomSidebar from '../../components/room/RoomSidebar';
-import RoomAvailabilityBadge from '../../components/room/RoomAvailabilityBadge';
-import { formatPrice } from '../../utils/helpers';
-import './RoomListPage.css';
+import { useEffect, useState, type FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { FiChevronLeft, FiChevronRight, FiFilter, FiMapPin, FiSearch } from 'react-icons/fi';
+import { postService } from '../../services/postService';
+import { categoryService, type RoomCategory } from '../../services/categoryService';
+import { adminService, type AdminCatalogItem } from '../../services/adminService';
+import type { PostSearchParams, PostSearchResult } from '../../types/post.types';
+import RoomCard from '../../components/room/RoomCard';
+import Modal from '../../components/common/Modal';
+import { getApiErrorMessage } from '../../utils/apiError';
+import './RoomSearch.css';
 
-const PRICE_RANGES = [
-  { label: 'Tất cả giá', min: undefined, max: undefined },
-  { label: 'Dưới 2 triệu', min: undefined, max: 2_000_000 },
-  { label: '2 - 3 triệu', min: 2_000_000, max: 3_000_000 },
-  { label: '3 - 5 triệu', min: 3_000_000, max: 5_000_000 },
-  { label: '5 - 10 triệu', min: 5_000_000, max: 10_000_000 },
-  { label: 'Trên 10 triệu', min: 10_000_000, max: undefined },
-];
+const fields = [
+  ['keyword', 'Từ khóa', 'text'], ['province', 'Tỉnh/Thành phố', 'text'],
+  ['district', 'Quận/Huyện', 'text'], ['ward', 'Phường/Xã', 'text'],
+  ['minPrice', 'Giá từ (đ)', 'number'], ['maxPrice', 'Giá đến (đ)', 'number'],
+  ['minArea', 'Diện tích từ (m²)', 'number'], ['maxArea', 'Diện tích đến (m²)', 'number'],
+  ['maxOccupants', 'Số người ở', 'number'], ['latitude', 'Vĩ độ', 'number'],
+  ['longitude', 'Kinh độ', 'number'], ['radiusInKm', 'Bán kính (km)', 'number'],
+] as const;
+const numeric = ['minPrice', 'maxPrice', 'minArea', 'maxArea', 'maxOccupants', 'categoryId', 'latitude', 'longitude', 'radiusInKm', 'pageNumber', 'pageSize'];
+const empty: PostSearchResult = { items: [], totalCount: 0, pageNumber: 1, pageSize: 12, totalPages: 0 };
+function parseQuery(url: string): PostSearchParams {
+  const values = new URLSearchParams(url);
+  const params: Record<string, string | number | number[]> = {};
+  for (const [key, value] of values) {
+    if (key !== 'amenityIds' && value) params[key] = numeric.includes(key) ? Number(value) : value;
+  }
+  const amenities = values.getAll('amenityIds').map(Number).filter(Number.isFinite);
+  if (amenities.length) params.amenityIds = amenities;
+  return { ...params, pageSize: Number(params.pageSize) || 12 } as PostSearchParams;
+}
 
-const AREA_RANGES = [
-  { label: 'Tất cả diện tích', min: undefined, max: undefined },
-  { label: 'Dưới 20 m²', min: undefined, max: 20 },
-  { label: '20 - 30 m²', min: 20, max: 30 },
-  { label: '30 - 50 m²', min: 30, max: 50 },
-  { label: 'Trên 50 m²', min: 50, max: undefined },
-];
-
-const getNumberParameter = (value: string | null): number | undefined => {
-  const numberValue = Number(value);
-  return value && Number.isFinite(numberValue) ? numberValue : undefined;
-};
-
-const RoomListPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
-
-  const [posts, setPosts] = useState<PostListItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Filter states
-  const [keyword, setKeyword] = useState<string>(searchParams.get('keyword') || '');
-  const [province, setProvince] = useState<string>(searchParams.get('province') || '');
-  const [sortBy, setSortBy] = useState<string>(searchParams.get('sortBy') || '');
-  const [categoryId, setCategoryId] = useState<number | undefined>(getNumberParameter(searchParams.get('categoryId')));
-  const [minPrice, setMinPrice] = useState<number | undefined>(getNumberParameter(searchParams.get('minPrice')));
-  const [maxPrice, setMaxPrice] = useState<number | undefined>(getNumberParameter(searchParams.get('maxPrice')));
-  const [minArea, setMinArea] = useState<number | undefined>(getNumberParameter(searchParams.get('minArea')));
-  const [maxArea, setMaxArea] = useState<number | undefined>(getNumberParameter(searchParams.get('maxArea')));
+export default function RoomListPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const url = searchParams.toString();
+  const [draft, setDraft] = useState<Record<string, string>>(() => Object.fromEntries(searchParams));
+  const [amenityIds, setAmenityIds] = useState<string[]>(() => searchParams.getAll('amenityIds'));
   const [categories, setCategories] = useState<RoomCategory[]>([]);
-
-  const buildSearchParameters = (overrides: Partial<PostQueryParams> = {}): PostQueryParams => ({
-    keyword: keyword.trim() || undefined,
-    province: province || undefined,
-    categoryId,
-    minPrice,
-    maxPrice,
-    minArea,
-    maxArea,
-    sortBy: sortBy || undefined,
-    ...overrides,
-  });
-
-  const fetchPosts = useCallback(async (params: PostQueryParams) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await postService.getPosts(params);
-      setPosts(res.data || []);
-    } catch {
-      setError('Không thể tải danh sách phòng trọ.');
-      toast.error('Không thể tải danh sách phòng trọ.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  const [amenities, setAmenities] = useState<AdminCatalogItem[]>([]);
+  const [result, setResult] = useState(empty);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [filterOpen, setFilterOpen] = useState(false);
   useEffect(() => {
-    const parameters: PostQueryParams = {
-      keyword: searchParams.get('keyword')?.trim() || undefined,
-      province: searchParams.get('province') || undefined,
-      categoryId: getNumberParameter(searchParams.get('categoryId')),
-      minPrice: getNumberParameter(searchParams.get('minPrice')),
-      maxPrice: getNumberParameter(searchParams.get('maxPrice')),
-      minArea: getNumberParameter(searchParams.get('minArea')),
-      maxArea: getNumberParameter(searchParams.get('maxArea')),
-      sortBy: searchParams.get('sortBy') || undefined,
-    };
-
     let active = true;
-    void Promise.resolve().then(() => {
+    void Promise.resolve().then(async () => {
       if (!active) return;
-      setKeyword(parameters.keyword || '');
-      setProvince(parameters.province || '');
-      setCategoryId(parameters.categoryId);
-      setMinPrice(parameters.minPrice);
-      setMaxPrice(parameters.maxPrice);
-      setMinArea(parameters.minArea);
-      setMaxArea(parameters.maxArea);
-      setSortBy(parameters.sortBy || '');
-      void fetchPosts(parameters);
-    });
-
-    return () => { active = false; };
-  }, [fetchPosts, searchParams]);
-
-  useEffect(() => {
-    const loadCategories = async () => {
+      setDraft(Object.fromEntries(new URLSearchParams(url)));
+      setAmenityIds(new URLSearchParams(url).getAll('amenityIds'));
+      setLoading(true);
+      setError('');
       try {
-        const response = await categoryService.getActiveCategories();
-        setCategories(response.data || []);
-      } catch {
-        setCategories([]);
-      }
-    };
-
-    void loadCategories();
+        const response = await postService.searchPage(parseQuery(url));
+        if (active) setResult(response.data);
+      } catch (e) {
+        if (active) setError(getApiErrorMessage(e, 'Không thể tải danh sách phòng.'));
+      } finally { if (active) setLoading(false); }
+    });
+    return () => { active = false; };
+  }, [url]);
+  useEffect(() => {
+    let active = true;
+    void categoryService.getActiveCategories().then(r => { if (active) setCategories(r.data || []); }).catch(() => {});
+    void adminService.getAmenities().then(r => { if (active) setAmenities(r.data || []); }).catch(() => {});
+    return () => { active = false; };
   }, []);
-
-  const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    void fetchPosts(buildSearchParameters());
+  const apply = (event: FormEvent) => {
+    event.preventDefault();
+    const values = new URLSearchParams();
+    for (const [key, value] of Object.entries(draft)) {
+      if (value.trim() && !['pageNumber', 'amenityIds', 'pageIndex'].includes(key)) values.set(key, value.trim());
+    }
+    amenityIds.forEach(value => values.append('amenityIds', value));
+    values.set('pageNumber', '1');
+    setSearchParams(values);
+    setFilterOpen(false);
   };
-
-  const handlePriceChange = (value: string) => {
-    const selectedRange = PRICE_RANGES[Number(value)];
-    setMinPrice(selectedRange.min);
-    setMaxPrice(selectedRange.max);
+  const changePage = (page: number) => {
+    const values = new URLSearchParams(searchParams);
+    values.set('pageNumber', String(page));
+    setSearchParams(values);
   };
-
-  const handleAreaChange = (value: string) => {
-    const selectedRange = AREA_RANGES[Number(value)];
-    setMinArea(selectedRange.min);
-    setMaxArea(selectedRange.max);
+  const locate = () => {
+    if (!navigator.geolocation) { setError('Trình duyệt không hỗ trợ định vị.'); return; }
+    navigator.geolocation.getCurrentPosition(position => {
+      setDraft(previous => ({ ...previous, latitude: String(position.coords.latitude), longitude: String(position.coords.longitude), radiusInKm: previous.radiusInKm || '5', sortBy: 'distance' }));
+    }, () => setError('Không lấy được vị trí. Vui lòng kiểm tra quyền định vị.'));
   };
-
-  const selectedPriceRange = PRICE_RANGES.findIndex(range => range.min === minPrice && range.max === maxPrice);
-  const selectedAreaRange = AREA_RANGES.findIndex(range => range.min === minArea && range.max === maxArea);
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return 'Hôm nay';
-    if (diffDays === 1) return 'Hôm qua';
-    if (diffDays < 7) return `${diffDays} ngày trước`;
-    return date.toLocaleDateString('vi-VN');
-  };
-
-  // Convert PostListItem to RoomListItem format for RoomSidebar
-  const latestRooms = posts.slice(0, 5).map(post => ({
-    id: post.id,
-    title: post.title,
-    price: post.price,
-    area: post.area,
-    imageUrl: post.thumbnailUrl || '',
-    address: post.address || '',
-    ward: post.ward,
-    district: post.district,
-    province: post.province,
-    createdAt: post.createdAt,
-    category: 'room' as const,
-    roomStatus: post.roomStatus,
-  }));
-
-  return (
-    <div className="room-list-page">
-      {/* ===== SEARCH SECTION ===== */}
-      <div className="room-list-search-wrapper">
-        <form onSubmit={handleSearchSubmit} className="room-search-section">
-          {/* Location Dropdown */}
-          <label className="room-search-location">
-            <FiMapPin />
-            <select value={province} onChange={(event) => setProvince(event.target.value)} aria-label="Tỉnh hoặc thành phố">
-              <option value="">Toàn quốc</option>
-              <option value="Hồ Chí Minh">Hồ Chí Minh</option>
-              <option value="Hà Nội">Hà Nội</option>
-              <option value="Đà Nẵng">Đà Nẵng</option>
-              <option value="Cần Thơ">Cần Thơ</option>
-            </select>
-            <FiChevronRight className="room-search-chevron" />
-          </label>
-
-          {/* Search Input */}
-          <div className="room-search-input-wrapper">
-            <FiSearch />
-            <input
-              type="text"
-              placeholder="Tìm kiếm theo địa điểm"
-              aria-label="Tìm kiếm phòng theo địa điểm hoặc từ khóa"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-            />
-          </div>
-
-          {/* Search Button */}
-          <button type="submit" className="room-search-button">
-            Tìm kiếm
-          </button>
-        </form>
-      </div>
-
-      {/* ===== FILTER BAR ===== */}
-      <div className="room-list-filter-wrapper">
-        <div className="room-filter-bar">
-          <div className="room-filter-select">
-            <select value={categoryId ?? ''} onChange={(event) => setCategoryId(getNumberParameter(event.target.value || null))} aria-label="Loại phòng">
-              <option value="">Tất cả loại phòng</option>
-              {categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
-            </select>
-            <FiChevronRight />
-          </div>
-
-          <div className="room-filter-select">
-            <select value={selectedPriceRange >= 0 ? selectedPriceRange : 0} onChange={(event) => handlePriceChange(event.target.value)} aria-label="Khoảng giá">
-              {PRICE_RANGES.map((range, index) => <option key={range.label} value={index}>{range.label}</option>)}
-            </select>
-            <FiChevronRight />
-          </div>
-
-          <div className="room-filter-select">
-            <select value={selectedAreaRange >= 0 ? selectedAreaRange : 0} onChange={(event) => handleAreaChange(event.target.value)} aria-label="Khoảng diện tích">
-              {AREA_RANGES.map((range, index) => <option key={range.label} value={index}>{range.label}</option>)}
-            </select>
-            <FiChevronRight />
-          </div>
-        </div>
-      </div>
-
-      {/* ===== MAIN CONTAINER ===== */}
-      <div className="room-list-container">
-        {/* Breadcrumb */}
-        <nav className="room-list-breadcrumb">
-          <Link to="/">Trang chủ</Link>
-          <FiChevronRight />
-          <span>Cho thuê phòng trọ</span>
-        </nav>
-
-        {/* Heading */}
-        <div className="room-list-heading">
-          <div>
-            <h1>Cho Thuê Phòng Trọ - Tin Giá Rẻ, Chính Chủ, Tiện Nghi</h1>
-            <p>Hiện có <strong>{posts.length}</strong> tin</p>
-          </div>
-
-          <select
-            value={sortBy}
-            onChange={(event) => {
-              const nextSortBy = event.target.value;
-              setSortBy(nextSortBy);
-              void fetchPosts(buildSearchParameters({ sortBy: nextSortBy || undefined }));
-            }}
-            className="room-sort-select"
-          >
-            <option value="">Tin mới đăng</option>
-            <option value="price_asc">Giá thấp đến cao</option>
-            <option value="price_desc">Giá cao đến thấp</option>
+  const filters = (prefix: string) => <form onSubmit={apply} className="search-filter-form">
+    <h2>Bộ lọc</h2>
+    <div className="search-filter-fields">
+      {fields.map(([key, label, type]) => <label key={key} htmlFor={prefix + key}>
+        <span>{label}</span>
+        <input id={prefix + key} type={type} step="any" value={draft[key] || ''} onChange={e => setDraft(previous => ({ ...previous, [key]: e.target.value }))} />
+      </label>)}
+    </div>
+    <label htmlFor={prefix + 'categoryId'}><span>Loại phòng</span>
+      <select id={prefix + 'categoryId'} value={draft.categoryId || ''} onChange={e => setDraft(previous => ({ ...previous, categoryId: e.target.value }))}>
+        <option value="">Tất cả</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select>
+    </label>
+    <fieldset><legend>Tiện ích</legend>{amenities.filter(a => a.isActive !== false).map(a => <label key={a.id} className="search-amenity">
+      <input type="checkbox" checked={amenityIds.includes(String(a.id))} onChange={e => setAmenityIds(previous => e.target.checked ? [...previous, String(a.id)] : previous.filter(v => v !== String(a.id)))} />{a.name}
+    </label>)}</fieldset>
+    <button type="button" onClick={locate} className="search-secondary"><FiMapPin />Vị trí của tôi</button>
+    <div className="search-filter-actions"><button type="submit" className="search-primary"><FiSearch />Tìm phòng</button>
+      <button type="button" className="search-secondary" onClick={() => { setSearchParams({}); setFilterOpen(false); }}>Xóa lọc</button>
+    </div>
+  </form>;
+  return <div className="rental-search">
+    <header className="rental-search-heading"><div><h1>Phòng trọ cho thuê</h1>
+      <p role="status">{loading ? 'Đang tìm phòng...' : error ? 'Không tải được kết quả' : result.totalCount.toLocaleString('vi-VN') + ' phòng phù hợp'}</p>
+    </div><button type="button" className="search-mobile-filter search-secondary" onClick={() => setFilterOpen(true)}><FiFilter />Bộ lọc</button></header>
+    <div className="rental-search-layout">
+      <aside className="search-desktop-filter">{filters('desktop-')}</aside>
+      <main className="rental-search-results" aria-busy={loading}>
+        <div className="search-result-toolbar"><span>{loading ? '' : 'Trang ' + result.pageNumber + ' / ' + Math.max(1, result.totalPages)}</span>
+          <select aria-label="Sắp xếp" value={searchParams.get('sortBy') || 'new'} onChange={e => {
+            const values = new URLSearchParams(searchParams); values.set('sortBy', e.target.value); values.set('pageNumber', '1'); setSearchParams(values);
+          }}>
+            <option value="new">Mới nhất</option><option value="price_asc">Giá thấp đến cao</option><option value="price_desc">Giá cao đến thấp</option><option value="distance">Gần nhất</option>
           </select>
         </div>
-
-        {/* ===== LAYOUT: Main + Sidebar ===== */}
-        <div className="room-list-layout">
-          {/* Main Content */}
-          <main className="room-list-main">
-            {loading ? (
-              /* Loading State */
-              <div className="room-list-items">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="room-list-card" style={{ opacity: 0.6 }}>
-                    <div className="room-list-card-image" style={{ background: '#e5e7eb' }} />
-                    <div className="room-list-card-content">
-                      <div style={{ height: '24px', background: '#e5e7eb', borderRadius: '4px', marginBottom: '8px' }} />
-                      <div style={{ height: '16px', background: '#e5e7eb', borderRadius: '4px', width: '70%' }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : error ? (
-              /* Error State */
-              <div className="room-list-empty">
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
-                  <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 700 }}>{error}</h3>
-                  <button
-                    onClick={() => void fetchPosts(buildSearchParameters())}
-                    style={{
-                      marginTop: '16px',
-                      padding: '10px 24px',
-                      background: '#0084ff',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontWeight: 600
-                    }}
-                  >
-                    Thử lại
-                  </button>
-                </div>
-              </div>
-            ) : posts.length === 0 ? (
-              /* Empty State */
-              <div className="room-list-empty">
-                <div style={{ textAlign: 'center' }}>
-                  <FiMapPin size={48} color="#9ca3af" style={{ marginBottom: '16px' }} />
-                  <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 700, color: '#111827' }}>
-                    Không tìm thấy phòng trọ
-                  </h3>
-                  <p style={{ margin: 0, color: '#6b7280', fontSize: '14px' }}>
-                    Hãy thử thay đổi bộ lọc tìm kiếm
-                  </p>
-                </div>
-              </div>
-            ) : (
-              /* Room List */
-              <div className="room-list-items">
-                {posts.map((post) => (
-                  <Link
-                    key={post.id}
-                    to={`/rooms/${post.id}`}
-                    className="room-list-card"
-                  >
-                    {/* Image */}
-                    <div className="room-list-card-image">
-                      {post.thumbnailUrl ? (
-                        <img src={post.thumbnailUrl} alt={post.title} />
-                      ) : (
-                        <div style={{
-                          width: '100%',
-                          height: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '48px'
-                        }}>
-                          🏠
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Content */}
-                    <div className="room-list-card-content">
-                      <RoomAvailabilityBadge status={post.roomStatus} />
-                      <h3 className="room-list-card-title">{post.title}</h3>
-
-                      <div className="room-list-card-address">
-                        <FiMapPin />
-                        <span>{post.address}, {post.district}, {post.province}</span>
-                      </div>
-
-                      <div className="room-list-card-price-row">
-                        <span className="room-list-card-price">{formatPrice(post.price)}/tháng</span>
-                        <span className="room-list-card-dot">•</span>
-                        <span className="room-list-card-area">{post.area}m²</span>
-                      </div>
-
-                      <div className="room-list-card-bottom">
-                        <span className="room-list-card-date">
-                          <FiClock />
-                          {formatDate(post.createdAt)}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </main>
-
-          {/* Sidebar */}
-          <aside className="room-sidebar">
-            <RoomSidebar latestRooms={latestRooms} />
-          </aside>
-        </div>
-      </div>
+        {error ? <p role="alert" className="form-error">{error}</p> : loading ? <p role="status">Đang tải kết quả...</p> :
+          result.items.length ? <div className="search-room-grid">{result.items.map(post => <div key={post.id}><RoomCard post={post} />{post.distanceInKm != null && <p className="search-distance">{post.distanceInKm} km</p>}</div>)}</div> :
+            <div className="search-empty"><FiSearch size={32} /><h2>Không tìm thấy phòng phù hợp</h2></div>}
+        {!loading && !error && result.totalPages > 1 && <nav className="search-pagination" aria-label="Phân trang">
+          <button type="button" className="search-secondary" disabled={result.pageNumber <= 1} onClick={() => changePage(result.pageNumber - 1)} aria-label="Trang trước"><FiChevronLeft /></button>
+          <span>{result.pageNumber} / {result.totalPages}</span>
+          <button type="button" className="search-secondary" disabled={result.pageNumber >= result.totalPages} onClick={() => changePage(result.pageNumber + 1)} aria-label="Trang sau"><FiChevronRight /></button>
+        </nav>}
+      </main>
     </div>
-  );
-};
-
-export default RoomListPage;
+    <Modal isOpen={filterOpen} onClose={() => setFilterOpen(false)} title="Lọc phòng trọ">{filters('mobile-')}</Modal>
+  </div>;
+}

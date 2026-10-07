@@ -56,18 +56,18 @@ public class CreateRoomDto
     public decimal? ServiceFee { get; set; }
     public decimal? PhiDichVu { get; set; }
 
-    public List<int> AmenityIds { get; set; } = new();
+    public List<int>? AmenityIds { get; set; } = new();
     public List<int>? TienIchIds
     {
         get => AmenityIds;
-        set { if (value != null && value.Count > 0) AmenityIds = value; }
+        set { if (value != null) AmenityIds = value; }
     }
 
-    public List<string> ImageUrls { get; set; } = new();
+    public List<string>? ImageUrls { get; set; } = new();
     public List<string>? DanhSachAnh
     {
         get => ImageUrls;
-        set { if (value != null && value.Count > 0) ImageUrls = value; }
+        set { if (value != null) ImageUrls = value; }
     }
 
     public int GetCategoryId() => CategoryId ?? DanhMucId ?? 1;
@@ -92,4 +92,10 @@ public class CreateRoomDto
 
 public class UpdateRoomDto : CreateRoomDto
 {
+    public UpdateRoomDto()
+    {
+        // Omitted collections preserve existing data; an explicit empty list clears it.
+        AmenityIds = null;
+        ImageUrls = null;
+    }
 }

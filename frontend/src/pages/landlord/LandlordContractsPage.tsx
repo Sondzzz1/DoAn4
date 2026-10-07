@@ -724,7 +724,7 @@ const LandlordContractsPage: React.FC = () => {
                           con.trangThai === CONTRACT_STATUS.ACTIVE ? 'paid' : (con.trangThai >= CONTRACT_STATUS.TERMINATED ? 'expired' : 'pending')
                         }`}
                       >
-                        {con.trangThai === CONTRACT_STATUS.ACTIVE ? 'Đang hiệu lực' : con.trangThai === CONTRACT_STATUS.TERMINATED ? 'Đã chấm dứt' : con.trangThai === CONTRACT_STATUS.EXPIRED ? 'Đã hết hạn' : 'Chờ xác nhận'}
+                        {con.trangThai === CONTRACT_STATUS.ACTIVE ? 'Đang hiệu lực' : con.trangThai === CONTRACT_STATUS.TERMINATED ? 'Đã chấm dứt' : con.trangThai === CONTRACT_STATUS.EXPIRED ? 'Đã hết hạn' : con.trangThai === CONTRACT_STATUS.PENDING_START ? 'Chờ ngày bắt đầu' : con.trangThai === CONTRACT_STATUS.CANCELLED ? 'Đã hủy' : 'Chờ xác nhận'}
                       </span>
                     </div>
 

@@ -1,8 +1,23 @@
 # Room Rental System - Database Documentation
 
-> **Database backend hien tai:** ung dung dang ket noi den `RoomRentalDB` va su dung schema tieng Viet (`TinDang`, `PhongTro`, `TaiKhoan`, ...). De nang cap cac chuc nang thue phong, dat coc, hop dong, hoa don va thanh toan, chay dung thu tu cac file `00_Preflight_WorkflowUpgrade.sql`, `01_Deploy_WorkflowUpgrade.sql`, `02_Verify_WorkflowUpgrade.sql`. Xem `WorkflowUpgrade-Runbook.md` truoc khi chay.
+> **Database backend hien tai:** `RoomRentalDB`, schema tieng Viet (`TinDang`, `PhongTro`, `TaiKhoan`, ...). Huong dan hien tai nam ngay ben duoi; phan demo cu chi de tham khao.
 >
 > Noi dung ben duoi mo ta schema demo cu `RoomRentalDb_Dev` (`Posts`, `Rooms`, `Users`). Khong chay `RoomRentalDb_Schema_And_Data.sql` len `RoomRentalDB` dang duoc backend su dung.
+
+## Schema Current (2026-10-07)
+
+- Database trang: tao/chon dung database trong SSMS, chay `00_CreateCurrentSchema.sql`. Script sinh tu EF model hien tai, tao 24 bang va cac index/FK/check constraint, gom `DatCoc.HanThanhToan` va `UX_TinDang_Room_Active`. Chay lai khong tao lai bang. Khong chay chuoi legacy cho database moi nay.
+- Database cu: backup truoc; xem `WorkflowUpgrade-Runbook.md`, chay `00_Preflight_WorkflowUpgrade.sql`, `01_Deploy_WorkflowUpgrade.sql`, `04_AddDepositDeadline.sql` neu deadline chua duoc nang cap, `05_RoomPostPublication.sql`, sau do `02_Verify_WorkflowUpgrade.sql`. Cac script upgrade cu co `USE RoomRentalDB`; phai xac nhan dung database.
+- Database local cua project da co `HanThanhToan`; `05_RoomPostPublication.sql` da duoc ap dung thanh cong trong dot nay.
+- `05_RoomPostPublication.sql` chi them unique filtered index cho toi da 1 Pending/Approved moi Room. Neu co tin trung, script liet ke va dung; khong tu xoa/an tin cu.
+- `00_CreateCurrentSchema.sql` KHONG phai schema-diff migration: neu `TaiKhoan` da ton tai thi bo qua bootstrap. Database cu/tao dang do phai duoc kiem tra/nang cap, khong duoc coi la database trang.
+- Khong drop `HopDongThue_Legacy`, khong chay script demo co lenh drop database, khong doi connection string sang database test.
+- Bootstrap chi tao schema, khong seed tai khoan mat khau demo. Tao du lieu danh muc/tien ich va tai khoan bang workflow seed/onboarding duoc kiem soat rieng.
+- Bao cao nghiep vu, API va ket qua test: `docs/FINAL_WORKFLOW_AUDIT.md` tai thu muc goc project.
+
+## Historical Demo Only
+
+Toan bo noi dung demo tiep theo KHONG mo ta schema/current state machine cua backend hien tai.
 
 ## 📊 Tổng quan Database
 

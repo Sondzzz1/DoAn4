@@ -60,7 +60,9 @@ public class PostConfiguration : IEntityTypeConfiguration<Post>
 
         builder.HasIndex(p => p.Status);
         builder.HasIndex(p => p.LandlordId);
-        builder.HasIndex(p => p.RoomId);
+        builder.HasIndex(p => p.RoomId).IsUnique()
+            .HasDatabaseName("UX_TinDang_Room_Active")
+            .HasFilter("[TrangThai] IN (0, 1)");
 
         builder.HasOne(p => p.Landlord)
             .WithMany(l => l.Posts)

@@ -65,6 +65,17 @@ public class RoomBLL : IRoomService
         return MapToDto(room);
     }
 
+    public async Task<RoomDto> GetAccessibleRoomAsync(int accountId, int roomId)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == accountId)
+            ?? throw BusinessRuleException.Forbidden("Tài khoản không khả dụng.");
+        if (user.IsBlocked) throw BusinessRuleException.Forbidden("Tài khoản đã bị khóa.");
+        if (user.RoleId != 0 && (user.RoleId != 2 ||
+            !await _context.Rooms.AnyAsync(r => r.Id == roomId && r.Landlord.AccountId == accountId)))
+            throw BusinessRuleException.Forbidden("Bạn không có quyền đọc phòng này.");
+        return await GetRoomByIdAsync(roomId);
+    }
+
     /// <summary>
     /// Tạo phòng trọ mới
     /// </summary>
@@ -85,8 +96,8 @@ public class RoomBLL : IRoomService
             RoomName = roomName,
             Description = createDto.GetDescription(),
             Price = createDto.GetPrice(),
-            Area = createDto.GetArea() > 0 ? createDto.GetArea() : 20,
-            MaxOccupants = createDto.GetMaxOccupants() > 0 ? createDto.GetMaxOccupants() : 2,
+            Area = createDto.Area.HasValue || createDto.DienTich.HasValue ? createDto.GetArea() : 20,
+            MaxOccupants = createDto.GetMaxOccupants(),
             CurrentOccupants = 0,
             Bedrooms = createDto.GetBedrooms(),
             Bathrooms = createDto.GetBathrooms(),
@@ -104,32 +115,31 @@ public class RoomBLL : IRoomService
             CreatedAt = DateTime.Now
         };
 
-        _context.Rooms.Add(room);
-        await _context.SaveChangesAsync();
-
         if (createDto.AmenityIds != null && createDto.AmenityIds.Any())
         {
             var amenities = createDto.AmenityIds.Distinct().Select(aId => new PostAmenity
             {
-                RoomId = room.Id,
+                Room = room,
                 AmenityId = aId
             });
-            _context.PostAmenities.AddRange(amenities);
+            room.RoomAmenities = amenities.ToList();
         }
 
         if (createDto.ImageUrls != null && createDto.ImageUrls.Any())
         {
             var images = createDto.ImageUrls.Select((url, index) => new PostImage
             {
-                RoomId = room.Id,
+                Room = room,
                 ImageUrl = url,
                 IsThumbnail = index == 0,
                 DisplayOrder = index,
                 CreatedAt = DateTime.Now
             });
-            _context.PostImages.AddRange(images);
+            room.Images = images.ToList();
         }
 
+        await ValidateRoomAsync(room);
+        _context.Rooms.Add(room);
         await _context.SaveChangesAsync();
 
         return await GetRoomByIdAsync(room.Id);
@@ -140,6 +150,8 @@ public class RoomBLL : IRoomService
     /// </summary>
     public async Task<RoomDto> UpdateRoomAsync(int landlordAccountId, int roomId, UpdateRoomDto updateDto)
     {
+        await using var transaction = _context.Database.IsRelational() ? await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable) : null;
+        if (transaction != null) await WorkflowLock.AcquireAsync(_context);
         var landlord = await GetOrCreateLandlordProfileAsync(landlordAccountId);
 
         var room = await _context.Rooms
@@ -154,9 +166,10 @@ public class RoomBLL : IRoomService
 
         if (room.LandlordId != landlord.Id)
         {
-            throw new Exception("Bạn không có quyền chỉnh sửa phòng này");
+            throw BusinessRuleException.Forbidden("Bạn không có quyền chỉnh sửa phòng này");
         }
 
+        var publicSnapshot = RoomPublicationPolicy.Capture(room);
         var updateName = updateDto.GetRoomName();
         if (!string.IsNullOrWhiteSpace(updateName))
         {
@@ -206,13 +219,17 @@ public class RoomBLL : IRoomService
 
         if (updateDto.AmenityIds != null)
         {
-            _context.PostAmenities.RemoveRange(room.RoomAmenities);
-            var amenities = updateDto.AmenityIds.Distinct().Select(aId => new PostAmenity
+            var selected = updateDto.AmenityIds.Distinct().ToHashSet();
+            var removed = room.RoomAmenities.Where(a => !selected.Contains(a.AmenityId)).ToList();
+            _context.PostAmenities.RemoveRange(removed);
+            foreach (var item in removed) room.RoomAmenities.Remove(item);
+            var added = selected.Where(id => !room.RoomAmenities.Any(a => a.AmenityId == id)).Select(aId => new PostAmenity
             {
                 RoomId = room.Id,
                 AmenityId = aId
-            });
-            _context.PostAmenities.AddRange(amenities);
+            }).ToList();
+            _context.PostAmenities.AddRange(added);
+            foreach (var item in added) room.RoomAmenities.Add(item);
         }
 
         if (updateDto.ImageUrls != null)
@@ -225,11 +242,16 @@ public class RoomBLL : IRoomService
                 IsThumbnail = index == 0,
                 DisplayOrder = index,
                 CreatedAt = DateTime.Now
-            });
+            }).ToList();
             _context.PostImages.AddRange(images);
+            room.Images = images.ToList();
         }
 
-        await _context.SaveChangesAsync();
+        await ValidateRoomAsync(room);
+        if (!publicSnapshot.SequenceEqual(RoomPublicationPolicy.Capture(room)))
+            await RoomPublicationPolicy.ReapproveAsync(_context, room);
+        await RoomPublicationPolicy.SaveAsync(_context);
+        if (transaction != null) await transaction.CommitAsync();
 
         return await GetRoomByIdAsync(roomId);
     }
@@ -239,6 +261,8 @@ public class RoomBLL : IRoomService
     /// </summary>
     public async Task<RoomDto> UpdateRoomStatusAsync(int landlordAccountId, int roomId, RoomStatus status)
     {
+        await using var transaction = _context.Database.IsRelational() ? await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable) : null;
+        if (transaction != null) await WorkflowLock.AcquireAsync(_context);
         var landlord = await GetOrCreateLandlordProfileAsync(landlordAccountId);
 
         var room = await _context.Rooms.FirstOrDefaultAsync(r => r.Id == roomId);
@@ -249,12 +273,12 @@ public class RoomBLL : IRoomService
 
         if (room.LandlordId != landlord.Id)
         {
-            throw new Exception("Bạn không có quyền thay đổi trạng thái phòng này");
+            throw BusinessRuleException.Forbidden("Bạn không có quyền thay đổi trạng thái phòng này");
         }
 
         var hasActiveContract = await _context.RentalContracts
             .Include(c => c.Post)
-            .AnyAsync(c => c.Post!.RoomId == roomId && c.Status == RentalContractStatus.Active);
+            .AnyAsync(c => c.Post!.RoomId == roomId && RentalContractStatus.EffectiveStatuses.Contains(c.Status));
 
         if (hasActiveContract)
             throw BusinessRuleException.Conflict("Phòng đang có hợp đồng hiệu lực nên không thể đổi trạng thái.");
@@ -272,6 +296,7 @@ public class RoomBLL : IRoomService
         room.UpdatedAt = DateTime.Now;
 
         await _context.SaveChangesAsync();
+        if (transaction != null) await transaction.CommitAsync();
 
         return await GetRoomByIdAsync(roomId);
     }
@@ -281,6 +306,8 @@ public class RoomBLL : IRoomService
     /// </summary>
     public async Task DeleteRoomAsync(int landlordAccountId, int roomId)
     {
+        await using var transaction = _context.Database.IsRelational() ? await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable) : null;
+        if (transaction != null) await WorkflowLock.AcquireAsync(_context);
         var landlord = await GetOrCreateLandlordProfileAsync(landlordAccountId);
 
         var room = await _context.Rooms
@@ -294,12 +321,12 @@ public class RoomBLL : IRoomService
 
         if (room.LandlordId != landlord.Id)
         {
-            throw new Exception("Bạn không có quyền xóa phòng này");
+            throw BusinessRuleException.Forbidden("Bạn không có quyền xóa phòng này");
         }
 
         var hasActiveContract = await _context.RentalContracts
             .Include(c => c.Post)
-            .AnyAsync(c => c.Post!.RoomId == roomId && c.Status == RentalContractStatus.Active);
+            .AnyAsync(c => c.Post!.RoomId == roomId && RentalContractStatus.EffectiveStatuses.Contains(c.Status));
         if (hasActiveContract)
             throw BusinessRuleException.Conflict("Phòng đang có hợp đồng hiệu lực nên không thể tạm ngưng.");
 
@@ -311,6 +338,24 @@ public class RoomBLL : IRoomService
         room.UpdatedAt = DateTime.Now;
 
         await _context.SaveChangesAsync();
+        if (transaction != null) await transaction.CommitAsync();
+    }
+
+    private async Task ValidateRoomAsync(Room room)
+    {
+        if (room.Price <= 0 || room.Area <= 0 || room.MaxOccupants < 1 || string.IsNullOrWhiteSpace(room.Address))
+            throw new BusinessRuleException("Giá, diện tích, số người và địa chỉ phòng phải hợp lệ.");
+        if (room.Latitude.HasValue != room.Longitude.HasValue || room.Latitude is < -90 or > 90 || room.Longitude is < -180 or > 180)
+            throw new BusinessRuleException("Tọa độ phòng không hợp lệ.");
+        if (room.ElectricityPrice is < 0 || room.WaterPrice is < 0 || room.ServiceFee is < 0 || room.Bedrooms is < 0 || room.Bathrooms is < 0)
+            throw new BusinessRuleException("Đơn giá và số phòng không được âm.");
+        if (!await _context.RoomCategories.AnyAsync(c => c.Id == room.CategoryId))
+            throw new BusinessRuleException("Loại phòng không tồn tại.");
+        var ids = room.RoomAmenities.Select(a => a.AmenityId).Distinct().ToArray();
+        if (await _context.Amenities.CountAsync(a => ids.Contains(a.Id)) != ids.Length)
+            throw new BusinessRuleException("Tiện ích phòng không tồn tại.");
+        if (room.Images.Any(i => string.IsNullOrWhiteSpace(i.ImageUrl)))
+            throw new BusinessRuleException("Đường dẫn ảnh không được để trống.");
     }
 
     private static RoomDto MapToDto(Room r)
@@ -343,7 +388,7 @@ public class RoomBLL : IRoomService
             Status = r.Status,
             ImageUrls = r.Images?.OrderByDescending(i => i.IsThumbnail).ThenBy(i => i.DisplayOrder).Select(i => i.ImageUrl).ToList() ?? new(),
             AmenityIds = r.RoomAmenities?.Select(ra => ra.AmenityId).ToList() ?? new(),
-            ActivePostId = r.Posts?.OrderByDescending(p => p.CreatedAt).Select(p => (int?)p.Id).FirstOrDefault(),
+            ActivePostId = r.Posts?.Where(p => p.Status == PostStatus.Pending || p.Status == PostStatus.Approved).OrderByDescending(p => p.CreatedAt).Select(p => (int?)p.Id).FirstOrDefault(),
             CreatedAt = r.CreatedAt,
             UpdatedAt = r.UpdatedAt
         };
@@ -360,9 +405,9 @@ public class RoomBLL : IRoomService
             throw new Exception("Người dùng không tồn tại");
         }
 
-        if (user.RoleId != 2 && user.RoleId != 0)
+        if (user.RoleId != 2)
         {
-            throw new Exception("Chỉ chủ trọ mới có quyền truy cập");
+            throw BusinessRuleException.Forbidden("Chỉ chủ trọ mới có quyền truy cập.");
         }
 
         if (user.IsBlocked)

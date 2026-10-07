@@ -192,6 +192,9 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
             throw BusinessRuleException.Conflict("Chỉ có thể xác nhận lịch hẹn đang chờ xử lý.");
         }
 
+        if (appointment.Post.Status != PostStatus.Approved || appointment.Post.Room.Status != RoomStatus.Available ||
+            appointment.ScheduledAt <= DateTime.Now)
+            throw BusinessRuleException.Conflict("Tin phải được duyệt, phòng còn trống và lịch hẹn chưa diễn ra.");
         appointment.Status = AppointmentStatus.Confirmed;
         appointment.UpdatedAt = DateTime.Now;
 
@@ -229,6 +232,8 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
         if (appointment.Status != AppointmentStatus.Confirmed)
             throw BusinessRuleException.Conflict("Chỉ lịch hẹn đã được xác nhận mới có thể hoàn thành.");
 
+        if (appointment.ScheduledAt > DateTime.Now)
+            throw BusinessRuleException.Conflict("Chưa đến thời gian xem phòng, không thể hoàn thành lịch hẹn.");
         appointment.Status = AppointmentStatus.Completed;
         appointment.UpdatedAt = DateTime.Now;
 
@@ -303,7 +308,7 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
             PostId = a.PostId,
             PostTitle = a.Post?.Title ?? string.Empty,
             PostAddress = a.Post?.Room?.Address ?? string.Empty,
-            PostPrice = a.Post?.DisplayPrice ?? 0,
+            PostPrice = a.Post?.Room?.Price ?? 0,
             RoomName = a.Post?.Room?.RoomName,
             TenantId = a.TenantId,
             TenantAccountId = a.Tenant?.AccountId ?? 0,
@@ -365,7 +370,7 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
             throw new Exception("Người dùng không tồn tại");
         }
 
-        if (user.RoleId != 2 && user.RoleId != 0)
+        if (user.RoleId != 2)
         {
             throw new Exception("Chỉ chủ trọ mới có quyền thực hiện");
         }

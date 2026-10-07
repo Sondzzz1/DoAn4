@@ -93,6 +93,7 @@ builder.Services.AddAuthentication(options =>
     // Hỗ trợ truyền JWT Token qua query string cho SignalR WebSockets
     options.Events = new JwtBearerEvents
     {
+        OnTokenValidated = AccountTokenValidation.ValidateAsync,
         OnMessageReceived = context =>
         {
             var accessToken = context.Request.Query["access_token"];

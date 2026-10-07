@@ -29,7 +29,8 @@ public static class RentalContractStatus
     public const int Expired = 3;
     public const int Cancelled = 4;
 
-    public static readonly int[] EffectiveStatuses = [PendingSignature, Active];
+    public const int PendingStart = 5;
+    public static readonly int[] EffectiveStatuses = [PendingSignature, PendingStart, Active];
 }
 
 public static class PaymentTransactionStatus
@@ -37,6 +38,7 @@ public static class PaymentTransactionStatus
     public const int Pending = 0;
     public const int Succeeded = 1;
     public const int Failed = 2;
+    public const int Expired = 3;
 }
 
 public static class MonthlyBillStatus

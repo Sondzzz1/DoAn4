@@ -6,5 +6,6 @@ namespace RoomRental.BackEnd.BLL.Interfaces;
 public interface IPaymentService
 {
     Task<PaymentResponseDto> CreatePaymentUrlAsync(int userId, CreatePaymentRequestDto dto, string clientIp);
+    Task ReconcilePendingPaymentsAsync(CancellationToken cancellationToken = default);
     Task<PaymentResultDto> ProcessPaymentReturnAsync(IQueryCollection query);
 }

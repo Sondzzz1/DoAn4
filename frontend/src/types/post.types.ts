@@ -100,38 +100,14 @@ export interface Post {
  * Create Post Request
  */
 export interface CreatePostRequest {
+  roomId: number;
   title: string;
   description: string;
-  price: number;
-  area: number;
-  maxOccupants: number;
-  province: string;
-  district: string;
-  ward: string;
-  address: string;
-  latitude?: number;
-  longitude?: number;
-  amenityIds: number[];
-  imageUrls: string[];
 }
 
-/**
- * Update Post Request
- */
 export interface UpdatePostRequest {
   title: string;
   description: string;
-  price: number;
-  area: number;
-  maxOccupants: number;
-  province: string;
-  district: string;
-  ward: string;
-  address: string;
-  latitude?: number;
-  longitude?: number;
-  amenityIds: number[];
-  imageUrls: string[];
 }
 
 /**
@@ -153,7 +129,18 @@ export interface PostSearchParams {
   sortBy?: string;
   isDescending?: boolean;
   pageIndex?: number;
+  pageNumber?: number;
+  maxOccupants?: number;
+  amenityIds?: number[];
   pageSize?: number;
 }
 
 export type PostQueryParams = PostSearchParams;
+
+export interface PostSearchResult {
+  items: PostListItem[];
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+}

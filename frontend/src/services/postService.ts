@@ -1,6 +1,6 @@
 import api from './api';
 import { ApiResponse } from '../types/common.types';
-import { Post, PostListItem, CreatePostRequest, UpdatePostRequest, PostSearchParams, PostQueryParams } from '../types/post.types';
+import { Post, PostListItem, CreatePostRequest, UpdatePostRequest, PostSearchParams, PostQueryParams, PostSearchResult } from '../types/post.types';
 
 export type { PostSearchParams, PostQueryParams };
 
@@ -8,6 +8,11 @@ export type { PostSearchParams, PostQueryParams };
  * Post Service
  */
 export const postService = {
+  searchPage: async (params: PostSearchParams): Promise<ApiResponse<PostSearchResult>> => {
+    const response = await api.get<ApiResponse<PostSearchResult>>('/bai-dang/search', { params,
+      paramsSerializer: { indexes: null } });
+    return response.data;
+  },
   /**
    * Tạo tin đăng mới (Landlord)
    */

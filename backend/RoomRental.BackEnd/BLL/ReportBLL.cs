@@ -23,7 +23,7 @@ public class ReportBLL : IReportService
             ?? throw BusinessRuleException.NotFound("Người báo cáo không tồn tại.");
         if (!reporter.IsActive)
             throw BusinessRuleException.Forbidden("Tài khoản không thể gửi báo cáo.");
-        var post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == postId);
+        var post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == postId && p.Status == PostStatus.Approved && p.Room.Status != RoomStatus.TemporarilyUnavailable);
         if (post == null)
         {
             throw BusinessRuleException.NotFound("Tin đăng không tồn tại.");

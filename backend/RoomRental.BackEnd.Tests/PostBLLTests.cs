@@ -15,7 +15,7 @@ namespace RoomRental.BackEnd.Tests;
 public sealed class PostBLLTests
 {
     [Fact]
-    public async Task SearchPostsAsync_returns_approved_posts_including_reserved_rooms()
+    public async Task SearchPostsAsync_returns_only_approved_available_rooms()
     {
         await using var context = CreateContext();
         await SeedPostsAsync(context);
@@ -23,10 +23,10 @@ public sealed class PostBLLTests
 
         var posts = await service.SearchPostsAsync(new PostQueryParameters());
 
-        Assert.Equal(2, posts.Count);
+        Assert.Single(posts);
         Assert.All(posts, post => Assert.Equal(PostStatus.Approved, post.Status));
         Assert.Contains(posts, post => post.Id == 1 && post.RoomStatus == RoomStatus.Available);
-        Assert.Contains(posts, post => post.Id == 2 && post.RoomStatus == RoomStatus.Reserved);
+        Assert.DoesNotContain(posts, post => post.Id == 2);
     }
 
     [Fact]
@@ -63,8 +63,8 @@ public sealed class PostBLLTests
         room.Longitude = 105;
         await context.SaveChangesAsync();
         if (throughPost)
-            await new PostBLL(context).UpdatePostAsync(1, 1, new UpdatePostDto { Address = "New address", Latitude = withPin ? 22 : null, Longitude = withPin ? 106 : null });
-        else
+            await Assert.ThrowsAsync<BusinessRuleException>(() => new PostBLL(context).UpdatePostAsync(1, 1, new UpdatePostDto { Address = "New address" }));
+
             await new RoomBLL(context).UpdateRoomAsync(1, 1, new UpdateRoomDto { Address = "New address", Latitude = withPin ? 22 : null, Longitude = withPin ? 106 : null });
         Assert.Equal(withPin ? 22m : (decimal?)null, room.Latitude);
         Assert.Equal(withPin ? 106m : (decimal?)null, room.Longitude);
@@ -98,8 +98,8 @@ public sealed class PostBLLTests
         room.Ward = "Old ward";
         room.District = "Old district";
         await context.SaveChangesAsync();
-        if (throughPost) await new PostBLL(context).UpdatePostAsync(1, 1, new UpdatePostDto { Ward = "", District = "" });
-        else await new RoomBLL(context).UpdateRoomAsync(1, 1, new UpdateRoomDto { Phuong = "", Quan = "" });
+        if (throughPost) await Assert.ThrowsAsync<BusinessRuleException>(() => new PostBLL(context).UpdatePostAsync(1, 1, new UpdatePostDto { Ward = "", District = "" }));
+        await new RoomBLL(context).UpdateRoomAsync(1, 1, new UpdateRoomDto { Phuong = "", Quan = "" });
         Assert.Equal("", room.Ward);
         Assert.Equal("", room.District);
     }
@@ -111,7 +111,7 @@ public sealed class PostBLLTests
 
     [Theory]
     [MemberData(nameof(VisibilityCases))]
-    public async Task Public_list_and_detail_have_consistent_visibility(PostStatus postStatus, RoomStatus roomStatus)
+    public async Task Public_search_is_available_only_but_approved_unavailable_detail_remains_readable(PostStatus postStatus, RoomStatus roomStatus)
     {
         await using var context = CreateContext();
         await SeedPostsAsync(context);
@@ -122,11 +122,11 @@ public sealed class PostBLLTests
         var service = new PostBLL(context);
         var visible = postStatus == PostStatus.Approved && roomStatus != RoomStatus.TemporarilyUnavailable;
         var posts = await service.SearchPostsAsync(new PostQueryParameters());
-        Assert.Equal(visible, posts.Any(p => p.Id == 1));
+        Assert.Equal(postStatus == PostStatus.Approved && roomStatus == RoomStatus.Available, posts.Any(p => p.Id == 1));
         if (visible)
         {
             Assert.Equal(roomStatus, (await service.GetPublicPostByIdAsync(1)).RoomStatus);
-            Assert.Equal(roomStatus, posts.Single(p => p.Id == 1).RoomStatus);
+            if (roomStatus == RoomStatus.Available) Assert.Equal(roomStatus, posts.Single(p => p.Id == 1).RoomStatus);
         }
         else
         {
@@ -170,20 +170,22 @@ public sealed class PostBLLTests
             room.Status = status;
             await context.SaveChangesAsync();
             var list = await service.SearchPostsAsync(new PostQueryParameters { Keyword = "Tin cong khai", MinPrice = 2_000_000, MaxPrice = 4_000_000 });
-            Assert.Equal(status, Assert.Single(list).RoomStatus);
+            if (status == RoomStatus.Available) Assert.Equal(status, Assert.Single(list).RoomStatus);
+            else Assert.Empty(list);
             Assert.Equal(status, (await service.GetPublicPostByIdAsync(1)).RoomStatus);
         }
     }
 
-    private static ApplicationDbContext CreateContext()
+    internal static ApplicationDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
             .Options;
         return new ApplicationDbContext(options);
     }
 
-    private static async Task SeedPostsAsync(ApplicationDbContext context)
+    internal static async Task SeedPostsAsync(ApplicationDbContext context)
     {
         var account = new User
         {

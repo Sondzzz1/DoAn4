@@ -41,6 +41,8 @@ public class PaymentBLL : IPaymentService
             throw new BusinessRuleException("Phải chọn đúng một đối tượng thanh toán: khoản cọc hoặc hóa đơn tháng.");
 
         await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        await WorkflowLock.AcquireAsync(_context);
+        await ExpireAttemptsAsync();
         Deposit? deposit = null;
         MonthlyBill? bill = null;
         decimal amount;
@@ -105,6 +107,7 @@ public class PaymentBLL : IPaymentService
         vnpay.AddRequestData("vnp_TmnCode", vnpaySettings.TmnCode);
         vnpay.AddRequestData("vnp_Amount", ((long)(amount * 100)).ToString(CultureInfo.InvariantCulture));
         vnpay.AddRequestData("vnp_CreateDate", DateTime.Now.ToString("yyyyMMddHHmmss"));
+        vnpay.AddRequestData("vnp_ExpireDate", DateTime.Now.AddMinutes(30).ToString("yyyyMMddHHmmss"));
         vnpay.AddRequestData("vnp_CurrCode", "VND");
         vnpay.AddRequestData("vnp_IpAddr", string.IsNullOrEmpty(clientIp) || clientIp == "::1" ? "127.0.0.1" : clientIp);
         vnpay.AddRequestData("vnp_Locale", "vn");
@@ -133,13 +136,24 @@ public class PaymentBLL : IPaymentService
         if (!vnpay.ValidateSignature(query["vnp_SecureHash"].ToString(), hashSecret))
             return Failure("Chữ ký VNPay không hợp lệ.", orderId, transactionCode, responseCode);
 
+        await using var dbTransaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        await WorkflowLock.AcquireAsync(_context);
+        await ExpireAttemptsAsync();
         var payment = await PaymentQuery().FirstOrDefaultAsync(p => p.OrderId == orderId);
         if (payment == null)
             return Failure("Không tìm thấy giao dịch thanh toán tương ứng.", orderId, transactionCode, responseCode);
         if (!long.TryParse(vnpay.GetResponseData("vnp_Amount"), out var rawAmount) || rawAmount != (long)(payment.Amount * 100))
             return Failure("Số tiền VNPay trả về không khớp với giao dịch.", orderId, transactionCode, responseCode, payment);
         if (payment.Status == PaymentTransactionStatus.Succeeded)
+        {
+            await dbTransaction.CommitAsync();
             return Success(payment, "Giao dịch đã được xử lý thành công trước đó.");
+        }
+        if (payment.Status != PaymentTransactionStatus.Pending)
+        {
+            await dbTransaction.CommitAsync();
+            return Failure("Lượt thanh toán đã kết thúc. Vui lòng kiểm tra và tạo lượt mới.", orderId, transactionCode, responseCode, payment);
+        }
 
         if (responseCode != "00" || (!string.IsNullOrWhiteSpace(transactionStatus) && transactionStatus != "00"))
         {
@@ -149,16 +163,10 @@ public class PaymentBLL : IPaymentService
             payment.ProcessedAt = DateTime.Now;
             RestoreBillAfterFailedPayment(payment);
             await _context.SaveChangesAsync();
+            await dbTransaction.CommitAsync();
             return Failure($"Giao dịch chưa thành công (mã: {responseCode}).", orderId, transactionCode, responseCode, payment);
         }
 
-        await using var dbTransaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
-        payment = await PaymentQuery().FirstAsync(p => p.OrderId == orderId);
-        if (payment.Status == PaymentTransactionStatus.Succeeded)
-        {
-            await dbTransaction.CommitAsync();
-            return Success(payment, "Giao dịch đã được xử lý thành công trước đó.");
-        }
         if (string.IsNullOrWhiteSpace(transactionCode))
             return Failure("VNPay không trả về mã giao dịch hợp lệ.", orderId, transactionCode, responseCode, payment);
         if (await _context.PaymentTransactions.AnyAsync(p => p.Id != payment.Id && p.TransactionCode == transactionCode))
@@ -191,6 +199,27 @@ public class PaymentBLL : IPaymentService
             : "Giao dịch thanh toán hóa đơn thành công.");
     }
 
+    public async Task ReconcilePendingPaymentsAsync(CancellationToken cancellationToken = default)
+    {
+        await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        await WorkflowLock.AcquireAsync(_context, cancellationToken);
+        await ExpireAttemptsAsync();
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    private async Task ExpireAttemptsAsync()
+    {
+        var cutoff = DateTime.Now.AddMinutes(-30);
+        var expired = await PaymentQuery().Where(p => p.Status == PaymentTransactionStatus.Pending && p.CreatedAt <= cutoff).ToListAsync();
+        foreach (var attempt in expired)
+        {
+            attempt.Status = PaymentTransactionStatus.Expired;
+            attempt.ProcessedAt = DateTime.Now;
+            RestoreBillAfterFailedPayment(attempt);
+        }
+        if (expired.Count > 0) await _context.SaveChangesAsync();
+    }
+
     private IQueryable<PaymentTransaction> PaymentQuery() => _context.PaymentTransactions
         .Include(p => p.Deposit)
         .Include(p => p.MonthlyBill).ThenInclude(b => b!.Contract);
@@ -218,6 +247,8 @@ public class PaymentBLL : IPaymentService
         {
             if (payment.Deposit.Amount != payment.Amount)
                 throw BusinessRuleException.Conflict("Số tiền khoản cọc đã thay đổi, giao dịch bị từ chối.");
+            if (payment.Deposit.DueAt <= DateTime.Now)
+                throw BusinessRuleException.Conflict("Khoản cọc đã quá hạn thanh toán.");
             if (payment.Deposit.Status != DepositStatus.Pending)
                 throw BusinessRuleException.Conflict("Khoản cọc không còn ở trạng thái chờ thanh toán.");
             return;

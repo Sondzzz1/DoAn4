@@ -29,6 +29,7 @@ public class RoomController : ControllerBase
     /// Landlord xem danh sách phòng thuộc sở hữu (Mục 15: GET /api/rooms)
     /// </summary>
     [HttpGet]
+    [Authorize(Roles = "Landlord")]
     [ProducesResponseType(typeof(ApiResponse<List<RoomDto>>), 200)]
     public async Task<IActionResult> GetLandlordRooms([FromQuery] RoomStatus? status)
     {
@@ -55,7 +56,7 @@ public class RoomController : ControllerBase
     {
         try
         {
-            var room = await _roomService.GetRoomByIdAsync(id);
+            var room = await _roomService.GetAccessibleRoomAsync(GetCurrentUserId(), id);
             return Ok(ApiResponse<RoomDto>.SuccessResponse(room, "Lấy thông tin phòng thành công"));
         }
         catch (Exception ex)
@@ -69,6 +70,7 @@ public class RoomController : ControllerBase
     /// Thêm phòng mới (POST /api/rooms)
     /// </summary>
     [HttpPost]
+    [Authorize(Roles = "Landlord")]
     [ProducesResponseType(typeof(ApiResponse<RoomDto>), 200)]
     public async Task<IActionResult> CreateRoom([FromBody] CreateRoomDto createDto)
     {
@@ -90,6 +92,7 @@ public class RoomController : ControllerBase
     /// Cập nhật thông tin phòng (PUT /api/rooms/{id})
     /// </summary>
     [HttpPut("{id:int}")]
+    [Authorize(Roles = "Landlord")]
     [ProducesResponseType(typeof(ApiResponse<RoomDto>), 200)]
     public async Task<IActionResult> UpdateRoom(int id, [FromBody] UpdateRoomDto updateDto)
     {
@@ -111,6 +114,7 @@ public class RoomController : ControllerBase
     /// Cập nhật trạng thái phòng (Mục 16: PUT /api/rooms/{id}/status)
     /// </summary>
     [HttpPut("{id:int}/trang-thai")]
+    [Authorize(Roles = "Landlord")]
     [ProducesResponseType(typeof(ApiResponse<RoomDto>), 200)]
     public async Task<IActionResult> UpdateRoomStatus(int id, [FromBody] UpdateRoomStatusDto statusDto)
     {
@@ -133,6 +137,7 @@ public class RoomController : ControllerBase
     /// Xóa/Tạm ngưng phòng (DELETE /api/rooms/{id})
     /// </summary>
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Landlord")]
     [ProducesResponseType(typeof(ApiResponse<object>), 200)]
     public async Task<IActionResult> DeleteRoom(int id)
     {

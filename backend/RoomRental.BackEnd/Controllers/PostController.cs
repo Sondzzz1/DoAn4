@@ -24,6 +24,14 @@ public class PostController : ControllerBase
         _logger = logger;
     }
 
+    [HttpGet("search")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SearchPage([FromQuery] PostQueryParameters query)
+    {
+        try { return Ok(ApiResponse<PostSearchResult>.SuccessResponse(await _postService.SearchPageAsync(query))); }
+        catch (Exception ex) { return this.BusinessError<PostSearchResult>(ex); }
+    }
+
     /// <summary>
     /// Tìm kiếm và lọc danh sách tin đăng phòng trọ (Mục 4: GET /api/posts)
     /// </summary>
@@ -69,7 +77,7 @@ public class PostController : ControllerBase
     /// Landlord đăng tin mới (Mục 11: POST /api/posts)
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = "Landlord,Admin")]
+    [Authorize(Roles = "Landlord")]
     [ProducesResponseType(typeof(ApiResponse<PostDto>), 200)]
     [ProducesResponseType(typeof(ApiResponse<PostDto>), 400)]
     public async Task<IActionResult> CreatePost([FromBody] CreatePostDto createDto)
@@ -84,7 +92,7 @@ public class PostController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi đăng tin mới");
-            return BadRequest(ApiResponse<PostDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<PostDto>(ex);
         }
     }
 
@@ -92,7 +100,7 @@ public class PostController : ControllerBase
     /// Landlord lấy danh sách tin đã đăng của mình (GET /api/posts/my-posts)
     /// </summary>
     [HttpGet("cua-toi")]
-    [Authorize(Roles = "Landlord,Admin")]
+    [Authorize(Roles = "Landlord")]
     [ProducesResponseType(typeof(ApiResponse<List<PostListDto>>), 200)]
     public async Task<IActionResult> GetMyPosts()
     {
@@ -135,7 +143,7 @@ public class PostController : ControllerBase
     /// Landlord chỉnh sửa tin đã đăng (Mục 13: PUT /api/posts/{id})
     /// </summary>
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Landlord,Admin")]
+    [Authorize(Roles = "Landlord")]
     [ProducesResponseType(typeof(ApiResponse<PostDto>), 200)]
     public async Task<IActionResult> UpdatePost(int id, [FromBody] UpdatePostDto updateDto)
     {
@@ -149,7 +157,7 @@ public class PostController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi cập nhật tin đăng ID: {Id}", id);
-            return BadRequest(ApiResponse<PostDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<PostDto>(ex);
         }
     }
 
@@ -157,7 +165,7 @@ public class PostController : ControllerBase
     /// Landlord xóa/ẩn tin đã đăng (Mục 14: DELETE /api/posts/{id})
     /// </summary>
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Landlord,Admin")]
+    [Authorize(Roles = "Landlord")]
     [ProducesResponseType(typeof(ApiResponse<object>), 200)]
     public async Task<IActionResult> DeletePost(int id)
     {
@@ -179,7 +187,7 @@ public class PostController : ControllerBase
     /// Landlord cập nhật trạng thái tin đăng (PUT /api/posts/{id}/status)
     /// </summary>
     [HttpPut("{id:int}/trang-thai")]
-    [Authorize(Roles = "Landlord,Admin")]
+    [Authorize(Roles = "Landlord")]
     [ProducesResponseType(typeof(ApiResponse<PostDto>), 200)]
     public async Task<IActionResult> UpdatePostStatus(int id, [FromBody] UpdatePostStatusDto statusDto)
     {
@@ -193,7 +201,7 @@ public class PostController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi cập nhật trạng thái tin ID: {Id}", id);
-            return BadRequest(ApiResponse<PostDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<PostDto>(ex);
         }
     }
 

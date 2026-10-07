@@ -12,6 +12,7 @@ public interface IPostService
     /// Tìm kiếm và lọc bài đăng công khai (cho Tenant & Khách vãng lai)
     /// </summary>
     Task<List<PostListDto>> SearchPostsAsync(PostQueryParameters queryParams);
+    Task<PostSearchResult> SearchPageAsync(PostQueryParameters queryParams);
 
     /// <summary>
     /// Lấy chi tiết 1 post kèm đầy đủ thông tin phòng, tiện ích, ảnh, tọa độ maps

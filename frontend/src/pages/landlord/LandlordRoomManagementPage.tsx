@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FiCheck, FiEdit2, FiHome, FiPlus, FiSearch, FiTrash2, FiX } from 'react-icons/fi';
 import { toast } from 'react-toastify';
+import { categoryService, type RoomCategory } from '../../services/categoryService';
+import { adminService, type AdminCatalogItem } from '../../services/adminService';
 import { roomService } from '../../services/roomService';
 import { RoomItem } from '../../types/room.types';
 import { getApiErrorMessage } from '../../utils/apiError';
@@ -13,6 +15,10 @@ const roomStatusLabel = (status: number) => ({ 0: 'Còn trống', 1: 'Đã thuê
 
 const emptyForm = {
   tenPhong: '',
+  danhMucId: 1,
+  tienDien: 0,
+  tienNuoc: 0,
+  phiDichVu: 0,
   moTa: '',
   gia: 0,
   dienTich: 0,
@@ -31,6 +37,8 @@ const emptyForm = {
 };
 
 const LandlordRoomManagementPage: React.FC = () => {
+  const [categories, setCategories] = useState<RoomCategory[]>([]);
+  const [amenities, setAmenities] = useState<AdminCatalogItem[]>([]);
   const [rooms, setRooms] = useState<RoomItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -98,6 +106,11 @@ const LandlordRoomManagementPage: React.FC = () => {
     setEditingId(null);
   };
 
+  useEffect(() => {
+    void categoryService.getActiveCategories().then(r => setCategories(r.data || [])).catch(() => {});
+    void adminService.getAmenities().then(r => setAmenities(r.data || [])).catch(() => {});
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (saving || locationBusy) return;
@@ -114,10 +127,10 @@ const LandlordRoomManagementPage: React.FC = () => {
     setFormError('');
     try {
       if (editingId) {
-        await roomService.updateRoom(editingId, { ...form });
+        await roomService.updateRoom(editingId, { ...form, danhSachAnh: form.danhSachAnh.map(v => v.trim()).filter(Boolean) });
         toast.success('Cập nhật phòng thành công');
       } else {
-        await roomService.createRoom({ ...form });
+        await roomService.createRoom({ ...form, danhSachAnh: form.danhSachAnh.map(v => v.trim()).filter(Boolean) });
         toast.success('Thêm phòng thành công');
       }
       clearForm();
@@ -136,6 +149,10 @@ const LandlordRoomManagementPage: React.FC = () => {
     setEditingId(room.id);
     setForm({
       tenPhong: room.roomName,
+      danhMucId: room.categoryId,
+      tienDien: room.electricityPrice ?? 0,
+      tienNuoc: room.waterPrice ?? 0,
+      phiDichVu: room.serviceFee ?? 0,
       moTa: room.description || '',
       gia: room.price,
       dienTich: room.area,
@@ -261,10 +278,10 @@ const LandlordRoomManagementPage: React.FC = () => {
                     <button onClick={() => handleEdit(room)} className="inline-flex items-center gap-1 bg-amber-100 text-amber-700 px-3 py-2 rounded-lg text-sm font-medium">
                       <FiEdit2 /> Sửa
                     </button>
-                    <button disabled={room.status === 1} title={room.status === 1 ? 'Phòng đang có hợp đồng hiệu lực' : 'Đổi giữa còn trống và tạm ngưng'} onClick={() => handleStatusToggle(room.id, room.status)} className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-3 py-2 rounded-lg text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50">
+                    <button disabled={room.status === 1 || room.status === 2} title={room.status === 1 ? 'Phòng đang có hợp đồng hiệu lực' : 'Đổi giữa còn trống và tạm ngưng'} onClick={() => handleStatusToggle(room.id, room.status)} className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-3 py-2 rounded-lg text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50">
                       <FiCheck /> Đổi trạng thái
                     </button>
-                    <button onClick={() => handleDelete(room.id)} className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-3 py-2 rounded-lg text-sm font-medium">
+                    <button disabled={room.status === 1 || room.status === 2} onClick={() => handleDelete(room.id)} className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-3 py-2 rounded-lg text-sm font-medium">
                       <FiTrash2 /> Tạm ngưng
                     </button>
                   </div>
@@ -278,6 +295,11 @@ const LandlordRoomManagementPage: React.FC = () => {
           <h2 className="text-xl font-semibold mb-4">{editingId ? 'Cập nhật phòng' : 'Thêm phòng mới'}</h2>
 
           <form onSubmit={handleSubmit} className="space-y-3">
+            <label className="block text-sm font-medium">Loại phòng
+              <select aria-label="Loại phòng" value={form.danhMucId} onChange={e => setForm({ ...form, danhMucId: Number(e.target.value) })} className="mt-1 w-full border rounded-lg px-3 py-2.5">
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </label>
             <Input label="Tên phòng" required value={form.tenPhong} onChange={(e) => setForm({ ...form, tenPhong: e.target.value })} />
             <label className="block text-sm font-medium text-slate-700">Mô tả
               <textarea value={form.moTa} onChange={(e) => setForm({ ...form, moTa: e.target.value })} className="mt-1 w-full border rounded-lg px-3 py-2.5" rows={3} />
@@ -287,6 +309,7 @@ const LandlordRoomManagementPage: React.FC = () => {
                 ['gia', 'Giá thuê (VNĐ/tháng)', 1], ['dienTich', 'Diện tích (m²)', 0.1],
                 ['soNguoiToiDa', 'Số người tối đa', 1], ['tang', 'Tầng', 0],
                 ['soPhongNgu', 'Số phòng ngủ', 0], ['soPhongTam', 'Số phòng tắm', 0],
+                ['tienDien', 'Giá điện (đ/kWh)', 0], ['tienNuoc', 'Giá nước (đ/m³)', 0], ['phiDichVu', 'Phí dịch vụ (đ/tháng)', 0],
               ] as const).map(([field, label, min]) => (
                 <Input key={field} label={label} type="number" min={min} step={field === 'dienTich' ? '0.1' : '1'} required value={form[field]} onChange={(e) => setForm({ ...form, [field]: Number(e.target.value) })} />
               ))}
@@ -300,6 +323,14 @@ const LandlordRoomManagementPage: React.FC = () => {
             <LeafletMapPicker key={mapSession} latitude={form.latitude} longitude={form.longitude}
               address={form.diaChi} ward={form.phuong} district={form.quan} province={form.thanhPho}
               searchRequest={locationSearch} onLocationChange={handleLocationChange} onBusyChange={setLocationBusy} />
+            <fieldset><legend className="text-sm font-medium">Tiện ích</legend>
+              <div className="grid grid-cols-2 gap-2 mt-2">{amenities.filter(a => a.isActive !== false).map(a => <label key={a.id} className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={form.tienIchIds.includes(a.id)} onChange={e => setForm({ ...form, tienIchIds: e.target.checked ? [...form.tienIchIds, a.id] : form.tienIchIds.filter(v => v !== a.id) })} />{a.name}
+              </label>)}</div>
+            </fieldset>
+            <label className="block text-sm font-medium">Ảnh phòng (mỗi dòng một URL)
+              <textarea aria-label="Ảnh phòng" value={form.danhSachAnh.join('\n')} onChange={e => setForm({ ...form, danhSachAnh: e.target.value.split('\n') })} rows={3} className="mt-1 w-full border rounded-lg px-3 py-2.5" />
+            </label>
             {formError && <p role="alert" className="text-sm text-red-600">{formError}</p>}
 
             <div className="flex gap-3 pt-2">

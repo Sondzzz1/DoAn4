@@ -1,0 +1,121 @@
+{
+  "fixtureMode": true,
+  "checks": [
+    {
+      "width": 1440,
+      "test": "Search real count, page/reload/filter URL and mobile modal"
+    },
+    {
+      "width": 1440,
+      "test": "Owned available room selector and RoomId-only publication payload"
+    },
+    {
+      "width": 1440,
+      "test": "Rented/reserved detail remains readable without new booking actions"
+    },
+    {
+      "width": 1440,
+      "test": "Room form category, rates, amenities, images, map and layout"
+    },
+    {
+      "width": 1440,
+      "test": "Protected routes reject anonymous and incorrect role"
+    },
+    {
+      "width": 1440,
+      "test": "Admin table and catalog modal layout"
+    },
+    {
+      "width": 1440,
+      "test": "Console and HTTP errors",
+      "warnings": []
+    },
+    {
+      "width": 1200,
+      "test": "Search real count, page/reload/filter URL and mobile modal"
+    },
+    {
+      "width": 1200,
+      "test": "Owned available room selector and RoomId-only publication payload"
+    },
+    {
+      "width": 1200,
+      "test": "Rented/reserved detail remains readable without new booking actions"
+    },
+    {
+      "width": 1200,
+      "test": "Room form category, rates, amenities, images, map and layout"
+    },
+    {
+      "width": 1200,
+      "test": "Protected routes reject anonymous and incorrect role"
+    },
+    {
+      "width": 1200,
+      "test": "Admin table and catalog modal layout"
+    },
+    {
+      "width": 1200,
+      "test": "Console and HTTP errors",
+      "warnings": []
+    },
+    {
+      "width": 768,
+      "test": "Search real count, page/reload/filter URL and mobile modal"
+    },
+    {
+      "width": 768,
+      "test": "Owned available room selector and RoomId-only publication payload"
+    },
+    {
+      "width": 768,
+      "test": "Rented/reserved detail remains readable without new booking actions"
+    },
+    {
+      "width": 768,
+      "test": "Room form category, rates, amenities, images, map and layout"
+    },
+    {
+      "width": 768,
+      "test": "Protected routes reject anonymous and incorrect role"
+    },
+    {
+      "width": 768,
+      "test": "Admin table and catalog modal layout"
+    },
+    {
+      "width": 768,
+      "test": "Console and HTTP errors",
+      "warnings": []
+    },
+    {
+      "width": 375,
+      "test": "Search real count, page/reload/filter URL and mobile modal"
+    },
+    {
+      "width": 375,
+      "test": "Owned available room selector and RoomId-only publication payload"
+    },
+    {
+      "width": 375,
+      "test": "Rented/reserved detail remains readable without new booking actions"
+    },
+    {
+      "width": 375,
+      "test": "Room form category, rates, amenities, images, map and layout"
+    },
+    {
+      "width": 375,
+      "test": "Protected routes reject anonymous and incorrect role"
+    },
+    {
+      "width": 375,
+      "test": "Admin table and catalog modal layout"
+    },
+    {
+      "width": 375,
+      "test": "Console and HTTP errors",
+      "warnings": []
+    }
+  ]
+}

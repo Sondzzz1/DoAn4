@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RoomRental.BackEnd.DTO.Post;
+using RoomRental.BackEnd.Models.Enums;
 using RoomRental.BackEnd.BLL.Interfaces;
 using RoomRental.BackEnd.Models;
 using RoomRental.BackEnd.DAL;
@@ -19,7 +20,7 @@ public class FavoriteBLL : IFavoriteService
     {
         var tenant = await GetOrCreateTenantProfileAsync(accountId);
 
-        var post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == postId);
+        var post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == postId && p.Status == PostStatus.Approved && p.Room.Status != RoomStatus.TemporarilyUnavailable);
         if (post == null)
         {
             throw new Exception("Tin đăng không tồn tại");
@@ -78,13 +79,13 @@ public class FavoriteBLL : IFavoriteService
             .Include(f => f.Post)
                 .ThenInclude(p => p.Landlord)
                     .ThenInclude(l => l.Account)
-            .Where(f => f.TenantId == tenant.Id)
+            .Where(f => f.TenantId == tenant.Id && f.Post.Status == PostStatus.Approved && f.Post.Room.Status != RoomStatus.TemporarilyUnavailable)
             .OrderByDescending(f => f.CreatedAt)
             .Select(f => new PostListDto
             {
                 Id = f.Post.Id,
                 Title = f.Post.Title,
-                Price = f.Post.DisplayPrice,
+                Price = f.Post.Room.Price,
                 Status = f.Post.Status,
                 Area = f.Post.Room.Area,
                 MaxOccupants = f.Post.Room.MaxOccupants,

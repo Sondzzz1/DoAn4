@@ -1,646 +1,115 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useState, type FormEvent } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { FiCheck, FiHome, FiX } from 'react-icons/fi';
 import { toast } from 'react-toastify';
-import { 
-  FiImage, 
-  FiMapPin, 
-  FiPlus, 
-  FiX, 
-  FiFileText, 
-  FiDollarSign, 
-  FiHome,
-  FiUsers,
-  FiCheckCircle,
-  FiAlertCircle
-} from 'react-icons/fi';
+import { roomService } from '../../services/roomService';
 import { postService } from '../../services/postService';
-import { adminService } from '../../services/adminService';
-import { CreatePostRequest } from '../../types/post.types';
+import { RoomStatus } from '../../types/post.types';
+import type { RoomItem } from '../../types/room.types';
 import { getApiErrorMessage } from '../../utils/apiError';
-import LeafletMapPicker from '../../components/map/LeafletMapPicker';
-import { buildLocationQuery, type LocationResult } from '../../services/locationService';
 
-interface Amenity {
-  id: number;
-  name: string;
-  icon?: string | null;
-}
-
-const CreatePostPage: React.FC = () => {
+export default function CreatePostPage() {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const isEditMode = !!id;
-  
-  const [loading, setLoading] = useState(false);
-  const [loadingData, setLoadingData] = useState(isEditMode);
-  const [amenities, setAmenities] = useState<Amenity[]>([]);
-  const [imageInput, setImageInput] = useState('');
-
-  const [formData, setFormData] = useState<CreatePostRequest>({
-    title: '',
-    description: '',
-    price: 0,
-    area: 0,
-    maxOccupants: 1,
-    province: '',
-    district: '',
-    ward: '',
-    address: '',
-    latitude: undefined,
-    longitude: undefined,
-    amenityIds: [],
-    imageUrls: [],
-  });
-
-  const [errors, setErrors] = useState<Partial<Record<keyof CreatePostRequest, string>>>({});
-  const [submitError, setSubmitError] = useState('');
-  const [locationBusy, setLocationBusy] = useState(false);
-  const [locationSearch, setLocationSearch] = useState<{ query: string; revision: number }>();
-  const addressEdited = useRef(false);
-
-  // Load danh sách tiện ích
+  const [rooms, setRooms] = useState<RoomItem[]>([]);
+  const [roomId, setRoomId] = useState(0);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   useEffect(() => {
-    const loadAmenities = async () => {
+    let active = true;
+    void (async () => {
       try {
-        const response = await adminService.getAmenities();
-        setAmenities(response.data || []);
-      } catch (error) {
-        console.error('Không thể tải danh sách tiện ích:', error);
-      }
-    };
-    void loadAmenities();
-  }, []);
-
-  // Load dữ liệu tin đăng nếu đang ở chế độ chỉnh sửa
-  useEffect(() => {
-    if (isEditMode && id) {
-      const loadPost = async () => {
-        setLoadingData(true);
-        try {
-          const response = await postService.getMyPostById(Number(id));
-          const post = response.data;
-          
-          setFormData({
-            title: post.title,
-            description: post.description,
-            price: post.price,
-            area: post.area,
-            maxOccupants: post.maxOccupants,
-            province: post.province,
-            district: post.district,
-            ward: post.ward,
-            address: post.address,
-            latitude: post.latitude,
-            longitude: post.longitude,
-            amenityIds: post.amenities.map((a) => a.id),
-            imageUrls: post.imageUrls || [],
-          });
-        } catch {
-          toast.error('Không thể tải thông tin tin đăng');
-          navigate('/landlord/posts');
-        } finally {
-          setLoadingData(false);
+        const response = await roomService.getMyRooms();
+        if (!active) return;
+        setRooms(response.data || []);
+        if (id) {
+          const post = (await postService.getMyPostById(Number(id))).data;
+          if (!active) return;
+          setRoomId(post.roomId);
+          setTitle(post.title);
+          setDescription(post.description);
         }
-      };
-      void loadPost();
-    }
-  }, [id, isEditMode, navigate]);
-
-  const handleInputChange = <K extends keyof CreatePostRequest>(field: K, value: CreatePostRequest[K]) => {
-    if (['address', 'province', 'district', 'ward'].includes(field)) addressEdited.current = true;
-    setErrors(current => ({ ...current, [field]: undefined }));
-    setFormData((prev) => ({ ...prev, [field]: value,
-      ...(['address', 'province', 'district', 'ward'].includes(field) ? { latitude: undefined, longitude: undefined } : {}),
-    }));
-  };
-
-  const searchCompletedAddress = () => {
-    if (!addressEdited.current || !formData.address.trim()) return;
-    addressEdited.current = false;
-    const query = buildLocationQuery(formData.address, formData.ward, formData.district, formData.province);
-    setLocationSearch(previous => ({ query, revision: (previous?.revision || 0) + 1 }));
-  };
-
-  const handleLocationChange = useCallback((lat: number, lng: number, location?: LocationResult) => {
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-    setFormData(previous => ({ ...previous, latitude: lat, longitude: lng,
-      ...(location ? { address: location.address || location.displayName, province: location.province || '',
-        district: location.district || '', ward: location.ward || '' } : {}),
-    }));
-    if (location) setErrors(previous => ({ ...previous, address: undefined, province: undefined, district: undefined, ward: undefined }));
-  }, []);
-
-  const handleAmenityToggle = (amenityId: number) => {
-    setFormData((prev) => {
-      const currentIds = prev.amenityIds;
-      const newIds = currentIds.includes(amenityId)
-        ? currentIds.filter((id) => id !== amenityId)
-        : [...currentIds, amenityId];
-      return { ...prev, amenityIds: newIds };
-    });
-  };
-
-  const handleAddImage = () => {
-    if (!imageInput.trim()) {
-      toast.warning('Vui lòng nhập URL hình ảnh');
+      } catch (e) {
+        if (active) setError(getApiErrorMessage(e, 'Không tải được thông tin phòng.'));
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [id]);
+  const selected = rooms.find(r => r.id === roomId);
+  const candidates = rooms.filter(r => r.status === RoomStatus.Available && !r.activePostId);
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (saving || loading) return;
+    if (!roomId || !title.trim() || !description.trim()) {
+      setError('Vui lòng chọn phòng và nhập đầy đủ tiêu đề, nội dung.');
       return;
     }
-    setFormData((prev) => ({
-      ...prev,
-      imageUrls: [...prev.imageUrls, imageInput.trim()],
-    }));
-    setImageInput('');
-  };
-
-  const handleRemoveImage = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      imageUrls: prev.imageUrls.filter((_, i) => i !== index),
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (loading || locationBusy) return;
-
-    const next: typeof errors = {};
-    if (!formData.title.trim()) next.title = 'Vui lòng nhập tiêu đề tin đăng.';
-    if (!formData.description.trim()) next.description = 'Vui lòng nhập mô tả chi tiết.';
-    if (formData.price <= 0) next.price = 'Giá thuê phải lớn hơn 0.';
-    if (formData.area <= 0) next.area = 'Diện tích phải lớn hơn 0.';
-    if (formData.maxOccupants < 1) next.maxOccupants = 'Số người tối đa phải từ 1 trở lên.';
-    if (!formData.address.trim()) next.address = 'Vui lòng nhập địa chỉ cụ thể.';
-    if (!formData.province.trim()) next.province = 'Vui lòng nhập tỉnh hoặc thành phố.';
-    setErrors(next);
-    setSubmitError('');
-    if (Object.keys(next).length) return;
-
-    setLoading(true);
+    setSaving(true);
+    setError('');
     try {
-      if (isEditMode && id) {
-        await postService.updatePost(Number(id), formData);
-        toast.success('Cập nhật tin đăng thành công! Tin của bạn sẽ được Admin duyệt lại.');
-      } else {
-        await postService.createPost(formData);
-        toast.success('Đăng tin thành công! Tin của bạn đang chờ Admin duyệt.');
-      }
+      const data = { roomId, title: title.trim(), description: description.trim() };
+      if (id) await postService.updatePost(Number(id), { title: data.title, description: data.description });
+      else await postService.createPost(data);
+      toast.success(id ? 'Đã cập nhật tin đăng.' : 'Đã gửi tin chờ duyệt.');
       navigate('/landlord/posts');
-    } catch (error) {
-      setSubmitError(getApiErrorMessage(error, 'Có lỗi xảy ra khi lưu tin đăng'));
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) {
+      setError(getApiErrorMessage(e, 'Không lưu được tin đăng.'));
+    } finally { setSaving(false); }
   };
-
-  if (loadingData) {
-    return (
-      <div className="min-h-screen bg-slate-50 p-4 sm:p-6">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center py-20">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-            <p className="text-slate-600 mt-4">Đang tải thông tin tin đăng...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="post-editor-page bg-slate-50">
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-6 px-4 pt-5 text-center sm:px-0 sm:pt-0">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-600 rounded-lg shadow-sm mb-3">
-            <FiFileText className="text-white text-xl" />
-          </div>
-          <p className="text-xs uppercase text-blue-600 font-semibold mb-2">
-            {isEditMode ? 'CHỈNH SỬA TIN ĐĂNG' : 'ĐĂNG TIN MỚI'}
-          </p>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">
-            {isEditMode ? 'Cập nhật tin đăng' : 'Tạo tin đăng phòng trọ'}
-          </h1>
-          <p className="text-slate-600 max-w-2xl mx-auto">
-            {isEditMode
-              ? 'Cập nhật thông tin tin đăng. Tin sẽ được Admin duyệt lại sau khi chỉnh sửa.'
-              : 'Điền đầy đủ thông tin để tạo tin đăng. Tin của bạn sẽ được Admin duyệt trước khi hiển thị công khai.'}
-          </p>
-        </div>
-
-        {/* Progress Steps */}
-        <div className="mb-6 px-4 sm:px-0">
-          <div className="grid grid-cols-3 gap-2 max-w-lg mx-auto">
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 text-white font-semibold shadow-md">
-                1
-              </div>
-              <span className="text-xs sm:text-sm font-medium text-slate-700">Thông tin</span>
+      <div className="max-w-4xl mx-auto p-4 sm:p-6">
+        <h1 className="text-2xl font-bold text-slate-900 mb-6">{id ? 'Chỉnh sửa tin đăng' : 'Đăng tin cho thuê'}</h1>
+        {loading ? <p role="status">Đang tải phòng...</p> : (
+          <form onSubmit={submit} className="space-y-6">
+            <div>
+              <label htmlFor="post-room" className="block font-semibold mb-2">Phòng trọ</label>
+              <select id="post-room" value={roomId} disabled={!!id || saving} onChange={e => {
+                const value = Number(e.target.value);
+                setRoomId(value);
+                const room = rooms.find(r => r.id === value);
+                if (room) { setTitle(room.roomName); setDescription(room.description || ''); }
+              }} className="w-full border border-slate-300 rounded-lg p-3 bg-white" required>
+                <option value={0}>Chọn phòng còn trống</option>
+                {(id ? rooms.filter(r => r.id === roomId) : candidates).map(r =>
+                  <option key={r.id} value={r.id}>{r.roomName} · {r.price.toLocaleString('vi-VN')} đ/tháng</option>)}
+              </select>
+              {!id && !candidates.length && <p className="mt-3 text-slate-600">Chưa có phòng đủ điều kiện đăng tin.</p>}
+              <Link to="/landlord/rooms" className="inline-flex items-center gap-2 mt-3 text-blue-700"><FiHome />Quản lý phòng</Link>
             </div>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 text-white font-semibold shadow-md">
-                2
-              </div>
-              <span className="text-xs sm:text-sm font-medium text-slate-700">Địa chỉ</span>
+            {selected && <div className="border-y border-slate-200 py-4 space-y-3">
+              <h2 className="text-lg font-semibold">{selected.roomName}</h2>
+              <p className="text-slate-600">{[selected.address, selected.ward, selected.district, selected.province].filter(Boolean).join(', ')}</p>
+              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+                <div><dt>Giá thuê</dt><dd className="font-semibold">{selected.price.toLocaleString('vi-VN')} đ/tháng</dd></div>
+                <div><dt>Diện tích</dt><dd>{selected.area} m²</dd></div>
+                <div><dt>Số người tối đa</dt><dd>{selected.maxOccupants}</dd></div>
+              </dl>
+              {!!selected.imageUrls.length && <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {selected.imageUrls.map((url, i) => <img key={url + i} src={url} alt={selected.roomName} className="w-full aspect-video object-cover rounded-lg" />)}
+              </div>}
+            </div>}
+            <div>
+              <label htmlFor="post-title" className="block font-semibold mb-2">Tiêu đề tin đăng</label>
+              <input id="post-title" value={title} onChange={e => setTitle(e.target.value)} maxLength={300} required className="w-full border border-slate-300 rounded-lg p-3" />
             </div>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-emerald-500 text-white font-semibold shadow-md">
-                3
-              </div>
-              <span className="text-xs sm:text-sm font-medium text-slate-700">Hoàn tất</span>
+            <div>
+              <label htmlFor="post-description" className="block font-semibold mb-2">Nội dung tin đăng</label>
+              <textarea id="post-description" value={description} onChange={e => setDescription(e.target.value)} required rows={7} className="w-full border border-slate-300 rounded-lg p-3" />
             </div>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} noValidate className="space-y-6">
-          {/* Thông tin cơ bản */}
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 sm:p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-md">
-                <FiFileText className="text-white text-xl" />
-              </div>
-              <h2 className="text-2xl font-bold text-slate-800">Thông tin cơ bản</h2>
+            {error && <p role="alert" className="form-error">{error}</p>}
+            <div className="flex flex-wrap gap-3">
+              <button type="submit" disabled={saving || (!id && !candidates.length)} className="inline-flex items-center gap-2 bg-blue-600 text-white rounded-lg px-5 py-3 disabled:opacity-50"><FiCheck />{saving ? 'Đang lưu...' : id ? 'Lưu tin đăng' : 'Gửi duyệt'}</button>
+              <button type="button" onClick={() => navigate('/landlord/posts')} className="inline-flex items-center gap-2 border border-slate-300 rounded-lg px-5 py-3"><FiX />Hủy</button>
             </div>
-
-            <div className="space-y-5">
-              <div>
-                <label htmlFor="post-title" className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                  <FiFileText className="text-blue-500" />
-                  Tiêu đề tin đăng <span className="text-red-500">*</span>
-                </label>
-                <input id="post-title" aria-invalid={!!errors.title} aria-describedby={errors.title ? 'post-title-error' : undefined}
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => handleInputChange('title', e.target.value)}
-                  className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all text-slate-800 placeholder:text-slate-400"
-                  placeholder="VD: Phòng trọ cao cấp gần ĐH Bách Khoa, đầy đủ nội thất"
-                />
-                {errors.title && <p id="post-title-error" role="alert" className="form-error mt-2">{errors.title}</p>}
-              </div>
-
-              <div>
-                <label htmlFor="post-description" className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                  <FiFileText className="text-blue-500" />
-                  Mô tả chi tiết <span className="text-red-500">*</span>
-                </label>
-                <textarea id="post-description" aria-invalid={!!errors.description} aria-describedby={errors.description ? 'post-description-error' : undefined}
-                  value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                  className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all text-slate-800 placeholder:text-slate-400 resize-none"
-                  placeholder="Mô tả chi tiết về phòng trọ: vị trí, tiện ích, nội thất, môi trường xung quanh..."
-                  rows={6}
-                />
-                {errors.description && <p id="post-description-error" role="alert" className="form-error mt-2">{errors.description}</p>}
-                <p className="text-xs text-slate-500 mt-2">Mô tả càng chi tiết sẽ càng thu hút người thuê</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div>
-                  <label htmlFor="post-price" className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                    <FiDollarSign className="text-green-500" />
-                    Giá thuê (VNĐ/tháng) <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <input id="post-price" aria-invalid={!!errors.price} aria-describedby={errors.price ? 'post-price-error' : undefined}
-                      type="number"
-                      value={formData.price}
-                      onChange={(e) => handleInputChange('price', Number(e.target.value))}
-                      className="w-full pr-12 border-2 border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all text-slate-800"
-                      placeholder="3000000"
-                      min="0"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">đ</span>
-                  </div>
-                {errors.price && <p id="post-price-error" role="alert" className="form-error mt-2">{errors.price}</p>}
-                </div>
-
-                <div>
-                  <label htmlFor="post-area" className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                    <FiHome className="text-purple-500" />
-                    Diện tích (m²) <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <input id="post-area" aria-invalid={!!errors.area} aria-describedby={errors.area ? 'post-area-error' : undefined}
-                      type="number"
-                      value={formData.area}
-                      onChange={(e) => handleInputChange('area', Number(e.target.value))}
-                      className="w-full pr-12 border-2 border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all text-slate-800"
-                      placeholder="25"
-                      min="0"
-                      step="0.1"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">m²</span>
-                  </div>
-                {errors.area && <p id="post-area-error" role="alert" className="form-error mt-2">{errors.area}</p>}
-                </div>
-
-                <div>
-                  <label htmlFor="post-maxOccupants" className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                    <FiUsers className="text-orange-500" />
-                    Số người tối đa <span className="text-red-500">*</span>
-                  </label>
-                  <input id="post-maxOccupants" aria-invalid={!!errors.maxOccupants} aria-describedby={errors.maxOccupants ? 'post-maxOccupants-error' : undefined}
-                    type="number"
-                    value={formData.maxOccupants}
-                    onChange={(e) => handleInputChange('maxOccupants', Number(e.target.value))}
-                    className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 transition-all text-slate-800"
-                    placeholder="2"
-                    min="1"
-                  />
-                {errors.maxOccupants && <p id="post-maxOccupants-error" role="alert" className="form-error mt-2">{errors.maxOccupants}</p>}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Địa chỉ */}
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 sm:p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-md">
-                <FiMapPin className="text-white text-xl" />
-              </div>
-              <h2 className="text-2xl font-bold text-slate-800">Địa chỉ</h2>
-            </div>
-
-            <div className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div>
-                  <label htmlFor="post-province" className="block text-sm font-semibold text-slate-700 mb-2">
-                    Tỉnh/Thành phố <span className="text-red-500">*</span>
-                  </label>
-                  <input id="post-province" aria-invalid={!!errors.province} aria-describedby={errors.province ? 'post-province-error' : undefined}
-                    type="text"
-                    value={formData.province}
-                    onChange={(e) => handleInputChange('province', e.target.value)}
-                    onBlur={searchCompletedAddress}
-                    className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all text-slate-800"
-                    placeholder="Hồ Chí Minh"
-                  />
-                {errors.province && <p id="post-province-error" role="alert" className="form-error mt-2">{errors.province}</p>}
-                </div>
-
-                <div>
-                  <label htmlFor="post-district" className="block text-sm font-semibold text-slate-700 mb-2">
-                    Quận/Huyện
-                  </label>
-                  <input id="post-district" aria-invalid={!!errors.district} aria-describedby={errors.district ? 'post-district-error' : undefined}
-                    type="text"
-                    value={formData.district}
-                    onChange={(e) => handleInputChange('district', e.target.value)}
-                    onBlur={searchCompletedAddress}
-                    className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all text-slate-800"
-                    placeholder="Quận 1"
-                  />
-                {errors.district && <p id="post-district-error" role="alert" className="form-error mt-2">{errors.district}</p>}
-                </div>
-
-                <div>
-                  <label htmlFor="post-ward" className="block text-sm font-semibold text-slate-700 mb-2">
-                    Phường/Xã
-                  </label>
-                  <input id="post-ward" aria-invalid={!!errors.ward} aria-describedby={errors.ward ? 'post-ward-error' : undefined}
-                    type="text"
-                    value={formData.ward}
-                    onChange={(e) => handleInputChange('ward', e.target.value)}
-                    onBlur={searchCompletedAddress}
-                    className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all text-slate-800"
-                    placeholder="Phường Bến Nghé"
-                  />
-                {errors.ward && <p id="post-ward-error" role="alert" className="form-error mt-2">{errors.ward}</p>}
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="post-address" className="block text-sm font-semibold text-slate-700 mb-2">
-                  Địa chỉ cụ thể <span className="text-red-500">*</span>
-                </label>
-                <input id="post-address" aria-invalid={!!errors.address} aria-describedby={errors.address ? 'post-address-error' : undefined}
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
-                  onBlur={searchCompletedAddress}
-                  className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all text-slate-800"
-                  placeholder="Số nhà, tên đường..."
-                />
-                {errors.address && <p id="post-address-error" role="alert" className="form-error mt-2">{errors.address}</p>}
-              </div>
-            </div>
-          </div>
-
-          {/* Vị trí trên bản đồ */}
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 sm:p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-md">
-                <FiMapPin className="text-white text-xl" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-800">Vị trí trên bản đồ</h2>
-                <p className="text-sm text-slate-600">Chọn vị trí chính xác để người thuê dễ tìm kiếm</p>
-              </div>
-            </div>
-
-            <LeafletMapPicker
-              latitude={formData.latitude ?? undefined}
-              longitude={formData.longitude ?? undefined}
-              address={formData.address}
-              ward={formData.ward}
-              district={formData.district}
-              province={formData.province}
-              searchRequest={locationSearch}
-              onBusyChange={setLocationBusy}
-              onLocationChange={handleLocationChange}
-            />
-
-            {formData.latitude !== undefined && formData.longitude !== undefined && (
-              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
-                <FiCheckCircle className="inline mr-1" />
-                Tọa độ: {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
-              </div>
-            )}
-          </div>
-
-          {/* Tiện ích */}
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 sm:p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-md">
-                <FiCheckCircle className="text-white text-xl" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-800">Tiện ích</h2>
-                <p className="text-sm text-slate-600">Chọn các tiện ích mà phòng của bạn có</p>
-              </div>
-            </div>
-
-            {amenities.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {amenities.map((amenity) => (
-                  <label
-                    key={amenity.id}
-                    className={`
-                      group relative flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all duration-200
-                      ${formData.amenityIds.includes(amenity.id)
-                        ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-500 shadow-md scale-105'
-                        : 'bg-white border-slate-200 hover:border-green-300 hover:shadow-sm'
-                      }
-                    `}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={formData.amenityIds.includes(amenity.id)}
-                      onChange={() => handleAmenityToggle(amenity.id)}
-                      className="w-5 h-5 rounded border-2 border-slate-300 text-green-500 focus:ring-2 focus:ring-green-200"
-                    />
-                    <span className={`text-sm font-medium ${formData.amenityIds.includes(amenity.id) ? 'text-green-700' : 'text-slate-700'}`}>
-                      {amenity.name}
-                    </span>
-                    {formData.amenityIds.includes(amenity.id) && (
-                      <FiCheckCircle className="absolute top-2 right-2 text-green-500 text-sm" />
-                    )}
-                  </label>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-green-500 border-t-transparent"></div>
-                <p className="text-slate-500 text-sm mt-3">Đang tải danh sách tiện ích...</p>
-              </div>
-            )}
-          </div>
-
-          {/* Hình ảnh */}
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 sm:p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-gradient-to-br from-pink-500 to-pink-600 rounded-xl shadow-md">
-                <FiImage className="text-white text-xl" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-800">Hình ảnh</h2>
-                <p className="text-sm text-slate-600">Thêm hình ảnh để phòng của bạn nổi bật hơn</p>
-              </div>
-            </div>
-
-            <div className="space-y-5">
-              <div className="flex gap-3">
-                <div className="flex-1 relative">
-                  <input
-                    type="url"
-                    aria-label="URL ảnh phòng trọ"
-                    value={imageInput}
-                    onChange={(e) => setImageInput(e.target.value)}
-                    className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 pr-12 outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-100 transition-all text-slate-800"
-                    placeholder="Dán URL hình ảnh hoặc link từ Google Drive, Imgur..."
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddImage();
-                      }
-                    }}
-                  />
-                  <FiImage className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                </div>
-                <button
-                  type="button"
-                  onClick={handleAddImage}
-                  className="px-6 py-3.5 bg-gradient-to-r from-pink-500 to-pink-600 text-white rounded-xl hover:from-pink-600 hover:to-pink-700 flex items-center gap-2 font-medium shadow-md hover:shadow-lg transition-all"
-                >
-                  <FiPlus /> Thêm
-                </button>
-              </div>
-
-              {formData.imageUrls.length > 0 ? (
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm font-medium text-slate-700">
-                      <FiCheckCircle className="inline text-green-500 mr-1" />
-                      {formData.imageUrls.length} ảnh đã thêm
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {formData.imageUrls.map((url, index) => (
-                      <div key={index} className="relative group">
-                        <div className="relative overflow-hidden rounded-xl border-2 border-slate-200 shadow-md hover:shadow-xl transition-all aspect-video">
-                          <img
-                            src={url}
-                            alt={`Ảnh ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="absolute bottom-2 left-2 text-white text-xs font-medium">
-                              Ảnh {index + 1}
-                            </div>
-                          </div>
-                          {index === 0 && (
-                            <div className="absolute top-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow">
-                              Ảnh đại diện
-                            </div>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveImage(index)}
-                          className="absolute -top-2 -right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:bg-red-600 hover:scale-110"
-                        >
-                          <FiX size={16} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="border-2 border-dashed border-slate-300 rounded-xl p-12 text-center bg-slate-50">
-                  <FiImage className="mx-auto text-5xl text-slate-400 mb-3" />
-                  <p className="text-slate-600 font-medium mb-1">Chưa có hình ảnh nào</p>
-                  <p className="text-slate-500 text-sm">
-                    Hãy thêm ít nhất 1 ảnh để thu hút người thuê
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {submitError && <p role="alert" className="form-error">{submitError}</p>}
-          {/* Submit buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 pt-4">
-            <button
-              type="submit"
-              disabled={loading || locationBusy}
-              className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3 group"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                  <span>{isEditMode ? 'Đang cập nhật...' : 'Đang đăng tin...'}</span>
-                </>
-              ) : (
-                <>
-                  <FiCheckCircle className="group-hover:scale-110 transition-transform" />
-                  <span>{isEditMode ? 'Cập nhật tin đăng' : 'Đăng tin ngay'}</span>
-                </>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/landlord/posts')}
-              className="px-8 py-4 border-2 border-slate-300 rounded-xl hover:bg-slate-50 hover:border-slate-400 font-semibold text-slate-700 transition-all flex items-center justify-center gap-2"
-            >
-              <FiX />
-              <span>Hủy</span>
-            </button>
-          </div>
-
-          {/* Helper Alert */}
-          <div className="mt-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg flex items-start gap-3">
-            <FiAlertCircle className="text-blue-500 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-blue-800">
-              <p className="font-semibold mb-1">Lưu ý quan trọng:</p>
-              <ul className="list-disc list-inside space-y-1 text-blue-700">
-                <li>Tin đăng sẽ được Admin duyệt trước khi hiển thị công khai</li>
-                <li>Vui lòng điền đầy đủ và chính xác thông tin để tăng tỷ lệ duyệt</li>
-                <li>Ảnh đầu tiên sẽ là ảnh đại diện của tin đăng</li>
-              </ul>
-            </div>
-          </div>
-        </form>
+          </form>
+        )}
       </div>
     </div>
   );
-};
-
-export default CreatePostPage;
+}

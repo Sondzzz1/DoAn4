@@ -22,8 +22,8 @@ public sealed class RentalLifecycleHostedService : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            var enabled = _configuration.GetValue<bool>("RentalLifecycle:Enabled");
-            var intervalMinutes = Math.Clamp(_configuration.GetValue<int?>("RentalLifecycle:IntervalMinutes") ?? 60, 5, 24 * 60);
+            var enabled = _configuration.GetValue<bool?>("RentalLifecycle:Enabled") ?? true;
+            var intervalMinutes = Math.Clamp(_configuration.GetValue<int?>("RentalLifecycle:IntervalMinutes") ?? 5, 1, 24 * 60);
 
             if (enabled)
             {
@@ -35,6 +35,8 @@ public sealed class RentalLifecycleHostedService : BackgroundService
                     var pendingSignatureExpiryHours = _configuration.GetValue<int?>("RentalLifecycle:PendingSignatureExpiryHours") ?? 72;
                     await depositService.ReconcileExpiredDepositsAsync(stoppingToken);
                     await contractService.ReconcileContractLifecycleAsync(pendingSignatureExpiryHours, stoppingToken);
+                    await scope.ServiceProvider.GetRequiredService<IPaymentService>().ReconcilePendingPaymentsAsync(stoppingToken);
+                    await scope.ServiceProvider.GetRequiredService<IMonthlyBillService>().ReconcileOverdueAsync();
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
