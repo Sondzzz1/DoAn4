@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FiChevronLeft, FiChevronRight, FiHeart, FiShare2, FiX } from 'react-icons/fi';
 import './RoomImageGallery.css';
 
@@ -19,9 +20,31 @@ const RoomImageGallery: React.FC<RoomImageGalleryProps> = ({
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const lightboxRef = useRef<HTMLDivElement>(null);
 
   const hasImages = images && images.length > 0;
   const displayImages = hasImages ? images : ['/room-placeholder.svg'];
+  useEffect(() => {
+    if (!isLightboxOpen) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const panel = lightboxRef.current;
+    panel?.querySelector<HTMLButtonElement>('button')?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsLightboxOpen(false);
+      if (event.key === 'ArrowRight') setCurrentIndex(index => (index + 1) % displayImages.length);
+      if (event.key === 'ArrowLeft') setCurrentIndex(index => (index + displayImages.length - 1) % displayImages.length);
+      if (event.key === 'Tab' && panel) {
+        const buttons = [...panel.querySelectorAll<HTMLButtonElement>('button')];
+        const first = buttons[0]; const last = buttons[buttons.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', onKey); previousFocus?.focus(); };
+  }, [isLightboxOpen, displayImages.length]);
 
   const handlePrevious = (e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -53,6 +76,7 @@ const RoomImageGallery: React.FC<RoomImageGalleryProps> = ({
             onClick={openLightbox}
             loading="lazy"
           />
+          <button type="button" className="absolute inset-0" aria-label="Mở ảnh phòng" onClick={openLightbox} />
 
           {/* Top Right Actions */}
           <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
@@ -119,6 +143,8 @@ const RoomImageGallery: React.FC<RoomImageGalleryProps> = ({
               {displayImages.map((img, index) => (
                 <button
                   key={index}
+                  aria-label={`Xem ảnh ${index + 1}`}
+                  aria-pressed={currentIndex === index}
                   onClick={() => setCurrentIndex(index)}
                   className={`relative flex-shrink-0 w-20 h-16 rounded-lg overflow-hidden border-2 transition-all ${
                     index === currentIndex
@@ -140,8 +166,12 @@ const RoomImageGallery: React.FC<RoomImageGalleryProps> = ({
       </div>
 
       {/* Lightbox Modal */}
-      {isLightboxOpen && (
+      {isLightboxOpen && createPortal(
         <div
+          ref={lightboxRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Ảnh phòng"
           className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4"
           onClick={closeLightbox}
         >
@@ -163,7 +193,7 @@ const RoomImageGallery: React.FC<RoomImageGalleryProps> = ({
           <img
             src={displayImages[currentIndex]}
             alt={`${title} - Hình ${currentIndex + 1}`}
-            className="max-w-full max-h-full object-contain"
+            className="max-w-full max-h-[90dvh] object-contain"
             onClick={(e) => e.stopPropagation()}
           />
 
@@ -186,7 +216,7 @@ const RoomImageGallery: React.FC<RoomImageGalleryProps> = ({
               </button>
             </>
           )}
-        </div>
+        </div>, document.body
       )}
     </>
   );

@@ -1,0 +1,3138 @@
+{
+  "fixtureMode": true,
+  "widths": [
+    1440,
+    1200,
+    1024,
+    768,
+    375
+  ],
+  "results": [
+    {
+      "role": "Public",
+      "route": "/",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Phòng trọ cho thuê",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/",
+      "width": 1440,
+      "imageCheck": [
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=1920&h=700&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        }
+      ]
+    },
+    {
+      "role": "Public",
+      "route": "/",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Phòng trọ cho thuê",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Phòng trọ cho thuê",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Phòng trọ cho thuê",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Phòng trọ cho thuê",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/",
+      "width": 375,
+      "imageCheck": [
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=1920&h=700&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        }
+      ]
+    },
+    {
+      "role": "Public",
+      "route": "/rooms",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Cho Thuê Phòng Trọ - Tin Giá Rẻ, Chính Chủ, Tiện Nghi",
+      "overflows": [],
+      "utilityPadding": [
+        "0px",
+        "0px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/rooms",
+      "width": 1440,
+      "imageCheck": [
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        }
+      ]
+    },
+    {
+      "role": "Public",
+      "route": "/rooms",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Cho Thuê Phòng Trọ - Tin Giá Rẻ, Chính Chủ, Tiện Nghi",
+      "overflows": [],
+      "utilityPadding": [
+        "0px",
+        "0px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/rooms",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Cho Thuê Phòng Trọ - Tin Giá Rẻ, Chính Chủ, Tiện Nghi",
+      "overflows": [],
+      "utilityPadding": [
+        "0px",
+        "0px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/rooms",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Cho Thuê Phòng Trọ - Tin Giá Rẻ, Chính Chủ, Tiện Nghi",
+      "overflows": [],
+      "utilityPadding": [
+        "0px",
+        "0px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/rooms",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Cho Thuê Phòng Trọ - Tin Giá Rẻ, Chính Chủ, Tiện Nghi",
+      "overflows": [],
+      "utilityPadding": [
+        "0px",
+        "0px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/rooms",
+      "width": 375,
+      "imageCheck": [
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        }
+      ]
+    },
+    {
+      "role": "Public",
+      "route": "/rooms/1",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Nhà trọ Bích Tùng - phòng có ban công, đầy đủ tiện nghi",
+      "overflows": [],
+      "utilityPadding": [
+        "24px",
+        "24px",
+        "32px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/rooms/1",
+      "width": 1440,
+      "imageCheck": [
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        }
+      ]
+    },
+    {
+      "role": "Public",
+      "route": "/rooms/1",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Nhà trọ Bích Tùng - phòng có ban công, đầy đủ tiện nghi",
+      "overflows": [],
+      "utilityPadding": [
+        "24px",
+        "24px",
+        "32px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/rooms/1",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Nhà trọ Bích Tùng - phòng có ban công, đầy đủ tiện nghi",
+      "overflows": [],
+      "utilityPadding": [
+        "24px",
+        "24px",
+        "32px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/rooms/1",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Nhà trọ Bích Tùng - phòng có ban công, đầy đủ tiện nghi",
+      "overflows": [],
+      "utilityPadding": [
+        "24px",
+        "24px",
+        "32px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/rooms/1",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Nhà trọ Bích Tùng - phòng có ban công, đầy đủ tiện nghi",
+      "overflows": [],
+      "utilityPadding": [
+        "24px",
+        "24px",
+        "24px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/rooms/1",
+      "width": 375,
+      "imageCheck": [
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        }
+      ]
+    },
+    {
+      "role": "Public",
+      "route": "/blog",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Blog Tìm Nhà Trọ",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/blog",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Blog Tìm Nhà Trọ",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/blog",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Blog Tìm Nhà Trọ",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/blog",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Blog Tìm Nhà Trọ",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/blog",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Blog Tìm Nhà Trọ",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/blog/1",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Những điều cần kiểm tra khi xem phòng trọ",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/blog/1",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Những điều cần kiểm tra khi xem phòng trọ",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/blog/1",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Những điều cần kiểm tra khi xem phòng trọ",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/blog/1",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Những điều cần kiểm tra khi xem phòng trọ",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/blog/1",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Những điều cần kiểm tra khi xem phòng trọ",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/payment/result",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Thanh toán chưa thành công",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/payment/result",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Thanh toán chưa thành công",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/payment/result",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Thanh toán chưa thành công",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/payment/result",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Thanh toán chưa thành công",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/payment/result",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Thanh toán chưa thành công",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/login",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Chào mừng trở lại",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/login",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Chào mừng trở lại",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/login",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Chào mừng trở lại",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/login",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Chào mừng trở lại",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/login",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Chào mừng trở lại",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/register",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Tạo tài khoản",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/register",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Tạo tài khoản",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/register",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Tạo tài khoản",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/register",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Tạo tài khoản",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/register",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Tạo tài khoản",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/missing-page",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "404 - Không tìm thấy trang",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/missing-page",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "404 - Không tìm thấy trang",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/missing-page",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "404 - Không tìm thấy trang",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/missing-page",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "404 - Không tìm thấy trang",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "route": "/missing-page",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "404 - Không tìm thấy trang",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Public",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "expectedSignalRErrors": 0,
+      "expectedOfflineTileErrors": 0,
+      "networkFailures": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/profile",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Hồ sơ cá nhân",
+      "overflows": [],
+      "utilityPadding": [
+        "24px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/profile",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Hồ sơ cá nhân",
+      "overflows": [],
+      "utilityPadding": [
+        "24px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/profile",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Hồ sơ cá nhân",
+      "overflows": [],
+      "utilityPadding": [
+        "24px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/profile",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Hồ sơ cá nhân",
+      "overflows": [],
+      "utilityPadding": [
+        "24px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/profile",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Hồ sơ cá nhân",
+      "overflows": [],
+      "utilityPadding": [
+        "16px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/favorites",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Phòng trọ đã lưu",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/favorites",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Phòng trọ đã lưu",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/favorites",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Phòng trọ đã lưu",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/favorites",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Phòng trọ đã lưu",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/favorites",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Phòng trọ đã lưu",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/appointments",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Lịch hẹn của tôi",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/appointments",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Lịch hẹn của tôi",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/appointments",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Lịch hẹn của tôi",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/appointments",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Lịch hẹn của tôi",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/appointments",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Lịch hẹn của tôi",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/rentals",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Hợp Đồng & Hóa Đơn Thuê Phòng",
+      "overflows": [],
+      "utilityPadding": [
+        "24px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/rentals",
+      "width": 1440,
+      "imageCheck": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/rentals",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Hợp Đồng & Hóa Đơn Thuê Phòng",
+      "overflows": [],
+      "utilityPadding": [
+        "24px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/rentals",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Hợp Đồng & Hóa Đơn Thuê Phòng",
+      "overflows": [],
+      "utilityPadding": [
+        "24px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/rentals",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Hợp Đồng & Hóa Đơn Thuê Phòng",
+      "overflows": [],
+      "utilityPadding": [
+        "24px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/rentals",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Hợp Đồng & Hóa Đơn Thuê Phòng",
+      "overflows": [],
+      "utilityPadding": [
+        "16px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Tenant",
+      "route": "/tenant/rentals",
+      "width": 375,
+      "imageCheck": []
+    },
+    {
+      "role": "Tenant",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "expectedSignalRErrors": 210,
+      "expectedOfflineTileErrors": 0,
+      "networkFailures": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/dashboard",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Chào Anh!",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/dashboard",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Chào Anh!",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/dashboard",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Chào Anh!",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/dashboard",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Chào Anh!",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/dashboard",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Chào Anh!",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/posts",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Tin đăng của tôi",
+      "overflows": [],
+      "utilityPadding": [
+        "24px",
+        "24px",
+        "24px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/posts",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Tin đăng của tôi",
+      "overflows": [],
+      "utilityPadding": [
+        "24px",
+        "24px",
+        "24px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/posts",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Tin đăng của tôi",
+      "overflows": [],
+      "utilityPadding": [
+        "24px",
+        "24px",
+        "24px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/posts",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Tin đăng của tôi",
+      "overflows": [],
+      "utilityPadding": [
+        "24px",
+        "24px",
+        "24px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/posts",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Tin đăng của tôi",
+      "overflows": [],
+      "utilityPadding": [
+        "24px",
+        "24px",
+        "24px"
+      ],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/posts/create",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Tạo tin đăng phòng trọ",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/posts/create",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Tạo tin đăng phòng trọ",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/posts/create",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Tạo tin đăng phòng trọ",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/posts/create",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Tạo tin đăng phòng trọ",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/posts/create",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Tạo tin đăng phòng trọ",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/posts/1/edit",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Cập nhật tin đăng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/posts/1/edit",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Cập nhật tin đăng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/posts/1/edit",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Cập nhật tin đăng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/posts/1/edit",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Cập nhật tin đăng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/posts/1/edit",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Cập nhật tin đăng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/appointments",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Lịch xem phòng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/appointments",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Lịch xem phòng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/appointments",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Lịch xem phòng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/appointments",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Lịch xem phòng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/appointments",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Lịch xem phòng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/rooms",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Phòng trọ của tôi",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/rooms",
+      "width": 1440,
+      "imageCheck": [
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        }
+      ]
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/rooms",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Phòng trọ của tôi",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/rooms",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Phòng trọ của tôi",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/rooms",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Phòng trọ của tôi",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/rooms",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Phòng trọ của tôi",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/rooms",
+      "width": 375,
+      "imageCheck": [
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        },
+        {
+          "src": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?w=800&fit=crop",
+          "loaded": true
+        }
+      ]
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/contracts?tab=requests",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Yêu Cầu Thuê & Đặt Cọc",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/contracts?tab=requests",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Yêu Cầu Thuê & Đặt Cọc",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/contracts?tab=requests",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Yêu Cầu Thuê & Đặt Cọc",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/contracts?tab=requests",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Yêu Cầu Thuê & Đặt Cọc",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/contracts?tab=requests",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Yêu Cầu Thuê & Đặt Cọc",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/contracts?tab=contracts",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Quản Lý Hợp Đồng & Chỉ Số Điện Nước",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/contracts?tab=contracts",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Quản Lý Hợp Đồng & Chỉ Số Điện Nước",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/contracts?tab=contracts",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Quản Lý Hợp Đồng & Chỉ Số Điện Nước",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/contracts?tab=contracts",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Quản Lý Hợp Đồng & Chỉ Số Điện Nước",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/contracts?tab=contracts",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Quản Lý Hợp Đồng & Chỉ Số Điện Nước",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/contracts?tab=bills",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Quản Lý Hợp Đồng & Chỉ Số Điện Nước",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/contracts?tab=bills",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Quản Lý Hợp Đồng & Chỉ Số Điện Nước",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/contracts?tab=bills",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Quản Lý Hợp Đồng & Chỉ Số Điện Nước",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/contracts?tab=bills",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Quản Lý Hợp Đồng & Chỉ Số Điện Nước",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "route": "/landlord/contracts?tab=bills",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Quản Lý Hợp Đồng & Chỉ Số Điện Nước",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Landlord",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "expectedSignalRErrors": 390,
+      "expectedOfflineTileErrors": 142,
+      "networkFailures": [
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6510/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6510/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6509/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6511/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6511/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6509/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6508/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6512/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6508/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6512/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6510/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6509/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6511/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6508/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6512/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6510/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6510/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6509/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6511/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6509/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6511/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6511/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6510/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6509/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6508/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6512/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6508/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6512/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6508/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6512/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6510/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6511/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6509/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6510/3607.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6509/3608.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6511/3608.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6510/3609.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6509/3607.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6511/3609.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6508/3608.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6512/3608.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6508/3607.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6512/3607.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6508/3609.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6512/3609.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6510/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6510/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6509/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6511/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6510/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6509/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6511/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6509/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6511/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6508/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6512/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6508/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6512/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6508/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6512/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6510/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6510/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6509/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6511/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6509/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6511/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6511/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6510/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6509/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6508/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6512/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6508/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6512/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6508/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6512/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6510/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6510/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6509/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6511/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6509/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6511/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6511/3608.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6512/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6510/3609.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6509/3607.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6508/3608.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6508/3607.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6512/3607.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6508/3609.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6512/3609.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6510/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6510/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6509/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6511/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6511/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6509/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6511/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6512/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6508/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6512/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6508/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6512/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6510/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6509/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6508/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6510/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6511/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6509/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6510/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6509/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6511/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6512/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6508/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6508/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6511/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6510/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6509/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6512/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6508/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6512/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6510/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6511/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6509/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6510/3607.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6509/3608.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6511/3608.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6510/3609.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6509/3607.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6511/3609.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6508/3608.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6512/3608.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6508/3607.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6512/3607.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6508/3609.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6512/3609.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6510/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6510/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6509/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6511/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6510/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6509/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6511/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6509/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6511/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6510/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6511/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6509/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6510/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6509/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6511/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6510/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6509/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6511/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6510/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6509/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6510/3607.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6509/3608.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6511/3608.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6510/3609.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6509/3607.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6511/3607.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6511/3609.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6510/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6511/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.org/13/6509/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6510/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6509/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6511/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6510/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.org/13/6509/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.org/13/6511/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6510/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6511/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile.openstreetmap.de/13/6509/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6510/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6509/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile.openstreetmap.de/13/6511/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6511/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6510/3609.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile.openstreetmap.de/13/6509/3607.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6510/3608.png",
+          "error": "net::ERR_FAILED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6510/3607.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6509/3608.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6511/3608.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6510/3609.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/13/6509/3607.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6511/3607.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://c.tile-cyclosm.openstreetmap.fr/cyclosm/13/6509/3609.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        },
+        {
+          "url": "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/13/6511/3609.png",
+          "error": "net::ERR_ABORTED",
+          "mapTile": true
+        }
+      ]
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/dashboard",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Chào Anh!",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/dashboard",
+      "width": 1440,
+      "imageCheck": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/dashboard",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Chào Anh!",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/dashboard",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Chào Anh!",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/dashboard",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Chào Anh!",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/dashboard",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Chào Anh!",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/dashboard",
+      "width": 375,
+      "imageCheck": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/users",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Người dùng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/users",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Người dùng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/users",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Người dùng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/users",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Người dùng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/users",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Người dùng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/posts",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Tin đăng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/posts",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Tin đăng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/posts",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Tin đăng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/posts",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Tin đăng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/posts",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Tin đăng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/posts/approval",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Duyệt tin đăng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/posts/approval",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Duyệt tin đăng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/posts/approval",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Duyệt tin đăng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/posts/approval",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Duyệt tin đăng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/posts/approval",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Duyệt tin đăng",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/rooms",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Phòng trọ",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/rooms",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Phòng trọ",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/rooms",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Phòng trọ",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/rooms",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Phòng trọ",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/rooms",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Phòng trọ",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/categories",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Danh mục",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/categories",
+      "width": 1440,
+      "imageCheck": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/categories",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Danh mục",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/categories",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Danh mục",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/categories",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Danh mục",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/categories",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Danh mục",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/categories",
+      "width": 375,
+      "imageCheck": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/amenities",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Tiện ích",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/amenities",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Tiện ích",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/amenities",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Tiện ích",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/amenities",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Tiện ích",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/amenities",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Tiện ích",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/reports",
+      "width": 1440,
+      "pageWidth": 1440,
+      "viewport": 1440,
+      "heading": "Báo cáo vi phạm",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/reports",
+      "width": 1200,
+      "pageWidth": 1200,
+      "viewport": 1200,
+      "heading": "Báo cáo vi phạm",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/reports",
+      "width": 1024,
+      "pageWidth": 1024,
+      "viewport": 1024,
+      "heading": "Báo cáo vi phạm",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/reports",
+      "width": 768,
+      "pageWidth": 768,
+      "viewport": 768,
+      "heading": "Báo cáo vi phạm",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "route": "/admin/reports",
+      "width": 375,
+      "pageWidth": 375,
+      "viewport": 375,
+      "heading": "Báo cáo vi phạm",
+      "overflows": [],
+      "utilityPadding": [],
+      "brokenImages": []
+    },
+    {
+      "role": "Admin",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "expectedSignalRErrors": 330,
+      "expectedOfflineTileErrors": 0,
+      "networkFailures": []
+    }
+  ],
+  "issues": [],
+  "interactions": [
+    {
+      "role": "Public",
+      "width": 1440,
+      "passed": true
+    },
+    {
+      "role": "Public",
+      "width": 1200,
+      "passed": true
+    },
+    {
+      "role": "Public",
+      "width": 1024,
+      "passed": true
+    },
+    {
+      "role": "Public",
+      "width": 768,
+      "passed": true
+    },
+    {
+      "role": "Public",
+      "width": 375,
+      "passed": true
+    },
+    {
+      "role": "Tenant",
+      "width": 1440,
+      "passed": true
+    },
+    {
+      "role": "Tenant",
+      "width": 1200,
+      "passed": true
+    },
+    {
+      "role": "Tenant",
+      "width": 1024,
+      "passed": true
+    },
+    {
+      "role": "Tenant",
+      "width": 768,
+      "passed": true
+    },
+    {
+      "role": "Tenant",
+      "width": 375,
+      "passed": true
+    },
+    {
+      "role": "Landlord",
+      "width": 1440,
+      "passed": true
+    },
+    {
+      "role": "Landlord",
+      "width": 1200,
+      "passed": true
+    },
+    {
+      "role": "Landlord",
+      "width": 1024,
+      "passed": true
+    },
+    {
+      "role": "Landlord",
+      "width": 768,
+      "passed": true
+    },
+    {
+      "role": "Landlord",
+      "width": 375,
+      "passed": true
+    },
+    {
+      "role": "Admin",
+      "width": 1440,
+      "passed": true
+    },
+    {
+      "role": "Admin",
+      "width": 1200,
+      "passed": true
+    },
+    {
+      "role": "Admin",
+      "width": 1024,
+      "passed": true
+    },
+    {
+      "role": "Admin",
+      "width": 768,
+      "passed": true
+    },
+    {
+      "role": "Admin",
+      "width": 375,
+      "passed": true
+    }
+  ]
+}

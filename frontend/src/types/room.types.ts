@@ -60,6 +60,8 @@ export interface CreateRoomRequest {
   phuong?: string | null;
   quan?: string | null;
   thanhPho?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   tienIchIds?: number[];
   danhSachAnh?: string[];
 }

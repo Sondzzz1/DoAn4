@@ -35,11 +35,11 @@ const LandlordContactCard: React.FC<LandlordContactCardProps> = ({
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#0084ff] to-cyan-400 flex items-center justify-center flex-shrink-0 text-white font-bold text-xl shadow-md shadow-blue-500/20">
             {post.landlordName ? post.landlordName.charAt(0).toUpperCase() : 'C'}
           </div>
-          <div>
+          <div className="min-w-0 break-words">
             <p className="text-base font-bold text-slate-900 mb-0.5">{post.landlordName || 'Chủ phòng trọ'}</p>
             <p className="text-xs text-slate-500 flex items-center gap-1">
               <FiUser className="text-[#0084ff]" />
-              Chủ trọ đã xác thực
+              Chủ phòng trọ
             </p>
           </div>
         </div>
@@ -49,6 +49,7 @@ const LandlordContactCard: React.FC<LandlordContactCardProps> = ({
           {/* Phone Button */}
           <button
             onClick={handleCallPhone}
+            disabled={!post.landlordPhone}
             className="w-full flex items-center justify-center gap-2 px-5 h-[46px] rounded-2xl bg-[#00a651] text-white text-sm font-bold hover:bg-[#008f45] transition-all shadow-md shadow-emerald-500/20 cursor-pointer border-none"
           >
             <FiPhone className="w-4 h-4" />

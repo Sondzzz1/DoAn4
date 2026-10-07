@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   FiFileText,
   FiZap,
@@ -30,12 +31,14 @@ import { exportService } from '../../services/exportService';
 import { formatPrice } from '../../utils/helpers';
 import './LandlordContractsPage.css';
 import StatusBadge, { StatusTone } from '../../components/common/StatusBadge';
+import Modal from '../../components/common/Modal';
+import PageState from '../../components/common/PageState';
 import { CONTRACT_STATUS, DEPOSIT_STATUS, MONTHLY_BILL_STATUS, RENTAL_REQUEST_STATUS } from '../../utils/constants';
 import { getApiErrorMessage } from '../../utils/apiError';
 
 const requestStatus = (status: number): { label: string; tone: StatusTone } => ({
   0: { label: 'Chờ duyệt', tone: 'pending' }, 1: { label: 'Đã duyệt', tone: 'success' }, 2: { label: 'Đã từ chối', tone: 'danger' },
-  3: { label: 'Người thuê đã hủy', tone: 'danger' }, 4: { label: 'Đã tạo hợp đồng', tone: 'info' },
+  3: { label: 'Người thuê đã hủy', tone: 'danger' }, 4: { label: 'Đã tạo hợp đồng', tone: 'info' }, 5: { label: 'Đã hết hạn cọc', tone: 'danger' },
 }[status] as { label: string; tone: StatusTone } || { label: 'Không xác định', tone: 'neutral' });
 
 const dateInputAfterDays = (days: number) => {
@@ -44,9 +47,24 @@ const dateInputAfterDays = (days: number) => {
   return date.toISOString().slice(0, 10);
 };
 
+const dateTimeInputAfterHours = (hours: number) => {
+  const date = new Date(Date.now() + hours * 60 * 60 * 1000);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 16);
+};
+
+type LandlordTab = 'bills' | 'contracts' | 'requests';
+
+const getSelectedTab = (tab: string | null): LandlordTab => (
+  tab === 'bills' || tab === 'contracts' || tab === 'requests' ? tab : 'requests'
+);
+
 const LandlordContractsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'bills' | 'contracts' | 'requests'>('bills');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = getSelectedTab(searchParams.get('tab'));
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [formErrors, setFormErrors] = useState<Partial<Record<'bill' | 'edit' | 'deposit' | 'contract', string>>>({});
 
   // Data states
   const [bills, setBills] = useState<MonthlyBillDto[]>([]);
@@ -81,6 +99,7 @@ const LandlordContractsPage: React.FC = () => {
 
   // Modal Edit Bill State
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [submittingEdit, setSubmittingEdit] = useState(false);
   const [editingBill, setEditingBill] = useState<MonthlyBillDto | null>(null);
   const [editOldElec, setEditOldElec] = useState<number>(0);
   const [editNewElec, setEditNewElec] = useState<number>(0);
@@ -100,9 +119,22 @@ const LandlordContractsPage: React.FC = () => {
   const [contractRent, setContractRent] = useState<number>(3000000);
   const [submittingContract, setSubmittingContract] = useState(false);
 
+  // Deposit setup state, used both for new approvals and legacy approved requests.
+  const [depositModalOpen, setDepositModalOpen] = useState(false);
+  const [depositAction, setDepositAction] = useState<'approve' | 'setup'>('approve');
+  const [depositRequest, setDepositRequest] = useState<RentalRequestDto | null>(null);
+  const [depositAmount, setDepositAmount] = useState(0);
+  const [depositDueAt, setDepositDueAt] = useState(() => dateTimeInputAfterHours(24));
+  const [submittingDeposit, setSubmittingDeposit] = useState(false);
+
+  const selectTab = (tab: LandlordTab) => {
+    setSearchParams({ tab });
+  };
+
   // Load all data
   async function loadData() {
     setLoading(true);
+    setLoadError('');
     try {
       const [billsRes, contractsRes, requestsRes, depositsRes] = await Promise.all([
         monthlyBillService.getMyBills(true),
@@ -116,7 +148,7 @@ const LandlordContractsPage: React.FC = () => {
       setRequests(requestsRes.data || []);
       setDeposits(depositsRes.data || []);
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Không thể tải dữ liệu.'));
+      setLoadError(getApiErrorMessage(error, 'Không thể tải dữ liệu.'));
     } finally {
       setLoading(false);
     }
@@ -155,6 +187,8 @@ const LandlordContractsPage: React.FC = () => {
   // Handle Create Bill
   const handleCreateBill = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormErrors(current => ({ ...current, bill: undefined }));
+    if (submittingBill) return;
     if (!selectedContractId) {
       toast.warning('Vui lòng chọn hợp đồng thuê.');
       return;
@@ -193,7 +227,7 @@ const LandlordContractsPage: React.FC = () => {
       resetBillForm();
       await loadData();
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Không thể tạo hóa đơn.'));
+      setFormErrors(current => ({ ...current, bill: getApiErrorMessage(error, 'Không thể tạo hóa đơn.') }));
     } finally {
       setSubmittingBill(false);
     }
@@ -226,8 +260,13 @@ const LandlordContractsPage: React.FC = () => {
 
   const handleUpdateBill = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingBill) return;
-
+    setFormErrors(current => ({ ...current, edit: undefined }));
+    if (!editingBill || submittingEdit) return;
+    if (editOldElec < 0 || editNewElec < editOldElec || editOldWater < 0 || editNewWater < editOldWater || editOtherFees < 0) {
+      toast.warning('Chỉ số mới phải bằng hoặc lớn hơn chỉ số cũ; số tiền và chỉ số không được âm.');
+      return;
+    }
+    setSubmittingEdit(true);
     try {
       await monthlyBillService.updateBill(editingBill.id, {
         soDienCu: editOldElec,
@@ -246,7 +285,9 @@ const LandlordContractsPage: React.FC = () => {
       setEditModalOpen(false);
       await loadData();
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Không thể cập nhật hóa đơn.'));
+      setFormErrors(current => ({ ...current, edit: getApiErrorMessage(error, 'Không thể cập nhật hóa đơn.') }));
+    } finally {
+      setSubmittingEdit(false);
     }
   };
 
@@ -276,14 +317,42 @@ const LandlordContractsPage: React.FC = () => {
     }
   };
 
-  // Handle Rental Request Approval / Rejection
-  const handleApproveRequest = async (requestId: number) => {
+  const openDepositModal = (request: RentalRequestDto, action: 'approve' | 'setup') => {
+    setDepositRequest(request);
+    setDepositAction(action);
+    setDepositAmount(request.giaThue || 0);
+    setDepositDueAt(dateTimeInputAfterHours(24));
+    setDepositModalOpen(true);
+  };
+
+  const handleDepositSetup = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (submittingDeposit) return;
+    setFormErrors(current => ({ ...current, deposit: undefined }));
+    if (!depositRequest || depositAmount <= 0 || !depositDueAt) {
+      toast.warning('Vui lòng nhập số tiền cọc và hạn thanh toán hợp lệ.');
+      return;
+    }
+
+    setSubmittingDeposit(true);
     try {
-      await rentalService.updateRentalRequestStatus(requestId, 1);
-      toast.success('Đã duyệt yêu cầu thuê phòng! Bạn có thể tạo hợp đồng ngay.');
+      const dueAt = new Date(depositDueAt).toISOString();
+      if (depositAction === 'approve') {
+        await rentalService.updateRentalRequestStatus(depositRequest.id, RENTAL_REQUEST_STATUS.APPROVED, undefined, {
+          soTienDatCoc: depositAmount,
+          hanThanhToanCoc: dueAt,
+        });
+        toast.success('Đã duyệt yêu cầu và tạo khoản cọc cho khách thuê.');
+      } else {
+        await rentalService.setupDeposit(depositRequest.id, { soTien: depositAmount, hanThanhToan: dueAt });
+        toast.success('Đã thiết lập khoản cọc cho khách thuê.');
+      }
+      setDepositModalOpen(false);
       await loadData();
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Không thể duyệt yêu cầu.'));
+      setFormErrors(current => ({ ...current, deposit: getApiErrorMessage(error, 'Không thể thiết lập khoản cọc.') }));
+    } finally {
+      setSubmittingDeposit(false);
     }
   };
 
@@ -308,12 +377,18 @@ const LandlordContractsPage: React.FC = () => {
   // Handle Create Contract from Request
   const handleOpenCreateContract = (req: RentalRequestDto) => {
     setSelectedRequestId(req.id);
-    setContractRent(3000000);
+    setContractRent(req.giaThue || 0);
     setContractModalOpen(true);
   };
 
   const handleCreateContract = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormErrors(current => ({ ...current, contract: undefined }));
+    if (submittingContract) return;
+    if (contractEndDate <= contractStartDate || contractRent <= 0) {
+      toast.warning('Ngày kết thúc phải sau ngày bắt đầu và tiền thuê phải lớn hơn 0.');
+      return;
+    }
     if (!selectedRequestId) return;
 
     setSubmittingContract(true);
@@ -329,7 +404,7 @@ const LandlordContractsPage: React.FC = () => {
       setContractModalOpen(false);
       await loadData();
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Không thể tạo hợp đồng.'));
+      setFormErrors(current => ({ ...current, contract: getApiErrorMessage(error, 'Không thể tạo hợp đồng.') }));
     } finally {
       setSubmittingContract(false);
     }
@@ -370,6 +445,13 @@ const LandlordContractsPage: React.FC = () => {
   const totalRevenuePending = bills
     .filter((b) => b.trangThai === 0)
     .reduce((acc, curr) => acc + curr.tongTien, 0);
+  const pendingRequestCount = requests.filter((request) => request.trangThai === RENTAL_REQUEST_STATUS.PENDING).length;
+  const pendingDepositCount = deposits.filter((deposit) => deposit.trangThai === DEPOSIT_STATUS.PENDING).length;
+  const paidDepositCount = deposits.filter((deposit) => deposit.trangThai === DEPOSIT_STATUS.PAID).length;
+  const confirmedDepositCount = deposits.filter((deposit) => deposit.trangThai === DEPOSIT_STATUS.CONFIRMED).length;
+  const isRequestTab = activeTab === 'requests';
+
+  if (loadError && !loading) return <PageState type="error" message={loadError} onRetry={loadData} />;
 
   return (
     <div className="landlord-contracts-page">
@@ -379,15 +461,17 @@ const LandlordContractsPage: React.FC = () => {
           <div className="contracts-header-content">
             <div className="contracts-header-info">
               <div className="contracts-header-badge">
-                <FiZap /> Quản lý PMS & Điện Nước
+                {isRequestTab ? <FiUsers /> : <FiZap />} {isRequestTab ? 'Quản lý khách thuê' : 'Quản lý PMS & Điện Nước'}
               </div>
-              <h1>Quản Lý Hợp Đồng & Chỉ Số Điện Nước</h1>
+              <h1>{isRequestTab ? 'Yêu Cầu Thuê & Đặt Cọc' : 'Quản Lý Hợp Đồng & Chỉ Số Điện Nước'}</h1>
               <p>
-                Tính toán tự động tiền điện, tiền nước, phụ phí và quản lý hợp đồng pháp lý cho chủ trọ.
+                {isRequestTab
+                  ? 'Duyệt yêu cầu thuê, theo dõi thanh toán cọc và tạo hợp đồng sau khi đã xác nhận tiền cọc.'
+                  : 'Tính toán tự động tiền điện, tiền nước, phụ phí và quản lý hợp đồng pháp lý cho chủ trọ.'}
               </p>
             </div>
 
-            <div className="contracts-header-actions">
+            {!isRequestTab && <div className="contracts-header-actions">
               <button
                 onClick={() => exportService.downloadRevenueExcel(filterYear, filterMonth === 'all' ? undefined : filterMonth)}
                 className="btn-success"
@@ -403,71 +487,41 @@ const LandlordContractsPage: React.FC = () => {
               >
                 <FiPlus /> Nhập Số Điện Nước / Tạo Hóa Đơn
               </button>
-            </div>
+            </div>}
           </div>
         </div>
 
         {/* KPI Stats Cards */}
         <div className="kpi-stats-grid">
-          <div className="kpi-card">
-            <div className="kpi-card-header">
-              <span className="kpi-card-label">Hợp đồng thuê</span>
-              <FiFileText className="kpi-card-icon blue" />
-            </div>
-            <div className="kpi-card-value">{contracts.length}</div>
-            <span className="kpi-card-subtitle">
-              {contracts.filter((c) => c.trangThai === 1).length} đang hiệu lực
-            </span>
-          </div>
-
-          <div className="kpi-card">
-            <div className="kpi-card-header">
-              <span className="kpi-card-label">Hóa đơn đã thu</span>
-              <FiCheckCircle className="kpi-card-icon emerald" />
-            </div>
-            <div className="kpi-card-value emerald">{formatPrice(totalRevenuePaid)}</div>
-            <span className="kpi-card-subtitle">
-              {bills.filter((b) => b.trangThai === 1).length} hóa đơn đã xong
-            </span>
-          </div>
-
-          <div className="kpi-card">
-            <div className="kpi-card-header">
-              <span className="kpi-card-label">Chờ thanh toán</span>
-              <FiClock className="kpi-card-icon amber" />
-            </div>
-            <div className="kpi-card-value amber">{formatPrice(totalRevenuePending)}</div>
-            <span className="kpi-card-subtitle">
-              {bills.filter((b) => b.trangThai === 0).length} hóa đơn chưa thu
-            </span>
-          </div>
-
-          <div className="kpi-card">
-            <div className="kpi-card-header">
-              <span className="kpi-card-label">Tổng hóa đơn</span>
-              <FiZap className="kpi-card-icon purple" />
-            </div>
-            <div className="kpi-card-value">{bills.length}</div>
-            <span className="kpi-card-subtitle">Toàn bộ các kỳ</span>
-          </div>
+          {isRequestTab ? <>
+            <div className="kpi-card"><div className="kpi-card-header"><span className="kpi-card-label">Yêu cầu chờ duyệt</span><FiUsers className="kpi-card-icon blue" /></div><div className="kpi-card-value">{pendingRequestCount}</div><span className="kpi-card-subtitle">Cần chủ trọ xử lý</span></div>
+            <div className="kpi-card"><div className="kpi-card-header"><span className="kpi-card-label">Cọc chờ thanh toán</span><FiClock className="kpi-card-icon amber" /></div><div className="kpi-card-value amber">{pendingDepositCount}</div><span className="kpi-card-subtitle">Khách chưa thanh toán</span></div>
+            <div className="kpi-card"><div className="kpi-card-header"><span className="kpi-card-label">Cọc chờ xác nhận</span><FiCheckCircle className="kpi-card-icon emerald" /></div><div className="kpi-card-value emerald">{paidDepositCount}</div><span className="kpi-card-subtitle">Cần xác nhận đã nhận tiền</span></div>
+            <div className="kpi-card"><div className="kpi-card-header"><span className="kpi-card-label">Cọc đã xác nhận</span><FiFileText className="kpi-card-icon purple" /></div><div className="kpi-card-value">{confirmedDepositCount}</div><span className="kpi-card-subtitle">Có thể tạo hợp đồng</span></div>
+          </> : <>
+            <div className="kpi-card"><div className="kpi-card-header"><span className="kpi-card-label">Hợp đồng thuê</span><FiFileText className="kpi-card-icon blue" /></div><div className="kpi-card-value">{contracts.length}</div><span className="kpi-card-subtitle">{contracts.filter((contract) => contract.trangThai === CONTRACT_STATUS.ACTIVE).length} đang hiệu lực</span></div>
+            <div className="kpi-card"><div className="kpi-card-header"><span className="kpi-card-label">Hóa đơn đã thu</span><FiCheckCircle className="kpi-card-icon emerald" /></div><div className="kpi-card-value emerald">{formatPrice(totalRevenuePaid)}</div><span className="kpi-card-subtitle">{bills.filter((bill) => bill.trangThai === MONTHLY_BILL_STATUS.PAID).length} hóa đơn đã xong</span></div>
+            <div className="kpi-card"><div className="kpi-card-header"><span className="kpi-card-label">Chờ thanh toán</span><FiClock className="kpi-card-icon amber" /></div><div className="kpi-card-value amber">{formatPrice(totalRevenuePending)}</div><span className="kpi-card-subtitle">{bills.filter((bill) => bill.trangThai === MONTHLY_BILL_STATUS.UNPAID).length} hóa đơn chưa thu</span></div>
+            <div className="kpi-card"><div className="kpi-card-header"><span className="kpi-card-label">Tổng hóa đơn</span><FiZap className="kpi-card-icon purple" /></div><div className="kpi-card-value">{bills.length}</div><span className="kpi-card-subtitle">Toàn bộ các kỳ</span></div>
+          </>}
         </div>
 
         {/* Tabs Switcher */}
         <div className="contracts-tabs">
           <button
-            onClick={() => setActiveTab('bills')}
+            onClick={() => selectTab('bills')}
             className={`tab-button ${activeTab === 'bills' ? 'active' : ''}`}
           >
             <FiZap /> Hóa Đơn Điện Nước & Tiền Phòng ({bills.length})
           </button>
           <button
-            onClick={() => setActiveTab('contracts')}
+            onClick={() => selectTab('contracts')}
             className={`tab-button ${activeTab === 'contracts' ? 'active' : ''}`}
           >
             <FiFileText /> Danh Sách Hợp Đồng ({contracts.length})
           </button>
           <button
-            onClick={() => setActiveTab('requests')}
+            onClick={() => selectTab('requests')}
             className={`tab-button ${activeTab === 'requests' ? 'active' : ''}`}
           >
             <FiUsers /> Yêu Cầu Thuê Phòng ({requests.length})
@@ -750,7 +804,8 @@ const LandlordContractsPage: React.FC = () => {
               {deposits.map(dep => {
                 const request = requests.find(r => r.id === dep.yeuCauThueId);
                 return <div key={dep.id} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                  <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-bold text-slate-900">{request?.tieuDeBaiDang || `Khoản cọc #${dep.id}`}</p><p className="mt-1 text-xl font-bold text-blue-600">{formatPrice(dep.soTien)}</p></div><StatusBadge label={dep.trangThai === 0 ? 'Chờ thanh toán' : dep.trangThai === 1 ? 'Đã thanh toán' : dep.trangThai === 2 ? 'Đã xác nhận' : 'Đã đóng'} tone={dep.trangThai === 2 ? 'success' : dep.trangThai === 1 ? 'info' : 'pending'} /></div>
+                  <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-bold text-slate-900">{request?.tieuDeBaiDang || `Khoản cọc #${dep.id}`}</p><p className="mt-1 text-xl font-bold text-blue-600">{formatPrice(dep.soTien)}</p></div><StatusBadge label={dep.trangThai === DEPOSIT_STATUS.PENDING ? 'Chờ thanh toán' : dep.trangThai === DEPOSIT_STATUS.PAID ? 'Đã thanh toán' : dep.trangThai === DEPOSIT_STATUS.CONFIRMED ? 'Đã xác nhận' : dep.trangThai === DEPOSIT_STATUS.EXPIRED ? 'Đã hết hạn' : 'Đã đóng'} tone={dep.trangThai === DEPOSIT_STATUS.CONFIRMED ? 'success' : dep.trangThai === DEPOSIT_STATUS.PAID ? 'info' : dep.trangThai === DEPOSIT_STATUS.EXPIRED ? 'danger' : 'pending'} /></div>
+                  {dep.hanThanhToan && dep.trangThai === DEPOSIT_STATUS.PENDING && <p className="mt-2 text-xs text-amber-700">Hạn thanh toán: {new Date(dep.hanThanhToan).toLocaleString('vi-VN')}</p>}
                   {dep.ngayThanhToan && <p className="mt-2 text-xs text-slate-500">Thanh toán: {new Date(dep.ngayThanhToan).toLocaleString('vi-VN')}</p>}
                   {dep.trangThai === DEPOSIT_STATUS.PAID && <button onClick={() => handleConfirmDeposit(dep.id)} className="mt-3 rounded-md bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700">Xác nhận đã nhận cọc</button>}
                 </div>;
@@ -801,7 +856,7 @@ const LandlordContractsPage: React.FC = () => {
                       <>
                         <button
                           type="button"
-                          onClick={() => handleApproveRequest(req.id)}
+                          onClick={() => openDepositModal(req, 'approve')}
                           className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm cursor-pointer transition-all border-none flex items-center gap-1.5"
                         >
                           <FiCheck /> Duyệt Yêu Cầu
@@ -825,6 +880,15 @@ const LandlordContractsPage: React.FC = () => {
                         <FiPlus /> Tạo Hợp Đồng Thuê
                       </button>
                     )}
+                    {req.trangThai === RENTAL_REQUEST_STATUS.APPROVED && !deposits.some(d => d.yeuCauThueId === req.id) && (
+                      <button
+                        type="button"
+                        onClick={() => openDepositModal(req, 'setup')}
+                        className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm cursor-pointer transition-all border-none flex items-center gap-1.5"
+                      >
+                        <FiPlus /> Thiết Lập Đặt Cọc
+                      </button>
+                    )}
                     {req.trangThai === RENTAL_REQUEST_STATUS.APPROVED && !deposits.some(d => d.yeuCauThueId === req.id && d.trangThai === DEPOSIT_STATUS.CONFIRMED) && <p className="text-xs font-medium text-amber-700">Chờ người thuê thanh toán và chủ trọ xác nhận cọc trước khi tạo hợp đồng.</p>}
                   </div>
                 </div>
@@ -834,34 +898,60 @@ const LandlordContractsPage: React.FC = () => {
         </div>
       )}
 
+      {depositModalOpen && depositRequest && (
+        <Modal isOpen={depositModalOpen} onClose={() => { if (!submittingDeposit) setDepositModalOpen(false); }} title={depositAction === 'approve' ? 'Duyệt yêu cầu và thiết lập cọc' : 'Thiết lập khoản đặt cọc'}>
+            <p className="mt-2 text-sm text-slate-600">
+              Khách thuê chỉ có thể giữ phòng khi thanh toán đúng số tiền trước hạn bạn đặt ra.
+            </p>
+            <form onSubmit={handleDepositSetup} className="mt-5 space-y-4">
+              <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+                <p className="font-semibold">{depositRequest.tieuDeBaiDang || `Yêu cầu #${depositRequest.id}`}</p>
+                <p className="mt-1">Khách thuê: {depositRequest.tenNguoiThue || `#${depositRequest.nguoiThueId}`}</p>
+              </div>
+              <label className="block text-sm font-semibold text-slate-700">
+                Số tiền đặt cọc (VNĐ)
+                <input
+                  type="number"
+                  min="1"
+                  value={depositAmount || ''}
+                  onChange={(event) => setDepositAmount(Number(event.target.value))}
+                  className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  required
+                />
+              </label>
+              <label className="block text-sm font-semibold text-slate-700">
+                Hạn thanh toán
+                <input
+                  type="datetime-local"
+                  value={depositDueAt}
+                  min={dateTimeInputAfterHours(1)}
+                  onChange={(event) => setDepositDueAt(event.target.value)}
+                  className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  required
+                />
+              </label>
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" disabled={submittingDeposit} onClick={() => setDepositModalOpen(false)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  Hủy
+                </button>
+                <button type="submit" disabled={submittingDeposit} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60">
+                  {submittingDeposit ? 'Đang lưu...' : depositAction === 'approve' ? 'Duyệt và tạo cọc' : 'Tạo khoản cọc'}
+                </button>
+              </div>
+            {formErrors.deposit && <p role="alert" className="form-error">{formErrors.deposit}</p>}
+            </form>
+        </Modal>
+      )}
+
       {/* MODAL 1: CREATE BILL & CALCULATE UTILITIES */}
       {billModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-              <div>
-                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                  <FiZap className="text-amber-500" /> Nhập Chỉ Số Điện, Nước & Tính Hóa Đơn Hàng Tháng
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Hệ thống tự động tính: (Số mới - Số cũ) × Đơn giá + Tiền phòng + Phụ phí = Tổng tiền.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setBillModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer border-none text-sm"
-              >
-                ✕
-              </button>
-            </div>
-
+        <Modal isOpen={billModalOpen} onClose={() => { if (!submittingBill) setBillModalOpen(false); }} title="Tạo hóa đơn hàng tháng" size="lg">
             <form onSubmit={handleCreateBill} className="space-y-4 text-xs">
               {/* Row 1: Contract & Month/Year */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-1">
-                  <label className="block font-bold text-slate-700 mb-1">Chọn Hợp Đồng *</label>
-                  <select
+                  <label htmlFor="field-selectedContractId" className="block font-bold text-slate-700 mb-1">Chọn Hợp Đồng *</label>
+                  <select id="field-selectedContractId"
                     value={selectedContractId}
                     onChange={(e) => selectBillContract(e.target.value ? Number(e.target.value) : '')}
                     required
@@ -877,8 +967,8 @@ const LandlordContractsPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Tháng *</label>
-                  <select
+                  <label htmlFor="field-billMonth" className="block font-bold text-slate-700 mb-1">Tháng *</label>
+                  <select id="field-billMonth"
                     value={billMonth}
                     onChange={(e) => setBillMonth(Number(e.target.value))}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:border-[#0084ff]"
@@ -892,8 +982,8 @@ const LandlordContractsPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Năm *</label>
-                  <input
+                  <label htmlFor="field-billYear" className="block font-bold text-slate-700 mb-1">Năm *</label>
+                  <input id="field-billYear"
                     type="number"
                     value={billYear}
                     onChange={(e) => setBillYear(Number(e.target.value))}
@@ -914,8 +1004,8 @@ const LandlordContractsPage: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Số điện cũ</label>
-                    <input
+                    <label htmlFor="field-oldElec" className="block text-[10px] font-semibold text-slate-600 mb-0.5">Số điện cũ</label>
+                    <input id="field-oldElec"
                       type="number"
                       step="any"
                       value={oldElec}
@@ -924,8 +1014,8 @@ const LandlordContractsPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Số điện mới</label>
-                    <input
+                    <label htmlFor="field-newElec" className="block text-[10px] font-semibold text-slate-600 mb-0.5">Số điện mới</label>
+                    <input id="field-newElec"
                       type="number"
                       step="any"
                       value={newElec}
@@ -934,8 +1024,8 @@ const LandlordContractsPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Đơn giá (VNĐ/kWh)</label>
-                    <input
+                    <label htmlFor="field-priceElec" className="block text-[10px] font-semibold text-slate-600 mb-0.5">Đơn giá (VNĐ/kWh)</label>
+                    <input id="field-priceElec"
                       type="number"
                       value={priceElec}
                       readOnly
@@ -957,8 +1047,8 @@ const LandlordContractsPage: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Số nước cũ</label>
-                    <input
+                    <label htmlFor="field-oldWater" className="block text-[10px] font-semibold text-slate-600 mb-0.5">Số nước cũ</label>
+                    <input id="field-oldWater"
                       type="number"
                       step="any"
                       value={oldWater}
@@ -967,8 +1057,8 @@ const LandlordContractsPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Số nước mới</label>
-                    <input
+                    <label htmlFor="field-newWater" className="block text-[10px] font-semibold text-slate-600 mb-0.5">Số nước mới</label>
+                    <input id="field-newWater"
                       type="number"
                       step="any"
                       value={newWater}
@@ -977,8 +1067,8 @@ const LandlordContractsPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Đơn giá (VNĐ/m³)</label>
-                    <input
+                    <label htmlFor="field-priceWater" className="block text-[10px] font-semibold text-slate-600 mb-0.5">Đơn giá (VNĐ/m³)</label>
+                    <input id="field-priceWater"
                       type="number"
                       value={priceWater}
                       readOnly
@@ -991,8 +1081,8 @@ const LandlordContractsPage: React.FC = () => {
               {/* ROOM PRICE & OTHER FEES */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Tiền Phòng (VNĐ) *</label>
-                  <input
+                  <label htmlFor="field-roomPrice" className="block font-bold text-slate-700 mb-1">Tiền Phòng (VNĐ) *</label>
+                  <input id="field-roomPrice"
                     type="number"
                     value={roomPrice}
                     readOnly
@@ -1002,8 +1092,8 @@ const LandlordContractsPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Phụ phí / Dịch vụ (VNĐ)</label>
-                  <input
+                  <label htmlFor="field-otherFees" className="block font-bold text-slate-700 mb-1">Phụ phí / Dịch vụ (VNĐ)</label>
+                  <input id="field-otherFees"
                     type="number"
                     value={otherFees}
                     onChange={(e) => setOtherFees(Number(e.target.value))}
@@ -1014,8 +1104,8 @@ const LandlordContractsPage: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Ghi chú phụ phí</label>
-                  <input
+                  <label htmlFor="field-otherFeesNote" className="block font-bold text-slate-700 mb-1">Ghi chú phụ phí</label>
+                  <input id="field-otherFeesNote"
                     type="text"
                     value={otherFeesNote}
                     onChange={(e) => setOtherFeesNote(e.target.value)}
@@ -1024,8 +1114,8 @@ const LandlordContractsPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Hạn đóng tiền</label>
-                  <input
+                  <label htmlFor="field-billDueDate" className="block font-bold text-slate-700 mb-1">Hạn đóng tiền</label>
+                  <input id="field-billDueDate"
                     type="date"
                     value={billDueDate}
                     onChange={(e) => setBillDueDate(e.target.value)}
@@ -1052,7 +1142,7 @@ const LandlordContractsPage: React.FC = () => {
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setBillModalOpen(false)}
+                  disabled={submittingBill} onClick={() => setBillModalOpen(false)}
                   className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold"
                 >
                   Hủy
@@ -1065,41 +1155,39 @@ const LandlordContractsPage: React.FC = () => {
                   {submittingBill ? 'Đang tạo...' : 'Lập & Gửi Hóa Đơn'}
                 </button>
               </div>
+            {formErrors.bill && <p role="alert" className="form-error">{formErrors.bill}</p>}
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* MODAL 2: EDIT BILL */}
       {editModalOpen && editingBill && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-black text-slate-900 mb-3 flex items-center gap-2">
-              <FiEdit2 /> Cập Nhật Chỉ Số Hóa Đơn #{editingBill.id} (Tháng {editingBill.thang}/{editingBill.nam})
-            </h3>
+        <Modal isOpen={editModalOpen} onClose={() => { if (!submittingEdit) setEditModalOpen(false); }} title={`Cập nhật hóa đơn #${editingBill.id} (${editingBill.thang}/${editingBill.nam})`} size="lg">
             <form onSubmit={handleUpdateBill} className="space-y-3 text-xs">
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-700 mb-1">Số điện cũ</label>
-                  <input
+                  <label htmlFor="field-editOldElec" className="block text-[10px] font-bold text-slate-700 mb-1">Số điện cũ</label>
+                  <input id="field-editOldElec"
                     type="number"
+                    min={0}
                     value={editOldElec}
                     onChange={(e) => setEditOldElec(Number(e.target.value))}
                     className="w-full px-3 py-1.5 rounded-xl border border-slate-200"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-700 mb-1">Số điện mới</label>
-                  <input
+                  <label htmlFor="field-editNewElec" className="block text-[10px] font-bold text-slate-700 mb-1">Số điện mới</label>
+                  <input id="field-editNewElec"
                     type="number"
+                    min={0}
                     value={editNewElec}
                     onChange={(e) => setEditNewElec(Number(e.target.value))}
                     className="w-full px-3 py-1.5 rounded-xl border border-slate-200 font-bold text-amber-600"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-700 mb-1">Đơn giá điện</label>
-                  <input
+                  <label htmlFor="field-editPriceElec" className="block text-[10px] font-bold text-slate-700 mb-1">Đơn giá điện</label>
+                  <input id="field-editPriceElec"
                     type="number"
                     value={editPriceElec}
                       readOnly
@@ -1110,26 +1198,28 @@ const LandlordContractsPage: React.FC = () => {
 
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-700 mb-1">Số nước cũ</label>
-                  <input
+                  <label htmlFor="field-editOldWater" className="block text-[10px] font-bold text-slate-700 mb-1">Số nước cũ</label>
+                  <input id="field-editOldWater"
                     type="number"
+                    min={0}
                     value={editOldWater}
                     onChange={(e) => setEditOldWater(Number(e.target.value))}
                     className="w-full px-3 py-1.5 rounded-xl border border-slate-200"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-700 mb-1">Số nước mới</label>
-                  <input
+                  <label htmlFor="field-editNewWater" className="block text-[10px] font-bold text-slate-700 mb-1">Số nước mới</label>
+                  <input id="field-editNewWater"
                     type="number"
+                    min={0}
                     value={editNewWater}
                     onChange={(e) => setEditNewWater(Number(e.target.value))}
                     className="w-full px-3 py-1.5 rounded-xl border border-slate-200 font-bold text-blue-600"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-700 mb-1">Đơn giá nước</label>
-                  <input
+                  <label htmlFor="field-editPriceWater" className="block text-[10px] font-bold text-slate-700 mb-1">Đơn giá nước</label>
+                  <input id="field-editPriceWater"
                     type="number"
                     value={editPriceWater}
                       readOnly
@@ -1140,8 +1230,8 @@ const LandlordContractsPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-700 mb-1">Tiền phòng (VNĐ)</label>
-                  <input
+                  <label htmlFor="field-editRoomPrice" className="block text-[10px] font-bold text-slate-700 mb-1">Tiền phòng (VNĐ)</label>
+                  <input id="field-editRoomPrice"
                     type="number"
                     value={editRoomPrice}
                     readOnly
@@ -1149,9 +1239,10 @@ const LandlordContractsPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-700 mb-1">Phụ phí (VNĐ)</label>
-                  <input
+                  <label htmlFor="field-editOtherFees" className="block text-[10px] font-bold text-slate-700 mb-1">Phụ phí (VNĐ)</label>
+                  <input id="field-editOtherFees"
                     type="number"
+                    min={0}
                     value={editOtherFees}
                     onChange={(e) => setEditOtherFees(Number(e.target.value))}
                     className="w-full px-3 py-1.5 rounded-xl border border-slate-200"
@@ -1167,34 +1258,31 @@ const LandlordContractsPage: React.FC = () => {
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setEditModalOpen(false)}
+                  disabled={submittingEdit} onClick={() => setEditModalOpen(false)}
                   className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
+                  disabled={submittingEdit}
                   className="px-5 py-2 rounded-xl font-bold bg-[#0084ff] hover:bg-[#0073e6] text-white shadow-md cursor-pointer"
                 >
-                  Lưu thay đổi
+                  {submittingEdit ? 'Đang lưu...' : 'Lưu thay đổi'}
                 </button>
               </div>
+            {formErrors.edit && <p role="alert" className="form-error">{formErrors.edit}</p>}
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* MODAL 3: CREATE CONTRACT */}
       {contractModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl animate-in fade-in zoom-in-95">
-            <h3 className="text-lg font-black text-slate-900 mb-3 flex items-center gap-2">
-              <FiFileText className="text-emerald-500" /> Tạo Hợp Đồng Thuê Phòng Mới
-            </h3>
+        <Modal isOpen={contractModalOpen} onClose={() => { if (!submittingContract) setContractModalOpen(false); }} title="Tạo hợp đồng thuê phòng">
             <form onSubmit={handleCreateContract} className="space-y-3 text-xs">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Ngày bắt đầu *</label>
-                <input
+                <label htmlFor="field-contractStartDate" className="block font-bold text-slate-700 mb-1">Ngày bắt đầu *</label>
+                <input id="field-contractStartDate"
                   type="date"
                   value={contractStartDate}
                   onChange={(e) => setContractStartDate(e.target.value)}
@@ -1203,20 +1291,22 @@ const LandlordContractsPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Ngày kết thúc *</label>
-                <input
+                <label htmlFor="field-contractEndDate" className="block font-bold text-slate-700 mb-1">Ngày kết thúc *</label>
+                <input id="field-contractEndDate"
                   type="date"
                   value={contractEndDate}
+                  min={contractStartDate}
                   onChange={(e) => setContractEndDate(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
                   required
                 />
               </div>
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Tiền thuê hàng tháng (VNĐ) *</label>
-                <input
+                <label htmlFor="field-contractRent" className="block font-bold text-slate-700 mb-1">Tiền thuê hàng tháng (VNĐ) *</label>
+                <input id="field-contractRent"
                   type="number"
                   value={contractRent}
+                  min="1"
                   onChange={(e) => setContractRent(Number(e.target.value))}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold"
                   required
@@ -1225,7 +1315,7 @@ const LandlordContractsPage: React.FC = () => {
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setContractModalOpen(false)}
+                  disabled={submittingContract} onClick={() => setContractModalOpen(false)}
                   className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold"
                 >
                   Hủy
@@ -1238,9 +1328,9 @@ const LandlordContractsPage: React.FC = () => {
                   {submittingContract ? 'Đang tạo...' : 'Tạo Hợp Đồng'}
                 </button>
               </div>
+            {formErrors.contract && <p role="alert" className="form-error">{formErrors.contract}</p>}
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
       </div>
     </div>

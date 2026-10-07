@@ -20,8 +20,12 @@ const LoginPage: React.FC = () => {
     remember: false,
   });
 
+  const [errors, setErrors] = useState<Partial<Record<keyof typeof formData, string>>>({});
+  const [submitError, setSubmitError] = useState('');
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
+    setErrors(current => ({ ...current, [name]: undefined }));
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -30,16 +34,13 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!formData.email.trim()) {
-      toast.error('Vui lòng nhập email hoặc số điện thoại.');
-      return;
-    }
-
-    if (!formData.password) {
-      toast.error('Vui lòng nhập mật khẩu.');
-      return;
-    }
+    if (loading) return;
+    setSubmitError('');
+    const next: typeof errors = {};
+    if (!formData.email.trim()) next.email = 'Vui lòng nhập email hoặc số điện thoại.';
+    if (!formData.password) next.password = 'Vui lòng nhập mật khẩu.';
+    setErrors(next);
+    if (Object.keys(next).length) return;
 
     try {
       setLoading(true);
@@ -64,7 +65,7 @@ const LoginPage: React.FC = () => {
         }
       }, 300);
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Email hoặc mật khẩu không chính xác.'));
+      setSubmitError(getApiErrorMessage(error, 'Email hoặc mật khẩu không chính xác.'));
     } finally {
       setLoading(false);
     }
@@ -94,7 +95,7 @@ const LoginPage: React.FC = () => {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} noValidate>
             {/* Email */}
             <div className="auth-field">
               <label htmlFor="email">Email hoặc số điện thoại</label>
@@ -102,6 +103,9 @@ const LoginPage: React.FC = () => {
                 <FiMail className="auth-input-icon" />
                 <input
                   id="email"
+                  required
+                  aria-invalid={!!errors.email}
+                  aria-describedby={errors.email ? 'auth-email-error' : undefined}
                   name="email"
                   type="text"
                   value={formData.email}
@@ -110,6 +114,7 @@ const LoginPage: React.FC = () => {
                   autoComplete="username"
                 />
               </div>
+            {errors.email && <p id="auth-email-error" role="alert" className="form-error mt-2">{errors.email}</p>}
             </div>
 
             {/* Password */}
@@ -123,6 +128,9 @@ const LoginPage: React.FC = () => {
                 <FiLock className="auth-input-icon" />
                 <input
                   id="password"
+                  required
+                  aria-invalid={!!errors.password}
+                  aria-describedby={errors.password ? 'auth-password-error' : undefined}
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
@@ -140,6 +148,7 @@ const LoginPage: React.FC = () => {
                   {showPassword ? <FiEyeOff /> : <FiEye />}
                 </button>
               </div>
+            {errors.password && <p id="auth-password-error" role="alert" className="form-error mt-2">{errors.password}</p>}
             </div>
 
             {/* Remember */}
@@ -153,6 +162,7 @@ const LoginPage: React.FC = () => {
               <span>Ghi nhớ đăng nhập</span>
             </label>
 
+            {submitError && <p role="alert" className="form-error mb-3">{submitError}</p>}
             {/* Submit */}
             <button
               type="submit"

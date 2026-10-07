@@ -235,6 +235,17 @@ public class PostBLL : IPostService
     public Task<PostDto> GetPublicPostByIdAsync(int postId) =>
         GetPostByIdInternalAsync(postId, incrementView: true, requirePublicVisibility: true);
 
+    public async Task<PostDto> GetMyPostByIdAsync(int accountId, int postId)
+    {
+        var landlord = await GetOrCreateLandlordProfileAsync(accountId);
+        var ownsPost = await _context.Posts.AnyAsync(p => p.Id == postId && p.LandlordId == landlord.Id);
+
+        if (!ownsPost)
+            throw BusinessRuleException.NotFound("Không tìm thấy tin đăng của bạn.");
+
+        return await GetPostByIdAsync(postId, incrementView: false);
+    }
+
     private async Task<PostDto> GetPostByIdInternalAsync(int postId, bool incrementView, bool requirePublicVisibility)
     {
         var post = await _context.Posts
@@ -528,6 +539,7 @@ public class PostBLL : IPostService
             post.Room.CategoryId = categoryId.Value;
         }
 
+        var oldLocation = (post.Room.Address, post.Room.Province, post.Room.District, post.Room.Ward);
         var address = updateDto.GetAddress();
         if (!string.IsNullOrWhiteSpace(address))
         {
@@ -540,20 +552,21 @@ public class PostBLL : IPostService
             post.Room.Province = province;
         }
 
-        var district = updateDto.GetDistrict();
-        if (!string.IsNullOrWhiteSpace(district))
+        var district = updateDto.District ?? updateDto.Quan;
+        if (district != null)
         {
             post.Room.District = district;
         }
 
-        var ward = updateDto.GetWard();
-        if (!string.IsNullOrWhiteSpace(ward))
+        var ward = updateDto.Ward ?? updateDto.Phuong;
+        if (ward != null)
         {
             post.Room.Ward = ward;
         }
 
-        if (updateDto.GetLatitude().HasValue) post.Room.Latitude = updateDto.GetLatitude();
-        if (updateDto.GetLongitude().HasValue) post.Room.Longitude = updateDto.GetLongitude();
+        var locationChanged = oldLocation != (post.Room.Address, post.Room.Province, post.Room.District, post.Room.Ward);
+        post.Room.Latitude = updateDto.GetLatitude() ?? (locationChanged ? null : post.Room.Latitude);
+        post.Room.Longitude = updateDto.GetLongitude() ?? (locationChanged ? null : post.Room.Longitude);
 
         if (updateDto.ElectricityPrice.HasValue) post.Room.ElectricityPrice = updateDto.ElectricityPrice;
         if (updateDto.WaterPrice.HasValue) post.Room.WaterPrice = updateDto.WaterPrice;

@@ -25,6 +25,14 @@ export const postService = {
   },
 
   /**
+   * Lấy chi tiết tin của chủ trọ hiện tại, bao gồm cả tin chưa công khai.
+   */
+  getMyPostById: async (id: number): Promise<ApiResponse<Post>> => {
+    const response = await api.get<ApiResponse<Post>>(`/bai-dang/cua-toi/${id}`);
+    return response.data;
+  },
+
+  /**
    * Lấy chi tiết tin đăng
    */
   getPostById: async (id: number): Promise<ApiResponse<Post>> => {

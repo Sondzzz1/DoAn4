@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { ROUTES } from '../../utils/constants';
@@ -9,6 +9,16 @@ const Header: React.FC = () => {
   const { user, isAuthenticated, isLandlord, isTenant, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const closeOutside = (event: MouseEvent) => { if (!accountRef.current?.contains(event.target as Node)) setAccountMenuOpen(false); };
+    const closeEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setAccountMenuOpen(false); setMobileMenuOpen(false); } };
+    document.addEventListener('mousedown', closeOutside);
+    document.addEventListener('keydown', closeEscape);
+    return () => { document.removeEventListener('mousedown', closeOutside); document.removeEventListener('keydown', closeEscape); };
+  }, []);
 
   const handleLogout = () => {
     setMobileMenuOpen(false);
@@ -45,6 +55,8 @@ const Header: React.FC = () => {
           <Link to="/blog">Blog</Link>
         </nav>
 
+        {isAuthenticated && <div className="header-notification"><NotificationBell /></div>}
+
         {/* Actions */}
         <div className="header-actions">
           {isAuthenticated ? (
@@ -56,24 +68,22 @@ const Header: React.FC = () => {
                 </Link>
               )}
 
-              <Link to={isLandlord ? ROUTES.LANDLORD_CREATE_POST : '#'} className="header-action">
+              {isLandlord && <Link to={ROUTES.LANDLORD_CREATE_POST} className="header-action">
                 Đăng tin
-              </Link>
+              </Link>}
 
-              <NotificationBell />
-
-              <div className="relative group">
-                <button className="flex items-center gap-2 cursor-pointer bg-transparent border-none">
+              <div className="relative" ref={accountRef}>
+                <button type="button" aria-expanded={accountMenuOpen} aria-controls="account-menu" onClick={() => setAccountMenuOpen(open => !open)} className="header-account-button flex items-center gap-2 cursor-pointer bg-transparent border-none">
                   <div className="w-8 h-8 rounded-full bg-[#0084ff] text-white flex items-center justify-center font-bold text-sm">
                     {user?.fullName?.charAt(0).toUpperCase() || 'U'}
                   </div>
-                  <span className="text-[14px] font-semibold text-gray-700">
+                  <span className="header-account-name text-[14px] font-semibold text-gray-700">
                     {user?.fullName}
                   </span>
                   <FiChevronDown size={15} />
                 </button>
 
-                <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-xl py-2 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all z-50">
+                <div id="account-menu" onClick={() => setAccountMenuOpen(false)} className={`absolute right-0 top-full mt-2 w-56 bg-white border border-gray-100 rounded-lg shadow-xl py-2 transition-all z-50 ${accountMenuOpen ? 'visible opacity-100' : 'invisible opacity-0'}`}>
                   {isTenant && (
                     <>
                       <Link to={ROUTES.TENANT_PROFILE} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0084ff]">
@@ -104,6 +114,10 @@ const Header: React.FC = () => {
                       <Link to={ROUTES.LANDLORD_POSTS} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0084ff]">
                         <FiUser />
                         Quản lý tin đăng
+                      </Link>
+                      <Link to={ROUTES.LANDLORD_RENTAL_REQUESTS} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0084ff]">
+                        <FiFileText />
+                        Yêu cầu thuê & đặt cọc
                       </Link>
                       <Link to={ROUTES.LANDLORD_CREATE_POST} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0084ff]">
                         <FiPlusCircle />

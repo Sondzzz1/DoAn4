@@ -43,6 +43,8 @@ const roomStatusLabel = (status: RoomStatus) => {
       return { text: 'Còn trống', className: 'bg-blue-100 text-blue-700' };
     case RoomStatus.Rented:
       return { text: 'Đã cho thuê', className: 'bg-purple-100 text-purple-700' };
+    case RoomStatus.Reserved:
+      return { text: 'Đang giữ chỗ', className: 'bg-amber-100 text-amber-700' };
     case RoomStatus.TemporarilyUnavailable:
       return { text: 'Tạm ngưng', className: 'bg-orange-100 text-orange-700' };
     default:
@@ -83,8 +85,25 @@ const LandlordPostsPage: React.FC = () => {
     }
   };
 
-  const handleView = (id: number) => {
-    navigate(`/rooms/${id}`);
+  const getPublicVisibilityMessage = (post: PostListItem) => {
+    if (post.status !== PostStatus.Approved) {
+      return 'Tin chưa được công khai. Chỉ tin đã được quản trị viên duyệt mới xuất hiện cho người thuê.';
+    }
+
+    if (post.roomStatus !== RoomStatus.Available) {
+      return 'Tin đang tạm ẩn với người thuê vì phòng không còn ở trạng thái còn trống.';
+    }
+
+    return 'Tin đang hiển thị công khai cho người thuê.';
+  };
+
+  const handleView = (post: PostListItem) => {
+    if (post.status !== PostStatus.Approved || post.roomStatus !== RoomStatus.Available) {
+      toast.info(getPublicVisibilityMessage(post));
+      return;
+    }
+
+    navigate(`/rooms/${post.id}`);
   };
 
   const handleEdit = (post: PostListItem) => {
@@ -276,10 +295,14 @@ const LandlordPostsPage: React.FC = () => {
                           </span>
                         </div>
 
+                        <p className={`mb-4 text-sm font-medium ${post.status === PostStatus.Approved && post.roomStatus === RoomStatus.Available ? 'text-emerald-700' : 'text-amber-700'}`}>
+                          {getPublicVisibilityMessage(post)}
+                        </p>
+
                         {/* Actions */}
                         <div className="flex flex-wrap gap-3">
                           <button
-                            onClick={() => handleView(post.id)}
+                            onClick={() => handleView(post)}
                             className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:from-blue-600 hover:to-blue-700 shadow-md hover:shadow-lg transition-all"
                           >
                             <FiEye /> Xem chi tiết

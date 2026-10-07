@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 // Layouts
@@ -31,12 +31,12 @@ const PaymentResultPage = lazy(() => import('../pages/payment/PaymentResultPage'
 // Protected Route
 import ProtectedRoute from './ProtectedRoute';
 
-// Placeholder components for routes not yet implemented
 const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
   <div className="container mx-auto px-4 py-8">
     <div className="text-center py-16">
       <h1 className="text-3xl font-bold text-gray-900 mb-4">{title}</h1>
-      <p className="text-gray-600">Trang này đang được phát triển...</p>
+      <p className="text-gray-600">Liên kết này không tồn tại hoặc đã được thay đổi.</p>
+      <Link to="/" className="mt-6 inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white">Về trang chủ</Link>
     </div>
   </div>
 );

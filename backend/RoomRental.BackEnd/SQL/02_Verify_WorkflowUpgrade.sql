@@ -24,7 +24,7 @@ FROM sys.indexes
 WHERE name IN (
     N'UX_DatCoc_RentalRequestId', N'UX_YeuCauThuePhong_Pending',
     N'UX_HoaDonHangThang_HopDong_Thang_Nam', N'UX_GiaoDichThanhToan_OrderId',
-    N'UX_GiaoDichThanhToan_TransactionCode'
+    N'UX_GiaoDichThanhToan_TransactionCode', N'IX_DatCoc_TrangThai_HanThanhToan'
 )
 ORDER BY name;
 

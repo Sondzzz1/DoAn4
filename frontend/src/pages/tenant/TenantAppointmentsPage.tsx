@@ -30,7 +30,7 @@ const TenantAppointmentsPage: React.FC = () => {
     catch (e) { toast.error(getApiErrorMessage(e, 'Không thể hủy lịch hẹn.')); }
   };
 
-  return <div className="mx-auto max-w-6xl p-4 md:p-6">
+  return <div className="tenant-page mx-auto max-w-6xl p-4 md:p-6">
     <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div><p className="text-xs font-semibold uppercase text-blue-600">Người thuê</p><h1 className="text-2xl font-bold text-slate-900">Lịch hẹn của tôi</h1><p className="mt-1 text-sm text-slate-500">Theo dõi lịch xem phòng và phản hồi từ chủ trọ.</p></div>
       <select value={filter} onChange={e => setFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { TileLayer } from 'react-leaflet';
 
 /**
@@ -34,24 +34,23 @@ interface TileLayerWithFallbackProps {
 const TileLayerWithFallback: React.FC<TileLayerWithFallbackProps> = ({ maxZoom = 19 }) => {
   const [providerIndex, setProviderIndex] = useState(0);
   const [error, setError] = useState(false);
+  const activeProviderRef = useRef(0);
 
   const currentProvider = TILE_PROVIDERS[providerIndex];
 
   const handleTileError = () => {
-    console.error(`Tile provider ${currentProvider.name} failed`);
-    
-    // Try next provider
+    // A provider can emit several tile errors before React renders the next layer.
+    if (activeProviderRef.current !== providerIndex) return;
+    activeProviderRef.current = providerIndex + 1;
     if (providerIndex < TILE_PROVIDERS.length - 1) {
-      console.log(`Switching to ${TILE_PROVIDERS[providerIndex + 1].name}...`);
-      setProviderIndex(prev => prev + 1);
+      setProviderIndex(providerIndex + 1);
     } else {
-      console.error('All tile providers failed');
       setError(true);
     }
   };
 
   if (error) {
-    console.error('Cannot load any tile provider');
+    return <div role="status" className="absolute inset-x-3 bottom-3 z-[600] rounded-md border border-slate-200 bg-white/95 px-3 py-2 text-center text-sm text-slate-600 shadow-sm">Bản đồ tạm thời không khả dụng.</div>;
   }
 
   return (

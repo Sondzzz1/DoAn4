@@ -24,6 +24,11 @@ public interface IPostService
     Task<PostDto> GetPublicPostByIdAsync(int postId);
 
     /// <summary>
+    /// Lấy chi tiết tin của chính chủ trọ, kể cả khi tin chưa được công khai.
+    /// </summary>
+    Task<PostDto> GetMyPostByIdAsync(int accountId, int postId);
+
+    /// <summary>
     /// Tạo post mới (Landlord đăng tin)
     /// </summary>
     Task<PostDto> CreatePostAsync(int accountId, CreatePostDto createDto);

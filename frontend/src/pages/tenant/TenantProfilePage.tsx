@@ -4,11 +4,16 @@ import { toast } from 'react-toastify';
 import { userService } from '../../services/userService';
 import { UserProfile, UpdateProfileRequest, ChangePasswordRequest } from '../../types/user.types';
 import { getApiErrorMessage } from '../../utils/apiError';
+import PageState from '../../components/common/PageState';
 
 const TenantProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [activeTab, setActiveTab] = useState<'profile' | 'password'>('profile');
+
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<'fullName' | 'phone' | 'currentPassword' | 'newPassword' | 'confirmPassword', string>>>({});
+  const [submitError, setSubmitError] = useState('');
 
   // Form states
   const [fullName, setFullName] = useState('');
@@ -24,6 +29,7 @@ const TenantProfilePage: React.FC = () => {
 
   async function fetchProfile() {
     setLoading(true);
+    setLoadError('');
     try {
       const response = await userService.getProfile();
       if (response.data) {
@@ -33,7 +39,7 @@ const TenantProfilePage: React.FC = () => {
         setAvatarUrl(response.data.avatarUrl || '');
       }
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Không thể tải thông tin cá nhân.'));
+      setLoadError(getApiErrorMessage(error, 'Không thể tải thông tin cá nhân.'));
     } finally {
       setLoading(false);
     }
@@ -45,10 +51,13 @@ const TenantProfilePage: React.FC = () => {
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName.trim()) {
-      toast.warning('Họ và tên không được để trống.');
-      return;
-    }
+    if (updating) return;
+    const next: typeof fieldErrors = {};
+    if (!fullName.trim()) next.fullName = 'Họ và tên không được để trống.';
+    if (phone.trim() && !/^\\d{10,11}$/.test(phone.trim())) next.phone = 'Số điện thoại phải gồm 10 hoặc 11 chữ số.';
+    setFieldErrors(next);
+    setSubmitError('');
+    if (Object.keys(next).length) return;
 
     setUpdating(true);
     try {
@@ -63,7 +72,7 @@ const TenantProfilePage: React.FC = () => {
         toast.success('Cập nhật thông tin thành công!');
       }
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Cập nhật thông tin thất bại.'));
+      setSubmitError(getApiErrorMessage(error, 'Cập nhật thông tin thất bại.'));
     } finally {
       setUpdating(false);
     }
@@ -71,18 +80,14 @@ const TenantProfilePage: React.FC = () => {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentPassword) {
-      toast.warning('Vui lòng nhập mật khẩu hiện tại.');
-      return;
-    }
-    if (newPassword.length < 6) {
-      toast.warning('Mật khẩu mới phải có ít nhất 6 ký tự.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast.warning('Xác nhận mật khẩu mới không khớp.');
-      return;
-    }
+    if (changingPassword) return;
+    const next: typeof fieldErrors = {};
+    if (!currentPassword) next.currentPassword = 'Vui lòng nhập mật khẩu hiện tại.';
+    if (newPassword.length < 6) next.newPassword = 'Mật khẩu mới phải có ít nhất 6 ký tự.';
+    if (!confirmPassword || newPassword !== confirmPassword) next.confirmPassword = 'Xác nhận mật khẩu mới không khớp.';
+    setFieldErrors(next);
+    setSubmitError('');
+    if (Object.keys(next).length) return;
 
     setChangingPassword(true);
     try {
@@ -96,7 +101,7 @@ const TenantProfilePage: React.FC = () => {
       setNewPassword('');
       setConfirmPassword('');
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Đổi mật khẩu thất bại. Vui lòng kiểm tra lại mật khẩu cũ.'));
+      setSubmitError(getApiErrorMessage(error, 'Đổi mật khẩu thất bại. Vui lòng kiểm tra lại mật khẩu cũ.'));
     } finally {
       setChangingPassword(false);
     }
@@ -112,8 +117,10 @@ const TenantProfilePage: React.FC = () => {
     );
   }
 
+  if (loadError || !profile) return <div className="tenant-page max-w-5xl mx-auto px-4 py-8"><PageState type="error" message={loadError || 'Không nhận được thông tin tài khoản.'} onRetry={fetchProfile} /></div>;
+
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="tenant-page max-w-5xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-[#0084ff] font-bold mb-1">
@@ -172,7 +179,7 @@ const TenantProfilePage: React.FC = () => {
           {/* Navigation tabs */}
           <div className="bg-white rounded-2xl border border-slate-200/80 p-2 shadow-sm space-y-1">
             <button
-              onClick={() => setActiveTab('profile')}
+              onClick={() => { setActiveTab('profile'); setSubmitError(''); setFieldErrors({}); }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                 activeTab === 'profile'
                   ? 'bg-[#0084ff] text-white shadow-md shadow-blue-500/20'
@@ -182,7 +189,7 @@ const TenantProfilePage: React.FC = () => {
               <FiUser size={18} /> Thông tin cá nhân
             </button>
             <button
-              onClick={() => setActiveTab('password')}
+              onClick={() => { setActiveTab('password'); setSubmitError(''); setFieldErrors({}); }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                 activeTab === 'password'
                   ? 'bg-[#0084ff] text-white shadow-md shadow-blue-500/20'
@@ -202,29 +209,33 @@ const TenantProfilePage: React.FC = () => {
                 <FiUser className="text-[#0084ff]" /> Chỉnh sửa thông tin cá nhân
               </h3>
 
-              <form onSubmit={handleUpdateProfile} className="space-y-5">
+              <form onSubmit={handleUpdateProfile} noValidate className="space-y-5">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Họ và tên *</label>
+                  <label htmlFor="profile-name" className="block text-sm font-semibold text-slate-700 mb-2">Họ và tên *</label>
                   <div className="relative">
                     <FiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
                       value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
+                      id="profile-name"
+                      autoComplete="name"
+                      onChange={(e) => { setFullName(e.target.value); setFieldErrors(current => ({ ...current, fullName: undefined })); }}
                       placeholder="Nhập họ và tên..."
                       required
                       className="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-[#0084ff] focus:ring-4 focus:ring-blue-500/10 text-sm"
                     />
                   </div>
+                  {fieldErrors.fullName && <p role="alert" className="form-error mt-2">{fieldErrors.fullName}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Địa chỉ Email</label>
+                  <label htmlFor="profile-email" className="block text-sm font-semibold text-slate-700 mb-2">Địa chỉ Email</label>
                   <div className="relative">
                     <FiMail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="email"
                       value={profile?.email || ''}
+                      id="profile-email"
                       disabled
                       className="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 bg-slate-50 text-slate-500 text-sm cursor-not-allowed"
                     />
@@ -233,20 +244,25 @@ const TenantProfilePage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Số điện thoại liên hệ *</label>
+                  <label htmlFor="profile-phone" className="block text-sm font-semibold text-slate-700 mb-2">Số điện thoại liên hệ</label>
                   <div className="relative">
                     <FiPhone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="tel"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      id="profile-phone"
+                      autoComplete="tel"
+                      inputMode="tel"
+                      onChange={(e) => { setPhone(e.target.value); setFieldErrors(current => ({ ...current, phone: undefined })); }}
                       placeholder="09xxxxxxxx..."
                       className="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-[#0084ff] focus:ring-4 focus:ring-blue-500/10 text-sm"
                     />
                   </div>
+                  {fieldErrors.phone && <p role="alert" className="form-error mt-2">{fieldErrors.phone}</p>}
                   <span className="text-xs text-slate-400 mt-1 block">Dùng để chủ trọ liên lạc xác nhận lịch xem phòng.</span>
                 </div>
 
+                {submitError && <p role="alert" className="form-error">{submitError}</p>}
                 <div className="pt-4 border-t border-slate-100 flex justify-end">
                   <button
                     type="submit"
@@ -264,52 +280,63 @@ const TenantProfilePage: React.FC = () => {
                 <FiLock className="text-[#0084ff]" /> Thay đổi mật khẩu
               </h3>
 
-              <form onSubmit={handleChangePassword} className="space-y-5">
+              <form onSubmit={handleChangePassword} noValidate className="space-y-5">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Mật khẩu hiện tại *</label>
+                  <label htmlFor="profile-current-password" className="block text-sm font-semibold text-slate-700 mb-2">Mật khẩu hiện tại *</label>
                   <div className="relative">
                     <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="password"
                       value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      id="profile-current-password"
+                      autoComplete="current-password"
+                      onChange={(e) => { setCurrentPassword(e.target.value); setFieldErrors(current => ({ ...current, currentPassword: undefined })); }}
                       placeholder="Nhập mật khẩu đang sử dụng..."
                       required
                       className="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-[#0084ff] focus:ring-4 focus:ring-blue-500/10 text-sm"
                     />
                   </div>
+                  {fieldErrors.currentPassword && <p role="alert" className="form-error mt-2">{fieldErrors.currentPassword}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Mật khẩu mới *</label>
+                  <label htmlFor="profile-new-password" className="block text-sm font-semibold text-slate-700 mb-2">Mật khẩu mới *</label>
                   <div className="relative">
                     <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="password"
                       value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
+                      id="profile-new-password"
+                      autoComplete="new-password"
+                      minLength={6}
+                      onChange={(e) => { setNewPassword(e.target.value); setFieldErrors(current => ({ ...current, newPassword: undefined })); }}
                       placeholder="Tối thiểu 6 ký tự..."
                       required
                       className="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-[#0084ff] focus:ring-4 focus:ring-blue-500/10 text-sm"
                     />
                   </div>
+                  {fieldErrors.newPassword && <p role="alert" className="form-error mt-2">{fieldErrors.newPassword}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Xác nhận mật khẩu mới *</label>
+                  <label htmlFor="profile-confirm-password" className="block text-sm font-semibold text-slate-700 mb-2">Xác nhận mật khẩu mới *</label>
                   <div className="relative">
                     <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="password"
                       value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      id="profile-confirm-password"
+                      autoComplete="new-password"
+                      onChange={(e) => { setConfirmPassword(e.target.value); setFieldErrors(current => ({ ...current, confirmPassword: undefined })); }}
                       placeholder="Nhập lại mật khẩu mới..."
                       required
                       className="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-[#0084ff] focus:ring-4 focus:ring-blue-500/10 text-sm"
                     />
                   </div>
+                  {fieldErrors.confirmPassword && <p role="alert" className="form-error mt-2">{fieldErrors.confirmPassword}</p>}
                 </div>
 
+                {submitError && <p role="alert" className="form-error">{submitError}</p>}
                 <div className="pt-4 border-t border-slate-100 flex justify-end">
                   <button
                     type="submit"

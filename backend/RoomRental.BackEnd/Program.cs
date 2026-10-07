@@ -56,6 +56,14 @@ builder.Services.AddSignalR();
 
 // Thêm HttpClient để gọi external APIs (Nominatim)
 builder.Services.AddHttpClient();
+builder.Services.AddHttpClient("Geocoding", client =>
+{
+    var baseUrl = builder.Configuration["Geocoding:BaseUrl"] ?? "https://nominatim.openstreetmap.org/";
+    client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("RoomRentalSystem/1.0");
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
+builder.Services.AddSingleton<NominatimGeocodingService>();
 
 // Cấu hình JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");

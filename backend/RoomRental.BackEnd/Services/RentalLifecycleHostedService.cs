@@ -31,7 +31,9 @@ public sealed class RentalLifecycleHostedService : BackgroundService
                 {
                     using var scope = _scopeFactory.CreateScope();
                     var contractService = scope.ServiceProvider.GetRequiredService<IRentalContractService>();
+                    var depositService = scope.ServiceProvider.GetRequiredService<IDepositService>();
                     var pendingSignatureExpiryHours = _configuration.GetValue<int?>("RentalLifecycle:PendingSignatureExpiryHours") ?? 72;
+                    await depositService.ReconcileExpiredDepositsAsync(stoppingToken);
                     await contractService.ReconcileContractLifecycleAsync(pendingSignatureExpiryHours, stoppingToken);
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)

@@ -32,8 +32,12 @@ const RegisterPage: React.FC = () => {
     agree: false,
   });
 
+  const [errors, setErrors] = useState<Partial<Record<keyof typeof formData, string>>>({});
+  const [submitError, setSubmitError] = useState('');
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
+    setErrors(current => ({ ...current, [name]: undefined }));
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -42,41 +46,17 @@ const RegisterPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!formData.fullName.trim()) {
-      toast.error('Vui lòng nhập họ và tên.');
-      return;
-    }
-
-    if (!formData.email.trim()) {
-      toast.error('Vui lòng nhập email.');
-      return;
-    }
-
-    if (!/\S+@\S+\.\S+/.test(formData.email.trim())) {
-      toast.error('Email không hợp lệ.');
-      return;
-    }
-
-    if (!formData.phone.trim()) {
-      toast.error('Vui lòng nhập số điện thoại.');
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      toast.error('Mật khẩu phải có ít nhất 6 ký tự.');
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      toast.error('Mật khẩu xác nhận không khớp.');
-      return;
-    }
-
-    if (!formData.agree) {
-      toast.error('Vui lòng đồng ý với điều khoản sử dụng.');
-      return;
-    }
+    if (loading) return;
+    setSubmitError('');
+    const next: typeof errors = {};
+    if (!formData.fullName.trim()) next.fullName = 'Vui lòng nhập họ và tên.';
+    if (!/\\S+@\\S+\\.\\S+/.test(formData.email.trim())) next.email = 'Vui lòng nhập email hợp lệ.';
+    if (!/^[0-9]{10,11}$/.test(formData.phone.trim())) next.phone = 'Số điện thoại phải gồm 10 hoặc 11 chữ số.';
+    if (formData.password.length < 6) next.password = 'Mật khẩu phải có ít nhất 6 ký tự.';
+    if (!formData.confirmPassword || formData.password !== formData.confirmPassword) next.confirmPassword = 'Mật khẩu xác nhận không khớp.';
+    if (!formData.agree) next.agree = 'Vui lòng đồng ý với điều khoản sử dụng.';
+    setErrors(next);
+    if (Object.keys(next).length) return;
 
     try {
       setLoading(true);
@@ -98,7 +78,7 @@ const RegisterPage: React.FC = () => {
         navigate(storedUser?.role === 'Landlord' ? ROUTES.LANDLORD_DASHBOARD : ROUTES.HOME);
       }, 300);
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Đăng ký thất bại. Vui lòng thử lại.'));
+      setSubmitError(getApiErrorMessage(error, 'Đăng ký thất bại. Vui lòng thử lại.'));
     } finally {
       setLoading(false);
     }
@@ -128,7 +108,7 @@ const RegisterPage: React.FC = () => {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} noValidate>
             {/* Full name */}
             <div className="auth-field">
               <label htmlFor="fullName">Họ và tên</label>
@@ -136,6 +116,9 @@ const RegisterPage: React.FC = () => {
                 <FiUser className="auth-input-icon" />
                 <input
                   id="fullName"
+                  required
+                  aria-invalid={!!errors.fullName}
+                  aria-describedby={errors.fullName ? 'auth-fullName-error' : undefined}
                   name="fullName"
                   type="text"
                   value={formData.fullName}
@@ -144,6 +127,7 @@ const RegisterPage: React.FC = () => {
                   autoComplete="name"
                 />
               </div>
+            {errors.fullName && <p id="auth-fullName-error" role="alert" className="form-error mt-2">{errors.fullName}</p>}
             </div>
 
             {/* Email */}
@@ -153,6 +137,9 @@ const RegisterPage: React.FC = () => {
                 <FiMail className="auth-input-icon" />
                 <input
                   id="email"
+                  required
+                  aria-invalid={!!errors.email}
+                  aria-describedby={errors.email ? 'auth-email-error' : undefined}
                   name="email"
                   type="email"
                   value={formData.email}
@@ -161,6 +148,7 @@ const RegisterPage: React.FC = () => {
                   autoComplete="email"
                 />
               </div>
+            {errors.email && <p id="auth-email-error" role="alert" className="form-error mt-2">{errors.email}</p>}
             </div>
 
             {/* Phone */}
@@ -170,6 +158,9 @@ const RegisterPage: React.FC = () => {
                 <FiPhone className="auth-input-icon" />
                 <input
                   id="phone"
+                  required
+                  aria-invalid={!!errors.phone}
+                  aria-describedby={errors.phone ? 'auth-phone-error' : undefined}
                   name="phone"
                   type="tel"
                   value={formData.phone}
@@ -178,6 +169,7 @@ const RegisterPage: React.FC = () => {
                   autoComplete="tel"
                 />
               </div>
+            {errors.phone && <p id="auth-phone-error" role="alert" className="form-error mt-2">{errors.phone}</p>}
             </div>
 
             {/* Password */}
@@ -187,6 +179,9 @@ const RegisterPage: React.FC = () => {
                 <FiLock className="auth-input-icon" />
                 <input
                   id="password"
+                  required
+                  aria-invalid={!!errors.password}
+                  aria-describedby={errors.password ? 'auth-password-error' : undefined}
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
@@ -204,6 +199,7 @@ const RegisterPage: React.FC = () => {
                   {showPassword ? <FiEyeOff /> : <FiEye />}
                 </button>
               </div>
+            {errors.password && <p id="auth-password-error" role="alert" className="form-error mt-2">{errors.password}</p>}
             </div>
 
             {/* Confirm password */}
@@ -213,6 +209,9 @@ const RegisterPage: React.FC = () => {
                 <FiLock className="auth-input-icon" />
                 <input
                   id="confirmPassword"
+                  required
+                  aria-invalid={!!errors.confirmPassword}
+                  aria-describedby={errors.confirmPassword ? 'auth-confirmPassword-error' : undefined}
                   name="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={formData.confirmPassword}
@@ -230,6 +229,7 @@ const RegisterPage: React.FC = () => {
                   {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
                 </button>
               </div>
+            {errors.confirmPassword && <p id="auth-confirmPassword-error" role="alert" className="form-error mt-2">{errors.confirmPassword}</p>}
             </div>
 
             {/* Terms */}
@@ -247,6 +247,8 @@ const RegisterPage: React.FC = () => {
               </span>
             </label>
 
+            {errors.agree && <p role="alert" className="form-error mb-3">{errors.agree}</p> }
+            {submitError && <p role="alert" className="form-error mb-3">{submitError}</p>}
             {/* Submit */}
             <button
               type="submit"

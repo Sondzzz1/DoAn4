@@ -21,6 +21,7 @@ public class Deposit
     public int LandlordAccountId { get; set; }
     public decimal Amount { get; set; }
     public int Status { get; set; }
+    public DateTime? DueAt { get; set; }
     public DateTime? PaidAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
     public DateTime? UpdatedAt { get; set; }

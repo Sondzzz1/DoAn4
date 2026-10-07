@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { FiMessageSquare, FiX, FiSend, FiArrowLeft, FiCircle } from 'react-icons/fi';
+import { FiMessageSquare, FiX, FiSend, FiArrowLeft } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { chatService, ChatMessage, Conversation } from '../../services/chatService';
 import { useAuth } from '../../hooks/useAuth';
@@ -16,6 +16,7 @@ const ChatDrawer: React.FC = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [totalUnread, setTotalUnread] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
 
   // Active Post context
   const [activePost, setActivePost] = useState<{ id?: number; title?: string; price?: number; image?: string } | null>(null);
@@ -135,10 +136,10 @@ const ChatDrawer: React.FC = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activePartner || !inputMessage.trim()) return;
+    if (sending || !activePartner || !inputMessage.trim()) return;
 
     const text = inputMessage.trim();
-    setInputMessage('');
+    setSending(true);
 
     try {
       const res = await chatService.sendMessage({
@@ -148,12 +149,15 @@ const ChatDrawer: React.FC = () => {
       });
 
       if (res.data) {
+        setInputMessage('');
         setMessages((prev) => [...prev, res.data]);
         scrollToBottom();
         void loadConversations();
       }
     } catch {
       toast.error('Không thể gửi tin nhắn.');
+    } finally {
+      setSending(false);
     }
   };
 
@@ -165,8 +169,9 @@ const ChatDrawer: React.FC = () => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-gradient-to-tr from-[#0084ff] to-cyan-500 text-white flex items-center justify-center shadow-xl hover:scale-110 transition-transform cursor-pointer border-none"
+          className="chat-trigger fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-[#0084ff] text-white flex items-center justify-center shadow-xl hover:scale-105 transition-transform cursor-pointer border-none"
           title="Mở tin nhắn trực tiếp"
+          aria-label="Mở tin nhắn trực tiếp"
         >
           <FiMessageSquare size={24} />
           {totalUnread > 0 && (
@@ -179,13 +184,14 @@ const ChatDrawer: React.FC = () => {
 
       {/* Chat Window / Drawer */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 w-96 max-w-[calc(100vw-32px)] h-[540px] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-8">
+        <div role="dialog" aria-label="Tin nhắn" className="chat-window fixed bottom-6 right-6 z-[400] w-96 max-w-[calc(100%-32px)] h-[540px] max-h-[calc(100dvh-100px)] bg-white rounded-lg shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-[#0084ff] to-blue-600 text-white p-4 flex items-center justify-between">
             {activePartner ? (
-              <div className="flex items-center gap-3">
+              <div className="min-w-0 flex items-center gap-3">
                 <button
                   type="button"
+                  aria-label="Danh sách cuộc trò chuyện"
                   onClick={() => {
                     setActivePartner(null);
                   }}
@@ -193,10 +199,10 @@ const ChatDrawer: React.FC = () => {
                 >
                   <FiArrowLeft size={16} />
                 </button>
-                <div>
+                <div className="min-w-0">
                   <h4 className="font-bold text-sm line-clamp-1">{activePartner.name}</h4>
                   <span className="text-[11px] text-blue-100 flex items-center gap-1">
-                    <FiCircle size={8} className="fill-emerald-400 text-emerald-400" /> Trực tuyến
+                    Cuộc trò chuyện
                   </span>
                 </div>
               </div>
@@ -208,6 +214,7 @@ const ChatDrawer: React.FC = () => {
             )}
 
             <button
+              aria-label="Đóng tin nhắn"
               onClick={() => {
                 setIsOpen(false);
               }}
@@ -250,7 +257,7 @@ const ChatDrawer: React.FC = () => {
                     return (
                       <div key={m.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                         <div
-                          className={`max-w-[80%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed shadow-sm ${
+                          className={`max-w-[80%] break-words px-3.5 py-2.5 rounded-lg text-sm leading-relaxed shadow-sm ${
                             isMe
                               ? 'bg-[#0084ff] text-white rounded-br-none'
                               : 'bg-white text-slate-800 border border-slate-200/80 rounded-bl-none'
@@ -275,11 +282,13 @@ const ChatDrawer: React.FC = () => {
                   placeholder="Nhập tin nhắn..."
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
-                  className="flex-1 px-4 py-2.5 rounded-2xl bg-slate-100 border border-transparent focus:bg-white focus:border-[#0084ff] text-xs focus:outline-none"
+                  aria-label="Tin nhắn mới"
+                  className="min-w-0 flex-1 px-4 py-2.5 rounded-lg bg-slate-100 border border-transparent focus:bg-white focus:border-[#0084ff] text-sm focus:outline-none"
                 />
                 <button
                   type="submit"
-                  disabled={!inputMessage.trim()}
+                  aria-label="Gửi tin nhắn"
+                  disabled={sending || !inputMessage.trim()}
                   className="w-9 h-9 rounded-2xl bg-[#0084ff] hover:bg-[#0073e6] disabled:opacity-50 text-white flex items-center justify-center transition-all cursor-pointer border-none shadow-md"
                 >
                   <FiSend size={14} />

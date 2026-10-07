@@ -10,6 +10,12 @@ Ap dung cho database `RoomRentalDB` dang dung schema tieng Viet cua backend (`Ti
 4. Mo va chay [02_Verify_WorkflowUpgrade.sql](02_Verify_WorkflowUpgrade.sql). Tat ca FK va index duoc liet ke, hai dong orphan phai co `ProblemCount = 0`.
 5. Khoi dong backend va thu luong: gui yeu cau thue -> duyet -> tao/xac nhan dat coc -> tao/xac nhan hop dong -> lap hoa don.
 
+## Nang cap han thanh toan dat coc
+
+Neu ban da tung chay `01_Deploy_WorkflowUpgrade.sql` truoc khi co chuc nang chu tro thiet lap dat coc, chay them [04_AddDepositDeadline.sql](04_AddDepositDeadline.sql) mot lan. Script bo sung `HanThanhToan` cho `DatCoc`, cap 24 gio xu ly cho cac khoan coc cu dang cho thanh toan va tao index cho worker kiem tra qua han.
+
+Sau khi chay script, backend tu dong kiem tra moi 5 phut. Khoan coc chua thanh toan qua han se chuyen sang het han, yeu cau thue het han va phong duoc tra lai trang thai con trong.
+
 ## Canh bao quan trong
 
 - Script dat dung database `RoomRentalDB`. Neu database cua ban co ten khac, sua dong `USE [RoomRentalDB]` trong ca ba file truoc khi chay.

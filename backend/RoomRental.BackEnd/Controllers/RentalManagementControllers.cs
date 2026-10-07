@@ -17,7 +17,8 @@ public class RentalRequestController : ControllerBase
     [HttpPost] public async Task<IActionResult> Tao([FromBody] TaoYeuCauThueDto dto) => Ok(ApiResponse<YeuCauThueDto>.SuccessResponse(await _service.TaoAsync(Id(), dto), "Gửi yêu cầu thuê phòng thành công"));
     [HttpGet("cua-toi")] public async Task<IActionResult> CuaToi() => Ok(ApiResponse<List<YeuCauThueDto>>.SuccessResponse(await _service.LayCuaToiAsync(Id(), false)));
     [HttpGet("chu-tro")][Authorize(Roles="Landlord,Admin")] public async Task<IActionResult> CuaChuTro() => Ok(ApiResponse<List<YeuCauThueDto>>.SuccessResponse(await _service.LayCuaToiAsync(Id(), true)));
-    [HttpPut("{id:int}/trang-thai")][Authorize(Roles="Landlord,Admin")] public async Task<IActionResult> TrangThai(int id, [FromBody] CapNhatTrangThaiDto dto) => Ok(ApiResponse<YeuCauThueDto>.SuccessResponse(await _service.CapNhatTrangThaiAsync(Id(), id, dto.TrangThai, dto.GhiChu)));
+    [HttpPut("{id:int}/trang-thai")][Authorize(Roles="Landlord,Admin")] public async Task<IActionResult> TrangThai(int id, [FromBody] CapNhatTrangThaiDto dto) => Ok(ApiResponse<YeuCauThueDto>.SuccessResponse(await _service.CapNhatTrangThaiAsync(Id(), id, dto.TrangThai, dto.GhiChu, dto.SoTienDatCoc, dto.HanThanhToanCoc)));
+    [HttpPost("{id:int}/dat-coc")][Authorize(Roles="Landlord,Admin")] public async Task<IActionResult> ThietLapDatCoc(int id, [FromBody] ThietLapDatCocDto dto) => Ok(ApiResponse<DatCocDto>.SuccessResponse(await _service.ThietLapDatCocAsync(Id(), id, dto), "Đã thiết lập khoản đặt cọc"));
     [HttpPut("{id:int}/huy")][Authorize(Roles="Tenant")] public async Task<IActionResult> Huy(int id) => Ok(ApiResponse<YeuCauThueDto>.SuccessResponse(await _service.HuyAsync(Id(), id), "Hủy yêu cầu thuê phòng thành công"));
     private int Id() => int.Parse(User.FindFirst("UserId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 }
@@ -29,7 +30,6 @@ public class DepositController : ControllerBase
 {
     private readonly IDepositService _service;
     public DepositController(IDepositService service) => _service = service;
-    [HttpPost] public async Task<IActionResult> Tao([FromBody] TaoDatCocDto dto) => Ok(ApiResponse<DatCocDto>.SuccessResponse(await _service.TaoAsync(Id(), dto), "Tạo thông tin đặt cọc thành công"));
     [HttpGet("cua-toi")] public async Task<IActionResult> CuaToi() => Ok(ApiResponse<List<DatCocDto>>.SuccessResponse(await _service.LayCuaToiAsync(Id())));
     [HttpPut("{id:int}/trang-thai")][Authorize(Roles="Landlord,Admin")] public async Task<IActionResult> TrangThai(int id, [FromBody] CapNhatTrangThaiDto dto) => Ok(ApiResponse<DatCocDto>.SuccessResponse(await _service.CapNhatTrangThaiAsync(Id(), id, dto.TrangThai)));
     private int Id() => int.Parse(User.FindFirst("UserId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");

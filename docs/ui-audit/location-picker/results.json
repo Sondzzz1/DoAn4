@@ -1,0 +1,185 @@
+{
+  "fixtureMode": true,
+  "checks": [
+    {
+      "width": 1440,
+      "check": "Completed address search, pin, alternatives, no typeahead",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "check": "Map click updates address parts and exact coordinates",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "check": "Marker drag reverse lookup",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "check": "Latest map selection wins over stale requests",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "check": "Manual edits are not overwritten by pending reverse requests",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "check": "Latest address wins over stale forward lookup",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "check": "No results and provider errors keep entered address",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "check": "Geolocation reverse lookup",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "check": "Submit preserves selected address and coordinates in existing DTO",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "check": "Edit-mode pin, responsive layout and no React crash",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "check": "Room-management address, reverse lookup and saved coordinates",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "check": "Reset cancels pending lookup in room form",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "check": "Completed address search, pin, alternatives, no typeahead",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "check": "Map click updates address parts and exact coordinates",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "check": "Marker drag reverse lookup",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "check": "Latest map selection wins over stale requests",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "check": "Manual edits are not overwritten by pending reverse requests",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "check": "Latest address wins over stale forward lookup",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "check": "No results and provider errors keep entered address",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "check": "Geolocation reverse lookup",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "check": "Submit preserves selected address and coordinates in existing DTO",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "check": "Edit-mode pin, responsive layout and no React crash",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "check": "Room-management address, reverse lookup and saved coordinates",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "check": "Reset cancels pending lookup in room form",
+      "passed": true
+    },
+    {
+      "width": 375,
+      "check": "Completed address search, pin, alternatives, no typeahead",
+      "passed": true
+    },
+    {
+      "width": 375,
+      "check": "Map click updates address parts and exact coordinates",
+      "passed": true
+    },
+    {
+      "width": 375,
+      "check": "Marker drag reverse lookup",
+      "passed": true
+    },
+    {
+      "width": 375,
+      "check": "Latest map selection wins over stale requests",
+      "passed": true
+    },
+    {
+      "width": 375,
+      "check": "Manual edits are not overwritten by pending reverse requests",
+      "passed": true
+    },
+    {
+      "width": 375,
+      "check": "Latest address wins over stale forward lookup",
+      "passed": true
+    },
+    {
+      "width": 375,
+      "check": "No results and provider errors keep entered address",
+      "passed": true
+    },
+    {
+      "width": 375,
+      "check": "Geolocation reverse lookup",
+      "passed": true
+    },
+    {
+      "width": 375,
+      "check": "Submit preserves selected address and coordinates in existing DTO",
+      "passed": true
+    },
+    {
+      "width": 375,
+      "check": "Edit-mode pin, responsive layout and no React crash",
+      "passed": true
+    },
+    {
+      "width": 375,
+      "check": "Room-management address, reverse lookup and saved coordinates",
+      "passed": true
+    },
+    {
+      "width": 375,
+      "check": "Reset cancels pending lookup in room form",
+      "passed": true
+    }
+  ]
+}

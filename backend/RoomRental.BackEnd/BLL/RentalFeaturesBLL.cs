@@ -44,7 +44,7 @@ public class RentalRequestBLL : IRentalRequestService
             post.Landlord.AccountId,
             "Yêu cầu thuê phòng mới",
             $"Có một yêu cầu thuê mới cho tin '{post.Title}'.",
-            "/landlord/posts");
+            "/landlord/contracts?tab=requests");
         return await Map(item);
     }
 
@@ -55,7 +55,7 @@ public class RentalRequestBLL : IRentalRequestService
         return await q.OrderByDescending(x => x.CreatedAt).Select(x => new YeuCauThueDto { Id=x.Id, BaiDangId=x.PostId, NguoiThueId=x.TenantAccountId, ChuTroId=x.LandlordAccountId, TieuDeBaiDang=x.Post.Title, AnhPhong=x.Post.Room.Images.OrderByDescending(i => i.IsThumbnail).Select(i => i.ImageUrl).FirstOrDefault(), GiaThue=x.Post.DisplayPrice, DiaChi=x.Post.Room.Address, TenNguoiThue=_db.Users.Where(u => u.Id == x.TenantAccountId).Select(u => u.FullName).FirstOrDefault(), SdtNguoiThue=_db.Users.Where(u => u.Id == x.TenantAccountId).Select(u => u.Phone).FirstOrDefault(), TrangThai=x.Status, GhiChu=x.Note, NgayTao=x.CreatedAt }).ToListAsync();
     }
 
-    public async Task<YeuCauThueDto> CapNhatTrangThaiAsync(int chuTroId, int id, int trangThai, string? ghiChu = null)
+    public async Task<YeuCauThueDto> CapNhatTrangThaiAsync(int chuTroId, int id, int trangThai, string? ghiChu = null, decimal? soTienDatCoc = null, DateTime? hanThanhToanCoc = null)
     {
         await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         var item = await _db.RentalRequests
@@ -67,8 +67,10 @@ public class RentalRequestBLL : IRentalRequestService
             throw new BusinessRuleException("Chỉ có thể chấp nhận hoặc từ chối yêu cầu thuê phòng.");
         if (item.Status != RentalRequestStatus.Pending) throw BusinessRuleException.Conflict("Yêu cầu thuê phòng này không còn ở trạng thái chờ xử lý.");
 
+        Deposit? deposit = null;
         if (trangThai == RentalRequestStatus.Approved)
         {
+            ValidateDepositTerms(soTienDatCoc, hanThanhToanCoc);
             var room = item.Post.Room;
             if (room.Status != RoomStatus.Available)
                 throw BusinessRuleException.Conflict("Phòng đã được giữ chỗ hoặc không còn trống.");
@@ -83,6 +85,7 @@ public class RentalRequestBLL : IRentalRequestService
 
             room.Status = RoomStatus.Reserved;
             room.UpdatedAt = DateTime.Now;
+            deposit = await CreateDepositAsync(item, soTienDatCoc!.Value, hanThanhToanCoc!.Value);
         }
 
         item.Status = trangThai;
@@ -93,10 +96,37 @@ public class RentalRequestBLL : IRentalRequestService
             item.TenantAccountId,
             trangThai == RentalRequestStatus.Approved ? "Yêu cầu thuê đã được duyệt" : "Yêu cầu thuê bị từ chối",
             trangThai == RentalRequestStatus.Approved
-                ? $"Yêu cầu thuê cho tin '{item.Post.Title}' đã được duyệt. Bạn có thể tiếp tục đặt cọc."
+                ? $"Yêu cầu thuê cho tin '{item.Post.Title}' đã được duyệt. Thanh toán tiền cọc {deposit!.Amount:N0} VNĐ trước {deposit.DueAt:HH:mm dd/MM/yyyy}."
                 : $"Yêu cầu thuê cho tin '{item.Post.Title}' đã bị từ chối.",
             "/tenant/rentals");
         return await Map(item);
+    }
+
+    public async Task<DatCocDto> ThietLapDatCocAsync(int chuTroId, int id, ThietLapDatCocDto dto)
+    {
+        await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        var request = await _db.RentalRequests
+            .Include(x => x.Post).ThenInclude(x => x.Room)
+            .FirstOrDefaultAsync(x => x.Id == id)
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy yêu cầu thuê phòng.");
+
+        if (chuTroId != 0 && request.LandlordAccountId != chuTroId)
+            throw BusinessRuleException.Forbidden("Bạn không có quyền thiết lập khoản cọc cho yêu cầu này.");
+        if (request.Status != RentalRequestStatus.Approved)
+            throw BusinessRuleException.Conflict("Chỉ có thể thiết lập cọc cho yêu cầu đã được duyệt.");
+
+        ValidateDepositTerms(dto.SoTien, dto.HanThanhToan);
+        var deposit = await CreateDepositAsync(request, dto.SoTien, dto.HanThanhToan);
+        await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        await SendNotificationAsync(
+            request.TenantAccountId,
+            "Chủ trọ đã thiết lập khoản đặt cọc",
+            $"Thanh toán tiền cọc {deposit.Amount:N0} VNĐ trước {deposit.DueAt:HH:mm dd/MM/yyyy} để giữ phòng '{request.Post.Title}'.",
+            "/tenant/rentals");
+
+        return MapDeposit(deposit);
     }
 
     public async Task<YeuCauThueDto> HuyAsync(int nguoiThueId, int id)
@@ -112,10 +142,17 @@ public class RentalRequestBLL : IRentalRequestService
 
         if (item.Status == RentalRequestStatus.Approved)
         {
-            if (await _db.Deposits.AnyAsync(x => x.RentalRequestId == item.Id))
-                throw BusinessRuleException.Conflict("Không thể hủy yêu cầu đã có khoản cọc. Hãy xử lý hoàn cọc trước.");
+            var deposit = await _db.Deposits.FirstOrDefaultAsync(x => x.RentalRequestId == item.Id);
+            if (deposit != null && deposit.Status != DepositStatus.Pending)
+                throw BusinessRuleException.Conflict("Không thể hủy yêu cầu đã có khoản cọc thanh toán. Hãy xử lý hoàn cọc trước.");
             if (await _db.RentalContracts.AnyAsync(x => x.RentalRequestId == item.Id))
                 throw BusinessRuleException.Conflict("Không thể hủy yêu cầu đã được chuyển thành hợp đồng.");
+
+            if (deposit != null)
+            {
+                deposit.Status = DepositStatus.Cancelled;
+                deposit.UpdatedAt = DateTime.Now;
+            }
 
             var room = item.Post.Room;
             var hasOtherApprovedRequest = await _db.RentalRequests
@@ -137,9 +174,48 @@ public class RentalRequestBLL : IRentalRequestService
             item.LandlordAccountId,
             "Yêu cầu thuê đã bị hủy",
             $"Khách thuê đã hủy yêu cầu cho tin '{item.Post.Title}'.",
-            "/landlord/posts");
+            "/landlord/contracts?tab=requests");
         return await Map(item);
     }
+
+    private static void ValidateDepositTerms(decimal? amount, DateTime? dueAt)
+    {
+        if (amount is null or <= 0)
+            throw new BusinessRuleException("Số tiền đặt cọc phải lớn hơn 0.");
+        if (dueAt is null || dueAt <= DateTime.Now)
+            throw new BusinessRuleException("Hạn thanh toán tiền cọc phải ở trong tương lai.");
+        if (dueAt > DateTime.Now.AddDays(30))
+            throw new BusinessRuleException("Hạn thanh toán tiền cọc không được vượt quá 30 ngày.");
+    }
+
+    private async Task<Deposit> CreateDepositAsync(RentalRequest request, decimal amount, DateTime dueAt)
+    {
+        if (await _db.Deposits.AnyAsync(x => x.RentalRequestId == request.Id))
+            throw BusinessRuleException.Conflict("Khoản cọc cho yêu cầu thuê này đã tồn tại.");
+
+        var deposit = new Deposit
+        {
+            RentalRequestId = request.Id,
+            TenantAccountId = request.TenantAccountId,
+            LandlordAccountId = request.LandlordAccountId,
+            Amount = amount,
+            DueAt = dueAt,
+            Status = DepositStatus.Pending
+        };
+        _db.Deposits.Add(deposit);
+        return deposit;
+    }
+
+    private static DatCocDto MapDeposit(Deposit deposit) => new()
+    {
+        Id = deposit.Id,
+        YeuCauThueId = deposit.RentalRequestId,
+        SoTien = deposit.Amount,
+        TrangThai = deposit.Status,
+        HanThanhToan = deposit.DueAt,
+        NgayThanhToan = deposit.PaidAt,
+        NgayTao = deposit.CreatedAt
+    };
 
     private async Task SendNotificationAsync(int accountId, string title, string content, string link)
     {
@@ -159,37 +235,14 @@ public class RentalRequestBLL : IRentalRequestService
 public class DepositBLL : IDepositService
 {
     private readonly ApplicationDbContext _db;
-    public DepositBLL(ApplicationDbContext db) => _db = db;
-    public async Task<DatCocDto> TaoAsync(int nguoiThueId, TaoDatCocDto dto)
+    private readonly INotificationService _notificationService;
+
+    public DepositBLL(ApplicationDbContext db, INotificationService notificationService)
     {
-        await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
-        var request = await _db.RentalRequests.Include(x => x.Post).ThenInclude(x => x.Room).FirstOrDefaultAsync(x => x.Id == dto.YeuCauThueId)
-            ?? throw BusinessRuleException.NotFound("Không tìm thấy yêu cầu thuê phòng.");
-        if (request.TenantAccountId != nguoiThueId) throw BusinessRuleException.Forbidden("Bạn không có quyền tạo khoản cọc cho yêu cầu này.");
-        if (request.Status != RentalRequestStatus.Approved) throw BusinessRuleException.Conflict("Yêu cầu thuê chưa được chủ trọ duyệt");
-        var room = request.Post.Room;
-        if (room.Status is not (RoomStatus.Available or RoomStatus.Reserved))
-            throw BusinessRuleException.Conflict("Phòng hiện không còn trong trạng thái giữ chỗ.");
-        var hasOtherApprovedRequest = await _db.RentalRequests
-            .Include(x => x.Post)
-            .AnyAsync(x => x.Id != request.Id &&
-                x.Status == RentalRequestStatus.Approved &&
-                x.Post.RoomId == room.Id);
-        if (hasOtherApprovedRequest)
-            throw BusinessRuleException.Conflict("Phòng đang được giữ bởi yêu cầu thuê khác.");
-        if (dto.SoTien <= 0) throw new BusinessRuleException("Số tiền đặt cọc phải lớn hơn 0");
-        if (await _db.Deposits.AnyAsync(x => x.RentalRequestId == request.Id)) throw BusinessRuleException.Conflict("Khoản cọc cho yêu cầu thuê này đã tồn tại.");
-        if (room.Status == RoomStatus.Available)
-        {
-            room.Status = RoomStatus.Reserved;
-            room.UpdatedAt = DateTime.Now;
-        }
-        var item = new Deposit { RentalRequestId=request.Id, TenantAccountId=nguoiThueId, LandlordAccountId=request.LandlordAccountId, Amount=dto.SoTien, Status=DepositStatus.Pending };
-        _db.Deposits.Add(item);
-        await _db.SaveChangesAsync();
-        await transaction.CommitAsync();
-        return Map(item);
+        _db = db;
+        _notificationService = notificationService;
     }
+
     public async Task<List<DatCocDto>> LayCuaToiAsync(int taiKhoanId) => await _db.Deposits.Where(x => x.TenantAccountId == taiKhoanId || x.LandlordAccountId == taiKhoanId).OrderByDescending(x => x.CreatedAt).Select(MapExpression()).ToListAsync();
     public async Task<DatCocDto> CapNhatTrangThaiAsync(int taiKhoanId, int id, int trangThai)
     {
@@ -200,8 +253,64 @@ public class DepositBLL : IDepositService
         if (item.Status != DepositStatus.Paid) throw BusinessRuleException.Conflict("Chỉ khoản cọc đã thanh toán mới có thể được xác nhận.");
         item.Status = DepositStatus.Confirmed; await _db.SaveChangesAsync(); return Map(item);
     }
-    private static DatCocDto Map(Deposit x) => new() { Id=x.Id, YeuCauThueId=x.RentalRequestId, SoTien=x.Amount, TrangThai=x.Status, NgayThanhToan=x.PaidAt, NgayTao=x.CreatedAt };
-    private static System.Linq.Expressions.Expression<Func<Deposit, DatCocDto>> MapExpression() => x => new DatCocDto { Id=x.Id, YeuCauThueId=x.RentalRequestId, SoTien=x.Amount, TrangThai=x.Status, NgayThanhToan=x.PaidAt, NgayTao=x.CreatedAt };
+
+    public async Task ReconcileExpiredDepositsAsync(CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.Now;
+        await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        var expiredDeposits = await _db.Deposits
+            .Where(x => x.Status == DepositStatus.Pending && x.DueAt != null && x.DueAt <= now)
+            .ToListAsync(cancellationToken);
+        if (expiredDeposits.Count == 0)
+        {
+            await transaction.CommitAsync(cancellationToken);
+            return;
+        }
+
+        var requestIds = expiredDeposits.Select(x => x.RentalRequestId).ToList();
+        var requests = await _db.RentalRequests
+            .Include(x => x.Post).ThenInclude(x => x.Room)
+            .Where(x => requestIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, cancellationToken);
+
+        foreach (var deposit in expiredDeposits)
+        {
+            deposit.Status = DepositStatus.Expired;
+            deposit.UpdatedAt = now;
+            if (!requests.TryGetValue(deposit.RentalRequestId, out var request) || request.Status != RentalRequestStatus.Approved)
+                continue;
+
+            request.Status = RentalRequestStatus.Expired;
+            request.UpdatedAt = now;
+            var hasOtherApprovedRequest = await _db.RentalRequests
+                .Include(x => x.Post)
+                .AnyAsync(x => x.Id != request.Id && x.Status == RentalRequestStatus.Approved && x.Post.RoomId == request.Post.RoomId, cancellationToken);
+            if (!hasOtherApprovedRequest && request.Post.Room.Status == RoomStatus.Reserved)
+            {
+                request.Post.Room.Status = RoomStatus.Available;
+                request.Post.Room.UpdatedAt = now;
+            }
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        foreach (var deposit in expiredDeposits)
+        {
+            try
+            {
+                await _notificationService.CreateNotificationAsync(deposit.TenantAccountId, "Khoản đặt cọc đã hết hạn", "Bạn chưa thanh toán cọc đúng hạn, phòng đã được mở lại để cho thuê.", 1, "/tenant/rentals");
+                await _notificationService.CreateNotificationAsync(deposit.LandlordAccountId, "Khoản đặt cọc đã hết hạn", "Khách thuê chưa thanh toán cọc đúng hạn. Yêu cầu thuê đã hết hạn và phòng được mở lại.", 1, "/landlord/contracts?tab=requests");
+            }
+            catch
+            {
+                // The expiration was committed even if its notification cannot be delivered.
+            }
+        }
+    }
+
+    private static DatCocDto Map(Deposit x) => new() { Id=x.Id, YeuCauThueId=x.RentalRequestId, SoTien=x.Amount, TrangThai=x.Status, HanThanhToan=x.DueAt, NgayThanhToan=x.PaidAt, NgayTao=x.CreatedAt };
+    private static System.Linq.Expressions.Expression<Func<Deposit, DatCocDto>> MapExpression() => x => new DatCocDto { Id=x.Id, YeuCauThueId=x.RentalRequestId, SoTien=x.Amount, TrangThai=x.Status, HanThanhToan=x.DueAt, NgayThanhToan=x.PaidAt, NgayTao=x.CreatedAt };
 }
 
 public class RentalContractBLL : IRentalContractService

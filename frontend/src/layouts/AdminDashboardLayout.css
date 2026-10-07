@@ -4,6 +4,7 @@
 ============================================== */
 
 .admin-dashboard-shell {
+  --sidebar-width: 256px;
   --ink: #172033;
   --muted: #7d8798;
   --line: #e8edf3;
@@ -21,7 +22,7 @@
 ========================================================= */
 
 .admin-dashboard-sidebar {
-  width: 256px;
+  width: var(--sidebar-width);
   background: #172033;
   color: #dbe4f3;
   display: flex;
@@ -34,6 +35,8 @@
   top: 0;
   bottom: 0;
   z-index: 100;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   transition: transform 0.3s ease;
 }
 
@@ -42,7 +45,7 @@
   align-items: center;
   gap: 10px;
   font-weight: 800;
-  letter-spacing: -0.4px;
+  letter-spacing: 0;
   font-size: 19px;
   padding: 0 12px 34px;
   color: #fff;
@@ -169,7 +172,8 @@
 .admin-dashboard-main {
   min-width: 0;
   flex: 1;
-  margin-left: 256px;
+  margin-left: var(--sidebar-width);
+  width: calc(100% - var(--sidebar-width));
 }
 
 /* =========================================================
@@ -190,6 +194,8 @@
 }
 
 .admin-dashboard-breadcrumb {
+  min-width: 0;
+  flex: 1;
   display: flex;
   align-items: center;
   gap: 9px;
@@ -202,6 +208,7 @@
 }
 
 .admin-dashboard-breadcrumb strong {
+  overflow-wrap: anywhere;
   color: var(--ink);
   font-weight: 700;
 }
@@ -225,6 +232,7 @@
 }
 
 .admin-dashboard-avatar {
+  flex: none;
   width: 34px;
   height: 34px;
   border-radius: 50%;
@@ -257,9 +265,16 @@
 ========================================================= */
 
 .admin-dashboard-content {
-  padding: 40px;
+  width: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 28px 32px;
   min-height: calc(100vh - 82px);
 }
+
+.admin-dashboard-account { margin-left: auto; min-width: 0; flex: none; }
+.admin-dashboard-user strong { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-dashboard-backdrop { display: none; }
 
 /* =========================================================
    RESPONSIVE
@@ -280,10 +295,17 @@
 
   .admin-dashboard-main {
     margin-left: 0;
+    width: 100%;
   }
 
+  .admin-dashboard-backdrop { display: block; position: fixed; inset: 0; z-index: 90; border: 0; background: #17203366; }
+
   .admin-dashboard-menu-button {
-    display: block;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    flex: none;
   }
 
   .admin-dashboard-topbar {
@@ -298,6 +320,8 @@
 @media (max-width: 640px) {
   .admin-dashboard-topbar {
     height: 68px;
+    padding: 0 12px;
+    gap: 8px;
   }
 
   .admin-dashboard-breadcrumb span:first-child {

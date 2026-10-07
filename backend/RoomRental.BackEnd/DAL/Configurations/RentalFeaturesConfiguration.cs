@@ -29,10 +29,12 @@ public class DepositConfiguration : IEntityTypeConfiguration<Deposit>
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Amount).HasColumnName("SoTien").HasColumnType("decimal(18,2)");
         builder.Property(x => x.Status).HasColumnName("TrangThai").HasDefaultValue(0);
+        builder.Property(x => x.DueAt).HasColumnName("HanThanhToan");
         builder.Property(x => x.PaidAt).HasColumnName("NgayThanhToan");
         builder.Property(x => x.CreatedAt).HasColumnName("NgayTao").HasDefaultValueSql("SYSDATETIME()");
         builder.Property(x => x.UpdatedAt).HasColumnName("NgayCapNhat");
         builder.HasIndex(x => x.RentalRequestId).IsUnique();
+        builder.HasIndex(x => new { x.Status, x.DueAt });
         builder.HasOne<RentalRequest>()
             .WithMany()
             .HasForeignKey(x => x.RentalRequestId)

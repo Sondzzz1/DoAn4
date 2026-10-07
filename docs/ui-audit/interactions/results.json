@@ -1,0 +1,139 @@
+{
+  "fixtureMode": true,
+  "widths": [
+    1440,
+    1200,
+    1024,
+    768,
+    375
+  ],
+  "results": [
+    {
+      "role": "Public",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "expectedSignalRErrors": 0
+    },
+    {
+      "role": "Tenant",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "expectedSignalRErrors": 60
+    },
+    {
+      "role": "Landlord",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "expectedSignalRErrors": 90
+    },
+    {
+      "role": "Admin",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "expectedSignalRErrors": 60
+    }
+  ],
+  "issues": [],
+  "interactions": [
+    {
+      "role": "Public",
+      "width": 1440,
+      "passed": true
+    },
+    {
+      "role": "Public",
+      "width": 1200,
+      "passed": true
+    },
+    {
+      "role": "Public",
+      "width": 1024,
+      "passed": true
+    },
+    {
+      "role": "Public",
+      "width": 768,
+      "passed": true
+    },
+    {
+      "role": "Public",
+      "width": 375,
+      "passed": true
+    },
+    {
+      "role": "Tenant",
+      "width": 1440,
+      "passed": true
+    },
+    {
+      "role": "Tenant",
+      "width": 1200,
+      "passed": true
+    },
+    {
+      "role": "Tenant",
+      "width": 1024,
+      "passed": true
+    },
+    {
+      "role": "Tenant",
+      "width": 768,
+      "passed": true
+    },
+    {
+      "role": "Tenant",
+      "width": 375,
+      "passed": true
+    },
+    {
+      "role": "Landlord",
+      "width": 1440,
+      "passed": true
+    },
+    {
+      "role": "Landlord",
+      "width": 1200,
+      "passed": true
+    },
+    {
+      "role": "Landlord",
+      "width": 1024,
+      "passed": true
+    },
+    {
+      "role": "Landlord",
+      "width": 768,
+      "passed": true
+    },
+    {
+      "role": "Landlord",
+      "width": 375,
+      "passed": true
+    },
+    {
+      "role": "Admin",
+      "width": 1440,
+      "passed": true
+    },
+    {
+      "role": "Admin",
+      "width": 1200,
+      "passed": true
+    },
+    {
+      "role": "Admin",
+      "width": 1024,
+      "passed": true
+    },
+    {
+      "role": "Admin",
+      "width": 768,
+      "passed": true
+    },
+    {
+      "role": "Admin",
+      "width": 375,
+      "passed": true
+    }
+  ]
+}

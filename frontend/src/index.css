@@ -1,6 +1,14 @@
 @import "tailwindcss";
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+/* Tailwind preflight owns the reset so spacing utilities keep their priority. */
+@layer base {
+  * { box-sizing: border-box; }
+  body { letter-spacing: 0; }
+  input, select, textarea { min-width: 0; max-width: 100%; }
+  button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+  :focus-visible { outline: 2px solid #0084ff; outline-offset: 3px; }
+  button:disabled { cursor: not-allowed; }
+}
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,

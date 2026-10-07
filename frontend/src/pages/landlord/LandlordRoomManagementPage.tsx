@@ -1,9 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FiCheck, FiEdit2, FiHome, FiPlus, FiSearch, FiTrash2, FiX } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { roomService } from '../../services/roomService';
 import { RoomItem } from '../../types/room.types';
 import { getApiErrorMessage } from '../../utils/apiError';
+import Input from '../../components/common/Input';
+import PageState from '../../components/common/PageState';
+import LeafletMapPicker from '../../components/map/LeafletMapPicker';
+import { buildLocationQuery, type LocationResult } from '../../services/locationService';
 
 const roomStatusLabel = (status: number) => ({ 0: 'Còn trống', 1: 'Đã thuê', 2: 'Đã giữ chỗ', 3: 'Tạm ngưng' }[status] || 'Không rõ');
 
@@ -20,6 +24,8 @@ const emptyForm = {
   phuong: '',
   quan: '',
   thanhPho: '',
+  latitude: undefined as number | undefined,
+  longitude: undefined as number | undefined,
   tienIchIds: [] as number[],
   danhSachAnh: [] as string[],
 };
@@ -27,18 +33,43 @@ const emptyForm = {
 const LandlordRoomManagementPage: React.FC = () => {
   const [rooms, setRooms] = useState<RoomItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [locationBusy, setLocationBusy] = useState(false);
+  const [locationSearch, setLocationSearch] = useState<{ query: string; revision: number }>();
+  const addressEdited = useRef(false);
+  const [mapSession, setMapSession] = useState(0);
+
+  const changeAddress = (field: 'diaChi' | 'phuong' | 'quan' | 'thanhPho', value: string) => {
+    addressEdited.current = true;
+    setForm(previous => ({ ...previous, [field]: value, latitude: undefined, longitude: undefined }));
+  };
+  const searchCompletedAddress = () => {
+    if (!addressEdited.current || !form.diaChi.trim()) return;
+    addressEdited.current = false;
+    const query = buildLocationQuery(form.diaChi, form.phuong, form.quan, form.thanhPho);
+    setLocationSearch(previous => ({ query, revision: (previous?.revision || 0) + 1 }));
+  };
+  const handleLocationChange = useCallback((lat: number, lng: number, location?: LocationResult) => {
+    setForm(previous => ({ ...previous, latitude: lat, longitude: lng,
+      ...(location ? { diaChi: location.address || location.displayName, thanhPho: location.province || '',
+        quan: location.district || '', phuong: location.ward || '' } : {}),
+    }));
+  }, []);
 
   const loadRooms = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const response = await roomService.getMyRooms(statusFilter ? Number(statusFilter) : undefined);
       setRooms(response.data || []);
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Không thể tải danh sách phòng.'));
+      setLoadError(getApiErrorMessage(error, 'Không thể tải danh sách phòng.'));
     } finally {
       setLoading(false);
     }
@@ -59,18 +90,28 @@ const LandlordRoomManagementPage: React.FC = () => {
   }, [query, rooms]);
 
   const clearForm = () => {
+    setMapSession(previous => previous + 1);
+    addressEdited.current = false;
+    setLocationSearch(undefined);
+    setFormError('');
     setForm(emptyForm);
     setEditingId(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    if (saving || locationBusy) return;
     if (!form.tenPhong.trim() || !form.diaChi.trim()) {
       toast.error('Vui lòng nhập tên phòng và địa chỉ.');
       return;
     }
 
+    if (form.gia <= 0 || form.dienTich <= 0 || form.soNguoiToiDa < 1) {
+      setFormError('Giá thuê, diện tích và số người tối đa phải lớn hơn 0.');
+      return;
+    }
+    setSaving(true);
+    setFormError('');
     try {
       if (editingId) {
         await roomService.updateRoom(editingId, { ...form });
@@ -82,11 +123,16 @@ const LandlordRoomManagementPage: React.FC = () => {
       clearForm();
       await loadRooms();
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Có lỗi xảy ra khi lưu phòng.'));
+      setFormError(getApiErrorMessage(error, 'Có lỗi xảy ra khi lưu phòng.'));
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleEdit = (room: RoomItem) => {
+    setMapSession(previous => previous + 1);
+    addressEdited.current = false;
+    setLocationSearch(undefined);
     setEditingId(room.id);
     setForm({
       tenPhong: room.roomName,
@@ -101,6 +147,8 @@ const LandlordRoomManagementPage: React.FC = () => {
       phuong: room.ward || '',
       quan: room.district || '',
       thanhPho: room.province || '',
+      latitude: room.latitude ?? undefined,
+      longitude: room.longitude ?? undefined,
       tienIchIds: room.amenityIds || [],
       danhSachAnh: room.imageUrls || [],
     });
@@ -131,7 +179,7 @@ const LandlordRoomManagementPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="room-management-page">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">QUẢN LÝ</p>
@@ -146,12 +194,13 @@ const LandlordRoomManagementPage: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[1.3fr_0.7fr] gap-6">
-        <div className="rounded-2xl border bg-white shadow-sm p-4">
+        <div className="min-w-0">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
             <div className="relative w-full md:max-w-sm">
               <FiSearch className="absolute left-3 top-3 text-slate-400" />
               <input
                 value={query}
+                aria-label="Tìm phòng của tôi"
                 onChange={(e) => setQuery(e.target.value)}
                 className="w-full border rounded-lg pl-10 pr-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Tìm phòng..."
@@ -160,19 +209,21 @@ const LandlordRoomManagementPage: React.FC = () => {
 
             <select
               value={statusFilter}
+              aria-label="Trạng thái phòng"
               onChange={(e) => setStatusFilter(e.target.value)}
               className="border rounded-lg px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Tất cả trạng thái</option>
               <option value="0">Còn trống</option>
               <option value="1">Đã thuê</option>
-              <option value="2">Tạm ngưng</option>
+              <option value="2">Đã giữ chỗ</option>
+              <option value="3">Tạm ngưng</option>
             </select>
           </div>
 
           {loading ? (
             <div className="py-10 text-center text-slate-500">Đang tải thông tin phòng...</div>
-          ) : filteredRooms.length === 0 ? (
+          ) : loadError ? <PageState type="error" message={loadError} onRetry={loadRooms} /> : filteredRooms.length === 0 ? (
             <div className="py-10 text-center text-slate-500">Chưa có phòng nào phù hợp.</div>
           ) : (
             <div className="space-y-4">
@@ -180,7 +231,7 @@ const LandlordRoomManagementPage: React.FC = () => {
                 <div key={room.id} className="border rounded-xl p-4 hover:shadow-sm transition">
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     <div className="flex items-center gap-4">
-                      <div className="w-20 h-20 rounded-xl bg-slate-100 overflow-hidden">
+                      <div className="w-20 h-20 shrink-0 rounded-lg bg-slate-100 overflow-hidden">
                         {room.imageUrls?.[0] ? (
                           <img src={room.imageUrls[0]} alt={room.roomName} className="w-full h-full object-cover" />
                         ) : (
@@ -188,7 +239,7 @@ const LandlordRoomManagementPage: React.FC = () => {
                         )}
                       </div>
 
-                      <div>
+                      <div className="min-w-0 break-words">
                         <h3 className="font-semibold text-lg text-slate-900">{room.roomName}</h3>
                         <p className="text-sm text-slate-500">{room.address}</p>
                         <div className="flex flex-wrap gap-2 mt-2 text-xs">
@@ -227,36 +278,35 @@ const LandlordRoomManagementPage: React.FC = () => {
           <h2 className="text-xl font-semibold mb-4">{editingId ? 'Cập nhật phòng' : 'Thêm phòng mới'}</h2>
 
           <form onSubmit={handleSubmit} className="space-y-3">
-            <input value={form.tenPhong} onChange={(e) => setForm({ ...form, tenPhong: e.target.value })} className="w-full border rounded-lg px-3 py-2.5" placeholder="Tên phòng" />
-            <textarea value={form.moTa} onChange={(e) => setForm({ ...form, moTa: e.target.value })} className="w-full border rounded-lg px-3 py-2.5" placeholder="Mô tả" rows={3} />
-
-            <div className="grid grid-cols-2 gap-3">
-              <input type="number" value={form.gia} onChange={(e) => setForm({ ...form, gia: Number(e.target.value) })} className="w-full border rounded-lg px-3 py-2.5" placeholder="Giá" />
-              <input type="number" value={form.dienTich} onChange={(e) => setForm({ ...form, dienTich: Number(e.target.value) })} className="w-full border rounded-lg px-3 py-2.5" placeholder="Diện tích" />
+            <Input label="Tên phòng" required value={form.tenPhong} onChange={(e) => setForm({ ...form, tenPhong: e.target.value })} />
+            <label className="block text-sm font-medium text-slate-700">Mô tả
+              <textarea value={form.moTa} onChange={(e) => setForm({ ...form, moTa: e.target.value })} className="mt-1 w-full border rounded-lg px-3 py-2.5" rows={3} />
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {([
+                ['gia', 'Giá thuê (VNĐ/tháng)', 1], ['dienTich', 'Diện tích (m²)', 0.1],
+                ['soNguoiToiDa', 'Số người tối đa', 1], ['tang', 'Tầng', 0],
+                ['soPhongNgu', 'Số phòng ngủ', 0], ['soPhongTam', 'Số phòng tắm', 0],
+              ] as const).map(([field, label, min]) => (
+                <Input key={field} label={label} type="number" min={min} step={field === 'dienTich' ? '0.1' : '1'} required value={form[field]} onChange={(e) => setForm({ ...form, [field]: Number(e.target.value) })} />
+              ))}
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <input type="number" value={form.soNguoiToiDa} onChange={(e) => setForm({ ...form, soNguoiToiDa: Number(e.target.value) })} className="w-full border rounded-lg px-3 py-2.5" placeholder="Số người tối đa" />
-              <input type="number" value={form.tang} onChange={(e) => setForm({ ...form, tang: Number(e.target.value) })} className="w-full border rounded-lg px-3 py-2.5" placeholder="Tầng" />
+            <Input id="room-address" label="Địa chỉ" required value={form.diaChi} onChange={(e) => changeAddress('diaChi', e.target.value)} onBlur={searchCompletedAddress} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input label="Phường / xã" value={form.phuong} onChange={(e) => changeAddress('phuong', e.target.value)} onBlur={searchCompletedAddress} />
+              <Input label="Quận / huyện" value={form.quan} onChange={(e) => changeAddress('quan', e.target.value)} onBlur={searchCompletedAddress} />
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <input type="number" value={form.soPhongNgu} onChange={(e) => setForm({ ...form, soPhongNgu: Number(e.target.value) })} className="w-full border rounded-lg px-3 py-2.5" placeholder="Số phòng ngủ" />
-              <input type="number" value={form.soPhongTam} onChange={(e) => setForm({ ...form, soPhongTam: Number(e.target.value) })} className="w-full border rounded-lg px-3 py-2.5" placeholder="Số phòng tắm" />
-            </div>
-
-            <input value={form.diaChi} onChange={(e) => setForm({ ...form, diaChi: e.target.value })} className="w-full border rounded-lg px-3 py-2.5" placeholder="Địa chỉ" />
-            <div className="grid grid-cols-2 gap-3">
-              <input value={form.phuong} onChange={(e) => setForm({ ...form, phuong: e.target.value })} className="w-full border rounded-lg px-3 py-2.5" placeholder="Phường" />
-              <input value={form.quan} onChange={(e) => setForm({ ...form, quan: e.target.value })} className="w-full border rounded-lg px-3 py-2.5" placeholder="Quận" />
-            </div>
-            <input value={form.thanhPho} onChange={(e) => setForm({ ...form, thanhPho: e.target.value })} className="w-full border rounded-lg px-3 py-2.5" placeholder="Thành phố" />
+            <Input label="Tỉnh / thành phố" value={form.thanhPho} onChange={(e) => changeAddress('thanhPho', e.target.value)} onBlur={searchCompletedAddress} />
+            <LeafletMapPicker key={mapSession} latitude={form.latitude} longitude={form.longitude}
+              address={form.diaChi} ward={form.phuong} district={form.quan} province={form.thanhPho}
+              searchRequest={locationSearch} onLocationChange={handleLocationChange} onBusyChange={setLocationBusy} />
+            {formError && <p role="alert" className="text-sm text-red-600">{formError}</p>}
 
             <div className="flex gap-3 pt-2">
-              <button type="submit" className="flex-1 bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700">
-                {editingId ? 'Lưu thay đổi' : 'Thêm phòng'}
+              <button type="submit" disabled={saving || locationBusy} className="flex-1 bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-60">
+                {saving ? 'Đang lưu...' : editingId ? 'Lưu thay đổi' : 'Thêm phòng'}
               </button>
-              <button type="button" onClick={clearForm} className="px-4 py-2.5 rounded-lg border">
+              <button type="button" disabled={saving} onClick={clearForm} aria-label="Xóa nội dung biểu mẫu" title="Xóa nội dung biểu mẫu" className="px-4 py-2.5 rounded-lg border">
                 <FiX />
               </button>
             </div>

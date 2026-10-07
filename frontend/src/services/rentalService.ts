@@ -22,6 +22,7 @@ export interface DepositDto {
   yeuCauThueId: number;
   soTien: number;
   trangThai: number; // 0 pending, 1 paid, 2 confirmed, 3 refund requested, 4 refunded, 5 cancelled
+  hanThanhToan?: string;
   ngayThanhToan?: string;
   ngayTao: string;
 }
@@ -86,8 +87,13 @@ export const rentalService = {
     return response.data;
   },
 
-  updateRentalRequestStatus: async (id: number, trangThai: number, ghiChu?: string): Promise<ApiResponse<RentalRequestDto>> => {
-    const response = await api.put<ApiResponse<RentalRequestDto>>(`/yeu-cau-thue/${id}/trang-thai`, { trangThai, ghiChu });
+  updateRentalRequestStatus: async (
+    id: number,
+    trangThai: number,
+    ghiChu?: string,
+    depositTerms?: { soTienDatCoc: number; hanThanhToanCoc: string },
+  ): Promise<ApiResponse<RentalRequestDto>> => {
+    const response = await api.put<ApiResponse<RentalRequestDto>>(`/yeu-cau-thue/${id}/trang-thai`, { trangThai, ghiChu, ...depositTerms });
     return response.data;
   },
 
@@ -96,9 +102,9 @@ export const rentalService = {
     return response.data;
   },
 
-  // Đặt cọc
-  createDeposit: async (data: { yeuCauThueId: number; soTien: number }): Promise<ApiResponse<DepositDto>> => {
-    const response = await api.post<ApiResponse<DepositDto>>('/dat-coc', data);
+  // Đặt cọc do chủ trọ thiết lập sau khi duyệt yêu cầu
+  setupDeposit: async (requestId: number, data: { soTien: number; hanThanhToan: string }): Promise<ApiResponse<DepositDto>> => {
+    const response = await api.post<ApiResponse<DepositDto>>(`/yeu-cau-thue/${requestId}/dat-coc`, data);
     return response.data;
   },
 

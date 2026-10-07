@@ -1,225 +1,61 @@
 import React, { useState } from 'react';
-import { Post } from '../../types/post.types';
-import { FiX, FiCalendar, FiClock, FiPhone, FiMessageSquare, FiCheck } from 'react-icons/fi';
+import { FiCalendar, FiCheck, FiClock } from 'react-icons/fi';
 import { toast } from 'react-toastify';
+import { Post } from '../../types/post.types';
 import { appointmentService } from '../../services/appointmentService';
 import { getApiErrorMessage } from '../../utils/apiError';
+import Modal from '../common/Modal';
+import Input from '../common/Input';
 
-interface BookingModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  post: Post;
-}
+interface BookingModalProps { isOpen: boolean; onClose: () => void; post: Post; }
 
 const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, post }) => {
-  const [formData, setFormData] = useState({
-    date: '',
-    time: '',
-    phone: '',
-    message: '',
-  });
+  const [formData, setFormData] = useState({ date: '', time: '', phone: '', message: '' });
+  const [errors, setErrors] = useState<Partial<Record<keyof typeof formData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  if (!isOpen) return null;
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const [submitError, setSubmitError] = useState('');
+  const now = new Date();
+  const today = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
+  const change = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const key = event.target.name as keyof typeof formData;
+    setFormData(current => ({ ...current, [key]: event.target.value }));
+    setErrors(current => ({ ...current, [key]: undefined }));
   };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validation
-    if (!formData.date || !formData.time || !formData.phone) {
-      toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
-      return;
-    }
-
-    setIsSubmitting(true);
-
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (isSubmitting) return;
+    const next: typeof errors = {};
+    if (!formData.date) next.date = 'Vui lòng chọn ngày xem.';
+    if (!formData.time) next.time = 'Vui lòng chọn giờ xem.';
+    if (formData.date && formData.time && new Date(formData.date + 'T' + formData.time) <= new Date()) next.time = 'Lịch xem phải ở thời điểm tương lai.';
+    if (!/^[0-9]{10,11}$/.test(formData.phone.trim())) next.phone = 'Nhập số điện thoại gồm 10–11 chữ số.';
+    setErrors(next);
+    if (Object.keys(next).length) return;
+    setIsSubmitting(true); setSubmitError('');
     try {
-      const payload = {
-        baiDangId: post.id,
-        chuTroId: post.landlordId,
-        ngayXem: formData.date,
-        gioXem: formData.time,
-        ghiChu: formData.message || '',
-      };
-
-      const response = await appointmentService.createAppointment(payload);
-
-      if (!response?.success) {
-        throw new Error(response?.message || 'Không thể đặt lịch xem phòng');
-      }
-
-      toast.success(response.message || 'Đặt lịch xem phòng thành công! Chủ nhà sẽ liên hệ với bạn sớm.');
+      const response = await appointmentService.createAppointment({ baiDangId: post.id, chuTroId: post.landlordId, ngayXem: formData.date, gioXem: formData.time, ghiChu: formData.message || '' });
+      if (!response.success) throw new Error(response.message || 'Không thể đặt lịch xem phòng.');
+      toast.success(response.message || 'Đã gửi lịch xem phòng.');
       onClose();
-
-      setFormData({
-        date: '',
-        time: '',
-        phone: '',
-        message: '',
-      });
-    } catch (error) {
-      const message = error instanceof Error
-        ? error.message
-        : getApiErrorMessage(error, 'Có lỗi xảy ra. Vui lòng thử lại sau.');
-      toast.error(message);
-    } finally {
-      setIsSubmitting(false);
-    }
+      setFormData({ date: '', time: '', phone: '', message: '' });
+    } catch (error) { setSubmitError(getApiErrorMessage(error, 'Không thể gửi lịch hẹn. Vui lòng thử lại.')); }
+    finally { setIsSubmitting(false); }
   };
 
-  // Get minimum date (today)
-  const today = new Date().toISOString().split('T')[0];
-
-  return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-2xl shadow-2xl max-w-[540px] w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
-          <h3 className="text-[20px] font-bold text-gray-900">Đặt lịch xem phòng</h3>
-          <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
-            aria-label="Đóng"
-          >
-            <FiX className="w-5 h-5 text-gray-600" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="px-6 py-5">
-          {/* Room Info Summary */}
-          <div className="mb-5 p-4 rounded-xl bg-gray-50 border border-gray-100">
-            <h4 className="text-[15px] font-semibold text-gray-900 mb-1 line-clamp-2">
-              {post.title}
-            </h4>
-            <p className="text-[13px] text-gray-600">
-              {post.address}, {post.district}, {post.province}
-            </p>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Date & Time Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Date */}
-              <div>
-                <label className="flex items-center gap-2 text-[14px] font-semibold text-gray-700 mb-2">
-                  <FiCalendar className="w-4 h-4 text-[#0084ff]" />
-                  Ngày xem <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  name="date"
-                  value={formData.date}
-                  onChange={handleChange}
-                  min={today}
-                  required
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#0084ff] focus:border-transparent transition-all"
-                />
-              </div>
-
-              {/* Time */}
-              <div>
-                <label className="flex items-center gap-2 text-[14px] font-semibold text-gray-700 mb-2">
-                  <FiClock className="w-4 h-4 text-[#0084ff]" />
-                  Giờ xem <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="time"
-                  name="time"
-                  value={formData.time}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#0084ff] focus:border-transparent transition-all"
-                />
-              </div>
-            </div>
-
-            {/* Phone */}
-            <div>
-              <label className="flex items-center gap-2 text-[14px] font-semibold text-gray-700 mb-2">
-                <FiPhone className="w-4 h-4 text-[#0084ff]" />
-                Số điện thoại <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                placeholder="Nhập số điện thoại liên hệ"
-                required
-                pattern="[0-9]{10,11}"
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-[15px] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0084ff] focus:border-transparent transition-all"
-              />
-            </div>
-
-            {/* Message (Optional) */}
-            <div>
-              <label className="flex items-center gap-2 text-[14px] font-semibold text-gray-700 mb-2">
-                <FiMessageSquare className="w-4 h-4 text-[#0084ff]" />
-                Ghi chú (tùy chọn)
-              </label>
-              <textarea
-                name="message"
-                value={formData.message}
-                onChange={handleChange}
-                placeholder="Nhập lời nhắn hoặc câu hỏi cho chủ nhà..."
-                rows={3}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-[15px] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0084ff] focus:border-transparent transition-all resize-none"
-              />
-            </div>
-
-            {/* Info Note */}
-            <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
-              <p className="text-[13px] text-blue-800 leading-relaxed">
-                Chủ nhà sẽ liên hệ xác nhận lịch hẹn qua số điện thoại của bạn trong vòng 24 giờ.
-              </p>
-            </div>
-          </form>
-        </div>
-
-        {/* Footer */}
-        <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 px-5 h-[48px] rounded-xl border-2 border-gray-300 text-gray-700 text-[15px] font-semibold hover:bg-gray-50 transition-colors"
-          >
-            Hủy
-          </button>
-          <button
-            type="submit"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="flex-1 flex items-center justify-center gap-2 px-5 h-[48px] rounded-xl bg-[#0084ff] text-white text-[15px] font-semibold hover:bg-[#0073df] transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Đang gửi...
-              </>
-            ) : (
-              <>
-                <FiCheck className="w-5 h-5" />
-                Xác nhận đặt lịch
-              </>
-            )}
-          </button>
-        </div>
+  return <Modal isOpen={isOpen} onClose={() => { if (!isSubmitting) onClose(); }} title="Đặt lịch xem phòng">
+    <div className="mb-5 border-b border-slate-200 pb-4"><h3 className="font-semibold text-slate-900">{post.title}</h3><p className="mt-1 text-sm text-slate-500">{[post.address, post.district, post.province].filter(Boolean).join(', ')}</p></div>
+    <form onSubmit={handleSubmit} noValidate className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Input label="Ngày xem" name="date" type="date" min={today} required value={formData.date} onChange={change} error={errors.date} />
+        <Input label="Giờ xem" name="time" type="time" required value={formData.time} onChange={change} error={errors.time} />
       </div>
-    </div>
-  );
+      <Input label="Số điện thoại liên hệ" name="phone" type="tel" inputMode="tel" autoComplete="tel" required value={formData.phone} onChange={change} placeholder="Nhập số điện thoại" error={errors.phone} />
+      <label htmlFor="booking-note" className="block text-sm font-medium text-slate-700">Lời nhắn cho chủ trọ</label>
+      <textarea id="booking-note" name="message" rows={4} maxLength={1000} value={formData.message} onChange={change} placeholder="Thời gian bạn thuận tiện, câu hỏi về phòng..." className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+      <p className="flex items-start gap-2 text-sm text-slate-500"><FiCalendar className="mt-1 shrink-0" /><span>Chủ trọ sẽ phản hồi lịch hẹn trong mục Lịch xem phòng.</span></p>
+      {submitError && <p className="form-error" role="alert">{submitError}</p>}
+      <div className="form-actions"><button type="button" disabled={isSubmitting} onClick={onClose}>Hủy</button><button type="submit" disabled={isSubmitting} className="inline-flex items-center justify-center gap-2 bg-[#0084ff] text-white disabled:opacity-60">{isSubmitting ? <FiClock /> : <FiCheck />}{isSubmitting ? 'Đang gửi...' : 'Xác nhận lịch hẹn'}</button></div>
+    </form>
+  </Modal>;
 };
-
 export default BookingModal;

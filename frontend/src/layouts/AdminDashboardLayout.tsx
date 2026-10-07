@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   FiActivity,
@@ -32,7 +32,8 @@ const landlordMenu = [
   { label: 'Tin đăng', icon: FiFileText, href: ROUTES.LANDLORD_POSTS },
   { label: 'Phòng trọ', icon: FiHome, href: '/landlord/rooms' },
   { label: 'Lịch hẹn xem phòng', icon: FiCalendar, href: ROUTES.LANDLORD_APPOINTMENTS },
-  { label: 'Hợp đồng & Đặt cọc', icon: FiShield, href: '/landlord/contracts' },
+  { label: 'Yêu cầu thuê & Đặt cọc', icon: FiUsers, href: ROUTES.LANDLORD_RENTAL_REQUESTS },
+  { label: 'Hợp đồng & Hóa đơn', icon: FiShield, href: ROUTES.LANDLORD_CONTRACTS },
 ];
 
 const adminMenu = [
@@ -55,8 +56,48 @@ const AdminDashboardLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() => window.matchMedia('(min-width: 1025px)').matches);
+  const sidebarRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 1025px)');
+    const update = () => setIsDesktop(media.matches);
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
 
   const menu = isAdmin ? adminMenu : landlordMenu;
+  const isMenuActive = (href: string) => {
+    const [pathname, query] = href.split('?');
+    if (query) {
+      const tab = new URLSearchParams(location.search).get('tab') || 'requests';
+      return location.pathname === pathname && (query.includes('requests') ? tab === 'requests' : tab !== 'requests');
+    }
+    return location.pathname === pathname || (pathname.endsWith('/posts') && location.pathname.startsWith(`${pathname}/`) && !location.pathname.endsWith('/approval'));
+  };
+  const activeMenuItem = [...menu].reverse().find((item) => isMenuActive(item.href));
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = 'hidden';
+    sidebarRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+      if (event.key === 'Tab' && sidebarRef.current) {
+        const items = [...sidebarRef.current.querySelectorAll<HTMLElement>('button,a[href]')].filter(item => item.getClientRects().length);
+        const first = items[0]; const last = items[items.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }
+    };
+    const desktop = window.matchMedia('(min-width: 1025px)');
+    const closeOnDesktop = () => { if (desktop.matches) setMenuOpen(false); };
+    window.addEventListener('keydown', closeOnEscape);
+    desktop.addEventListener('change', closeOnDesktop);
+    return () => { document.body.style.overflow = previousOverflow; previousFocus?.focus(); window.removeEventListener('keydown', closeOnEscape); desktop.removeEventListener('change', closeOnDesktop); };
+  }, [menuOpen]);
 
   const handleLogout = () => {
     logout();
@@ -68,7 +109,8 @@ const AdminDashboardLayout: React.FC = () => {
       {/* ===================================================
           SIDEBAR
       =================================================== */}
-      <aside className={`admin-dashboard-sidebar ${menuOpen ? 'is-open' : ''}`}>
+      {menuOpen && <button className="admin-dashboard-backdrop" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} />}
+      <aside ref={sidebarRef} id="dashboard-navigation" inert={!isDesktop && !menuOpen} aria-hidden={!isDesktop && !menuOpen} aria-label="Điều hướng quản lý" className={`admin-dashboard-sidebar ${menuOpen ? 'is-open' : ''}`}>
         <div className="admin-dashboard-brand">
           <span className="admin-dashboard-brand-mark">T</span>
           <span>
@@ -95,13 +137,14 @@ const AdminDashboardLayout: React.FC = () => {
 
           {menu.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.href;
+            const isActive = activeMenuItem === item;
 
             return (
               <Link
                 key={`${item.href}-${item.label}`}
                 to={item.href}
                 className={isActive ? 'is-active' : ''}
+                aria-current={isActive ? 'page' : undefined}
                 onClick={() => setMenuOpen(false)}
               >
                 <Icon />
@@ -135,19 +178,21 @@ const AdminDashboardLayout: React.FC = () => {
             className="admin-dashboard-menu-button"
             onClick={() => setMenuOpen(true)}
             aria-label="Mở menu"
+            aria-expanded={menuOpen}
+            aria-controls="dashboard-navigation"
           >
             <FiMenu />
           </button>
 
           <div className="admin-dashboard-breadcrumb">
             <span>{isAdmin ? 'Quản trị hệ thống' : 'Chủ trọ'}</span>
-            <FiChevronRight />
-            <strong>
-              {menu.find((m) => m.href === location.pathname)?.label || 'Trang'}
+              <FiChevronRight />
+              <strong>
+              {activeMenuItem?.label || 'Trang'}
             </strong>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="admin-dashboard-account flex items-center gap-3">
             <NotificationBell />
             <div className="admin-dashboard-user">
               <div className="admin-dashboard-avatar">

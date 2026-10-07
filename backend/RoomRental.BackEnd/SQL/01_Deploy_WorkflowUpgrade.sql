@@ -50,6 +50,7 @@ BEGIN TRY
             LandlordAccountId INT NOT NULL,
             SoTien DECIMAL(18,2) NOT NULL,
             TrangThai INT NOT NULL CONSTRAINT DF_DatCoc_TrangThai DEFAULT 0,
+            HanThanhToan DATETIME2 NULL,
             NgayThanhToan DATETIME2 NULL,
             NgayTao DATETIME2 NOT NULL CONSTRAINT DF_DatCoc_NgayTao DEFAULT SYSDATETIME(),
             NgayCapNhat DATETIME2 NULL
@@ -174,6 +175,8 @@ BEGIN TRY
         ALTER TABLE dbo.HopDongThue ADD DieuKhoan NVARCHAR(4000) NULL;
     IF COL_LENGTH(N'dbo.HoaDonHangThang', N'PhiDichVu') IS NULL
         ALTER TABLE dbo.HoaDonHangThang ADD PhiDichVu DECIMAL(18,2) NOT NULL CONSTRAINT DF_HoaDonHangThang_PhiDichVu DEFAULT 0;
+    IF COL_LENGTH(N'dbo.DatCoc', N'HanThanhToan') IS NULL
+        ALTER TABLE dbo.DatCoc ADD HanThanhToan DATETIME2 NULL;
     IF COL_LENGTH(N'dbo.DanhGiaPhong', N'NgayCapNhat') IS NULL
         ALTER TABLE dbo.DanhGiaPhong ADD NgayCapNhat DATETIME2 NULL;
     IF COL_LENGTH(N'dbo.GiaoDichThanhToan', N'MonthlyBillId') IS NULL
@@ -228,6 +231,8 @@ BEGIN TRY
         CREATE UNIQUE INDEX UX_GiaoDichThanhToan_TransactionCode ON dbo.GiaoDichThanhToan(TransactionCode) WHERE TransactionCode IS NOT NULL;
     IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_GiaoDichThanhToan_DepositId' AND object_id = OBJECT_ID(N'dbo.GiaoDichThanhToan'))
         CREATE INDEX IX_GiaoDichThanhToan_DepositId ON dbo.GiaoDichThanhToan(DepositId);
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_DatCoc_TrangThai_HanThanhToan' AND object_id = OBJECT_ID(N'dbo.DatCoc'))
+        CREATE INDEX IX_DatCoc_TrangThai_HanThanhToan ON dbo.DatCoc(TrangThai, HanThanhToan);
     IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_GiaoDichThanhToan_MonthlyBillId' AND object_id = OBJECT_ID(N'dbo.GiaoDichThanhToan'))
         CREATE INDEX IX_GiaoDichThanhToan_MonthlyBillId ON dbo.GiaoDichThanhToan(MonthlyBillId);
 

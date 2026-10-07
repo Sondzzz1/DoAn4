@@ -2,94 +2,64 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RoomRental.BackEnd.DTO.Common;
 using RoomRental.BackEnd.DTO.Location;
+using RoomRental.BackEnd.Services;
 using System.Text.Json;
 
 namespace RoomRental.BackEnd.Controllers;
 
-/// <summary>
-/// Controller proxy cho Nominatim Location Search
-/// </summary>
 [Route("api/location")]
 [ApiController]
+[AllowAnonymous]
 public class LocationController : ControllerBase
 {
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly NominatimGeocodingService _geocoding;
     private readonly ILogger<LocationController> _logger;
 
-    public LocationController(IHttpClientFactory httpClientFactory, ILogger<LocationController> logger)
+    public LocationController(NominatimGeocodingService geocoding, ILogger<LocationController> logger)
     {
-        _httpClientFactory = httpClientFactory;
+        _geocoding = geocoding;
         _logger = logger;
     }
 
-    /// <summary>
-    /// Tìm kiếm địa điểm qua Nominatim (proxy để tránh CORS/DNS issues)
-    /// GET /api/location/search?q=42+Đường+Nguyễn+Lân
-    /// </summary>
     [HttpGet("search")]
-    [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<List<LocationSearchResultDto>>), 200)]
-    public async Task<IActionResult> SearchLocation([FromQuery] string q)
+    public async Task<IActionResult> SearchLocation([FromQuery] string q, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(q) || q.Trim().Length > 500)
+            return BadRequest(ApiResponse<List<LocationSearchResultDto>>.ErrorResponse("Địa chỉ tìm kiếm phải có từ 1 đến 500 ký tự."));
         try
         {
-            if (string.IsNullOrWhiteSpace(q))
-            {
-                return BadRequest(ApiResponse<List<LocationSearchResultDto>>.ErrorResponse("Vui lòng nhập địa chỉ tìm kiếm"));
-            }
-
-            var httpClient = _httpClientFactory.CreateClient();
-            httpClient.DefaultRequestHeaders.Add("User-Agent", "RoomRentalSystem/1.0");
-
-            var nominatimUrl = $"https://nominatim.openstreetmap.org/search?format=json&q={Uri.EscapeDataString(q)}&limit=5&countrycodes=vn";
-
-            _logger.LogInformation("Calling Nominatim: {Url}", nominatimUrl);
-
-            var response = await httpClient.GetAsync(nominatimUrl);
-            response.EnsureSuccessStatusCode();
-
-            var content = await response.Content.ReadAsStringAsync();
-            var nominatimResults = JsonSerializer.Deserialize<List<NominatimResult>>(content, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-
-            if (nominatimResults == null || nominatimResults.Count == 0)
-            {
-                return Ok(ApiResponse<List<LocationSearchResultDto>>.SuccessResponse(
-                    new List<LocationSearchResultDto>(), 
-                    "Không tìm thấy kết quả"));
-            }
-
-            var results = nominatimResults.Select(r => new LocationSearchResultDto
-            {
-                DisplayName = r.DisplayName ?? r.Display_Name ?? "",
-                Latitude = double.TryParse(r.Lat, out var lat) ? lat : 0,
-                Longitude = double.TryParse(r.Lon, out var lon) ? lon : 0
-            }).ToList();
-
-            _logger.LogInformation("Found {Count} results", results.Count);
-
-            return Ok(ApiResponse<List<LocationSearchResultDto>>.SuccessResponse(results, "Tìm kiếm thành công"));
+            var results = await _geocoding.SearchAsync(q, cancellationToken);
+            return Ok(ApiResponse<List<LocationSearchResultDto>>.SuccessResponse(results, results.Count > 0 ? "Tìm kiếm thành công" : "Không tìm thấy kết quả"));
         }
-        catch (HttpRequestException ex)
+        catch (Exception ex) when (IsUpstreamError(ex, cancellationToken))
         {
-            _logger.LogError(ex, "HTTP error calling Nominatim");
-            return StatusCode(503, ApiResponse<List<LocationSearchResultDto>>.ErrorResponse("Không thể kết nối đến dịch vụ bản đồ. Vui lòng thử lại sau."));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error searching location");
-            return BadRequest(ApiResponse<List<LocationSearchResultDto>>.ErrorResponse($"Lỗi tìm kiếm: {ex.Message}"));
+            _logger.LogWarning(ex, "Geocoding search unavailable");
+            return StatusCode(503, ApiResponse<List<LocationSearchResultDto>>.ErrorResponse("Không thể tra cứu địa chỉ lúc này. Vui lòng thử lại sau."));
         }
     }
 
-    // Internal DTO for Nominatim response
-    private class NominatimResult
+    [HttpGet("reverse")]
+    [ProducesResponseType(typeof(ApiResponse<LocationSearchResultDto>), 200)]
+    public async Task<IActionResult> ReverseLocation([FromQuery] double lat, [FromQuery] double lng, CancellationToken cancellationToken)
     {
-        public string? Lat { get; set; }
-        public string? Lon { get; set; }
-        public string? DisplayName { get; set; }
-        public string? Display_Name { get; set; } // Nominatim uses snake_case
+        if (!Request.Query.ContainsKey("lat") || !Request.Query.ContainsKey("lng") || !double.IsFinite(lat) || !double.IsFinite(lng)
+            || lat is < -90 or > 90 || lng is < -180 or > 180)
+            return BadRequest(ApiResponse<LocationSearchResultDto>.ErrorResponse("Tọa độ không hợp lệ."));
+        try
+        {
+            var result = await _geocoding.ReverseAsync(lat, lng, cancellationToken);
+            if (result == null || string.IsNullOrWhiteSpace(result.DisplayName))
+                return NotFound(ApiResponse<LocationSearchResultDto>.ErrorResponse("Không tìm thấy địa chỉ tại vị trí đã chọn."));
+            return Ok(ApiResponse<LocationSearchResultDto>.SuccessResponse(result, "Tra cứu địa chỉ thành công"));
+        }
+        catch (Exception ex) when (IsUpstreamError(ex, cancellationToken))
+        {
+            _logger.LogWarning(ex, "Reverse geocoding unavailable");
+            return StatusCode(503, ApiResponse<LocationSearchResultDto>.ErrorResponse("Không thể tra cứu địa chỉ lúc này. Vui lòng thử lại sau."));
+        }
     }
+
+    private static bool IsUpstreamError(Exception error, CancellationToken cancellationToken) =>
+        error is HttpRequestException or JsonException || (error is OperationCanceledException && !cancellationToken.IsCancellationRequested);
 }

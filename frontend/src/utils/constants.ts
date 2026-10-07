@@ -59,8 +59,8 @@ export const APPOINTMENT_STATUS_LABELS = {
   [APPOINTMENT_STATUS.CANCELLED]: 'Đã hủy',
 } as const;
 
-export const RENTAL_REQUEST_STATUS = { PENDING: 0, APPROVED: 1, REJECTED: 2, CANCELLED: 3, CONVERTED: 4 } as const;
-export const DEPOSIT_STATUS = { PENDING: 0, PAID: 1, CONFIRMED: 2, REFUND_REQUESTED: 3, REFUNDED: 4, CANCELLED: 5 } as const;
+export const RENTAL_REQUEST_STATUS = { PENDING: 0, APPROVED: 1, REJECTED: 2, CANCELLED: 3, CONVERTED: 4, EXPIRED: 5 } as const;
+export const DEPOSIT_STATUS = { PENDING: 0, PAID: 1, CONFIRMED: 2, REFUND_REQUESTED: 3, REFUNDED: 4, CANCELLED: 5, EXPIRED: 6 } as const;
 export const CONTRACT_STATUS = { PENDING_SIGNATURE: 0, ACTIVE: 1, TERMINATED: 2, EXPIRED: 3, CANCELLED: 4 } as const;
 export const MONTHLY_BILL_STATUS = { UNPAID: 0, PAID: 1, CANCELLED: 2, PENDING_PAYMENT: 3, OVERDUE: 4 } as const;
 
@@ -90,6 +90,8 @@ export const ROUTES = {
   LANDLORD_CREATE_POST: '/landlord/posts/create',
   LANDLORD_EDIT_POST: '/landlord/posts/:id/edit',
   LANDLORD_APPOINTMENTS: '/landlord/appointments',
+  LANDLORD_RENTAL_REQUESTS: '/landlord/contracts?tab=requests',
+  LANDLORD_CONTRACTS: '/landlord/contracts?tab=contracts',
   
   // Admin
   ADMIN_DASHBOARD: '/admin/dashboard',

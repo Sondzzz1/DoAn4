@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { 
@@ -18,6 +18,7 @@ import { adminService } from '../../services/adminService';
 import { CreatePostRequest } from '../../types/post.types';
 import { getApiErrorMessage } from '../../utils/apiError';
 import LeafletMapPicker from '../../components/map/LeafletMapPicker';
+import { buildLocationQuery, type LocationResult } from '../../services/locationService';
 
 interface Amenity {
   id: number;
@@ -51,6 +52,12 @@ const CreatePostPage: React.FC = () => {
     imageUrls: [],
   });
 
+  const [errors, setErrors] = useState<Partial<Record<keyof CreatePostRequest, string>>>({});
+  const [submitError, setSubmitError] = useState('');
+  const [locationBusy, setLocationBusy] = useState(false);
+  const [locationSearch, setLocationSearch] = useState<{ query: string; revision: number }>();
+  const addressEdited = useRef(false);
+
   // Load danh sách tiện ích
   useEffect(() => {
     const loadAmenities = async () => {
@@ -70,7 +77,7 @@ const CreatePostPage: React.FC = () => {
       const loadPost = async () => {
         setLoadingData(true);
         try {
-          const response = await postService.getPostById(Number(id));
+          const response = await postService.getMyPostById(Number(id));
           const post = response.data;
           
           setFormData({
@@ -100,8 +107,28 @@ const CreatePostPage: React.FC = () => {
   }, [id, isEditMode, navigate]);
 
   const handleInputChange = <K extends keyof CreatePostRequest>(field: K, value: CreatePostRequest[K]) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (['address', 'province', 'district', 'ward'].includes(field)) addressEdited.current = true;
+    setErrors(current => ({ ...current, [field]: undefined }));
+    setFormData((prev) => ({ ...prev, [field]: value,
+      ...(['address', 'province', 'district', 'ward'].includes(field) ? { latitude: undefined, longitude: undefined } : {}),
+    }));
   };
+
+  const searchCompletedAddress = () => {
+    if (!addressEdited.current || !formData.address.trim()) return;
+    addressEdited.current = false;
+    const query = buildLocationQuery(formData.address, formData.ward, formData.district, formData.province);
+    setLocationSearch(previous => ({ query, revision: (previous?.revision || 0) + 1 }));
+  };
+
+  const handleLocationChange = useCallback((lat: number, lng: number, location?: LocationResult) => {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    setFormData(previous => ({ ...previous, latitude: lat, longitude: lng,
+      ...(location ? { address: location.address || location.displayName, province: location.province || '',
+        district: location.district || '', ward: location.ward || '' } : {}),
+    }));
+    if (location) setErrors(previous => ({ ...previous, address: undefined, province: undefined, district: undefined, ward: undefined }));
+  }, []);
 
   const handleAmenityToggle = (amenityId: number) => {
     setFormData((prev) => {
@@ -134,28 +161,19 @@ const CreatePostPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading || locationBusy) return;
 
-    // Validation
-    if (!formData.title.trim()) {
-      toast.error('Vui lòng nhập tiêu đề tin đăng');
-      return;
-    }
-    if (!formData.description.trim()) {
-      toast.error('Vui lòng nhập mô tả chi tiết');
-      return;
-    }
-    if (formData.price <= 0) {
-      toast.error('Vui lòng nhập giá thuê hợp lệ');
-      return;
-    }
-    if (formData.area <= 0) {
-      toast.error('Vui lòng nhập diện tích hợp lệ');
-      return;
-    }
-    if (!formData.address.trim() || !formData.province.trim()) {
-      toast.error('Vui lòng nhập đầy đủ địa chỉ');
-      return;
-    }
+    const next: typeof errors = {};
+    if (!formData.title.trim()) next.title = 'Vui lòng nhập tiêu đề tin đăng.';
+    if (!formData.description.trim()) next.description = 'Vui lòng nhập mô tả chi tiết.';
+    if (formData.price <= 0) next.price = 'Giá thuê phải lớn hơn 0.';
+    if (formData.area <= 0) next.area = 'Diện tích phải lớn hơn 0.';
+    if (formData.maxOccupants < 1) next.maxOccupants = 'Số người tối đa phải từ 1 trở lên.';
+    if (!formData.address.trim()) next.address = 'Vui lòng nhập địa chỉ cụ thể.';
+    if (!formData.province.trim()) next.province = 'Vui lòng nhập tỉnh hoặc thành phố.';
+    setErrors(next);
+    setSubmitError('');
+    if (Object.keys(next).length) return;
 
     setLoading(true);
     try {
@@ -168,7 +186,7 @@ const CreatePostPage: React.FC = () => {
       }
       navigate('/landlord/posts');
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Có lỗi xảy ra khi lưu tin đăng'));
+      setSubmitError(getApiErrorMessage(error, 'Có lỗi xảy ra khi lưu tin đăng'));
     } finally {
       setLoading(false);
     }
@@ -188,7 +206,7 @@ const CreatePostPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-0 sm:p-6">
+    <div className="post-editor-page bg-slate-50">
       <div className="max-w-5xl mx-auto">
         <div className="mb-6 px-4 pt-5 text-center sm:px-0 sm:pt-0">
           <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-600 rounded-lg shadow-sm mb-3">
@@ -231,7 +249,7 @@ const CreatePostPage: React.FC = () => {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} noValidate className="space-y-6">
           {/* Thông tin cơ bản */}
           <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-6">
@@ -243,78 +261,82 @@ const CreatePostPage: React.FC = () => {
 
             <div className="space-y-5">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                <label htmlFor="post-title" className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
                   <FiFileText className="text-blue-500" />
                   Tiêu đề tin đăng <span className="text-red-500">*</span>
                 </label>
-                <input
+                <input id="post-title" aria-invalid={!!errors.title} aria-describedby={errors.title ? 'post-title-error' : undefined}
                   type="text"
                   value={formData.title}
                   onChange={(e) => handleInputChange('title', e.target.value)}
                   className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all text-slate-800 placeholder:text-slate-400"
                   placeholder="VD: Phòng trọ cao cấp gần ĐH Bách Khoa, đầy đủ nội thất"
                 />
+                {errors.title && <p id="post-title-error" role="alert" className="form-error mt-2">{errors.title}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                <label htmlFor="post-description" className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
                   <FiFileText className="text-blue-500" />
                   Mô tả chi tiết <span className="text-red-500">*</span>
                 </label>
-                <textarea
+                <textarea id="post-description" aria-invalid={!!errors.description} aria-describedby={errors.description ? 'post-description-error' : undefined}
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
                   className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all text-slate-800 placeholder:text-slate-400 resize-none"
                   placeholder="Mô tả chi tiết về phòng trọ: vị trí, tiện ích, nội thất, môi trường xung quanh..."
                   rows={6}
                 />
+                {errors.description && <p id="post-description-error" role="alert" className="form-error mt-2">{errors.description}</p>}
                 <p className="text-xs text-slate-500 mt-2">Mô tả càng chi tiết sẽ càng thu hút người thuê</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                  <label htmlFor="post-price" className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
                     <FiDollarSign className="text-green-500" />
                     Giá thuê (VNĐ/tháng) <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
-                    <input
+                    <input id="post-price" aria-invalid={!!errors.price} aria-describedby={errors.price ? 'post-price-error' : undefined}
                       type="number"
                       value={formData.price}
                       onChange={(e) => handleInputChange('price', Number(e.target.value))}
-                      className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all text-slate-800"
+                      className="w-full pr-12 border-2 border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all text-slate-800"
                       placeholder="3000000"
                       min="0"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">đ</span>
                   </div>
+                {errors.price && <p id="post-price-error" role="alert" className="form-error mt-2">{errors.price}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                  <label htmlFor="post-area" className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
                     <FiHome className="text-purple-500" />
                     Diện tích (m²) <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
-                    <input
+                    <input id="post-area" aria-invalid={!!errors.area} aria-describedby={errors.area ? 'post-area-error' : undefined}
                       type="number"
                       value={formData.area}
                       onChange={(e) => handleInputChange('area', Number(e.target.value))}
-                      className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all text-slate-800"
+                      className="w-full pr-12 border-2 border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all text-slate-800"
                       placeholder="25"
                       min="0"
                       step="0.1"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">m²</span>
                   </div>
+                {errors.area && <p id="post-area-error" role="alert" className="form-error mt-2">{errors.area}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                  <label htmlFor="post-maxOccupants" className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
                     <FiUsers className="text-orange-500" />
                     Số người tối đa <span className="text-red-500">*</span>
                   </label>
-                  <input
+                  <input id="post-maxOccupants" aria-invalid={!!errors.maxOccupants} aria-describedby={errors.maxOccupants ? 'post-maxOccupants-error' : undefined}
                     type="number"
                     value={formData.maxOccupants}
                     onChange={(e) => handleInputChange('maxOccupants', Number(e.target.value))}
@@ -322,6 +344,7 @@ const CreatePostPage: React.FC = () => {
                     placeholder="2"
                     min="1"
                   />
+                {errors.maxOccupants && <p id="post-maxOccupants-error" role="alert" className="form-error mt-2">{errors.maxOccupants}</p>}
                 </div>
               </div>
             </div>
@@ -339,56 +362,64 @@ const CreatePostPage: React.FC = () => {
             <div className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  <label htmlFor="post-province" className="block text-sm font-semibold text-slate-700 mb-2">
                     Tỉnh/Thành phố <span className="text-red-500">*</span>
                   </label>
-                  <input
+                  <input id="post-province" aria-invalid={!!errors.province} aria-describedby={errors.province ? 'post-province-error' : undefined}
                     type="text"
                     value={formData.province}
                     onChange={(e) => handleInputChange('province', e.target.value)}
+                    onBlur={searchCompletedAddress}
                     className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all text-slate-800"
                     placeholder="Hồ Chí Minh"
                   />
+                {errors.province && <p id="post-province-error" role="alert" className="form-error mt-2">{errors.province}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  <label htmlFor="post-district" className="block text-sm font-semibold text-slate-700 mb-2">
                     Quận/Huyện
                   </label>
-                  <input
+                  <input id="post-district" aria-invalid={!!errors.district} aria-describedby={errors.district ? 'post-district-error' : undefined}
                     type="text"
                     value={formData.district}
                     onChange={(e) => handleInputChange('district', e.target.value)}
+                    onBlur={searchCompletedAddress}
                     className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all text-slate-800"
                     placeholder="Quận 1"
                   />
+                {errors.district && <p id="post-district-error" role="alert" className="form-error mt-2">{errors.district}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  <label htmlFor="post-ward" className="block text-sm font-semibold text-slate-700 mb-2">
                     Phường/Xã
                   </label>
-                  <input
+                  <input id="post-ward" aria-invalid={!!errors.ward} aria-describedby={errors.ward ? 'post-ward-error' : undefined}
                     type="text"
                     value={formData.ward}
                     onChange={(e) => handleInputChange('ward', e.target.value)}
+                    onBlur={searchCompletedAddress}
                     className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all text-slate-800"
                     placeholder="Phường Bến Nghé"
                   />
+                {errors.ward && <p id="post-ward-error" role="alert" className="form-error mt-2">{errors.ward}</p>}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                <label htmlFor="post-address" className="block text-sm font-semibold text-slate-700 mb-2">
                   Địa chỉ cụ thể <span className="text-red-500">*</span>
                 </label>
-                <input
+                <input id="post-address" aria-invalid={!!errors.address} aria-describedby={errors.address ? 'post-address-error' : undefined}
                   type="text"
                   value={formData.address}
                   onChange={(e) => handleInputChange('address', e.target.value)}
+                  onBlur={searchCompletedAddress}
                   className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all text-slate-800"
                   placeholder="Số nhà, tên đường..."
                 />
+                {errors.address && <p id="post-address-error" role="alert" className="form-error mt-2">{errors.address}</p>}
               </div>
             </div>
           </div>
@@ -412,18 +443,12 @@ const CreatePostPage: React.FC = () => {
               ward={formData.ward}
               district={formData.district}
               province={formData.province}
-              onLocationChange={(lat, lng) => {
-                if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
-                  setFormData(prev => ({
-                    ...prev,
-                    latitude: lat,
-                    longitude: lng,
-                  }));
-                }
-              }}
+              searchRequest={locationSearch}
+              onBusyChange={setLocationBusy}
+              onLocationChange={handleLocationChange}
             />
 
-            {formData.latitude && formData.longitude && (
+            {formData.latitude !== undefined && formData.longitude !== undefined && (
               <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
                 <FiCheckCircle className="inline mr-1" />
                 Tọa độ: {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
@@ -496,6 +521,7 @@ const CreatePostPage: React.FC = () => {
                 <div className="flex-1 relative">
                   <input
                     type="url"
+                    aria-label="URL ảnh phòng trọ"
                     value={imageInput}
                     onChange={(e) => setImageInput(e.target.value)}
                     className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 pr-12 outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-100 transition-all text-slate-800"
@@ -569,11 +595,12 @@ const CreatePostPage: React.FC = () => {
             </div>
           </div>
 
+          {submitError && <p role="alert" className="form-error">{submitError}</p>}
           {/* Submit buttons */}
           <div className="flex flex-col sm:flex-row gap-4 pt-4">
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || locationBusy}
               className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3 group"
             >
               {loading ? (

@@ -46,7 +46,7 @@ const RoomLocation: React.FC<RoomLocationProps> = ({
           <div>
             <h2 className="room-location-title">{title}</h2>
             <p className="room-location-subtitle">
-              {hasValidCoords ? 'Bản đồ Google Maps' : 'Thông tin địa chỉ'}
+              {hasValidCoords ? 'Vị trí trên bản đồ' : 'Thông tin địa chỉ'}
             </p>
           </div>
         </div>

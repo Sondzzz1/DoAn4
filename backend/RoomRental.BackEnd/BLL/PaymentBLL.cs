@@ -55,6 +55,8 @@ public class PaymentBLL : IPaymentService
                 throw BusinessRuleException.Forbidden("Bạn không có quyền thanh toán khoản đặt cọc này.");
             if (deposit.Status != DepositStatus.Pending)
                 throw BusinessRuleException.Conflict("Chỉ khoản cọc đang chờ thanh toán mới có thể thanh toán.");
+            if (deposit.DueAt is not null && deposit.DueAt <= DateTime.Now)
+                throw BusinessRuleException.Conflict("Khoản đặt cọc đã hết hạn thanh toán.");
             if (await _context.PaymentTransactions.AnyAsync(p => p.DepositId == deposit.Id &&
                 (p.Status == PaymentTransactionStatus.Pending || p.Status == PaymentTransactionStatus.Succeeded)))
                 throw BusinessRuleException.Conflict("Khoản cọc đã có giao dịch đang xử lý hoặc đã thành công.");
@@ -250,7 +252,7 @@ public class PaymentBLL : IPaymentService
                 await _notificationService.CreateNotificationAsync(payment.Deposit.TenantAccountId, "Đặt cọc thành công",
                     $"Bạn đã thanh toán {payment.Amount:N0} VNĐ tiền đặt cọc.", 1, "/tenant/rentals");
                 await _notificationService.CreateNotificationAsync(payment.Deposit.LandlordAccountId, "Có khoản cọc mới",
-                    $"Khách thuê đã thanh toán {payment.Amount:N0} VNĐ. Vui lòng xác nhận khoản cọc.", 1, "/landlord/contracts");
+                    $"Khách thuê đã thanh toán {payment.Amount:N0} VNĐ. Vui lòng xác nhận khoản cọc.", 1, "/landlord/contracts?tab=requests");
             }
             else if (payment.MonthlyBill != null)
             {

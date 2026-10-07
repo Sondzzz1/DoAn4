@@ -40,10 +40,13 @@ const NotificationBell: React.FC = () => {
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setIsOpen(false); };
+    document.addEventListener('keydown', closeOnEscape);
 
     return () => {
       unsubscribe();
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', closeOnEscape);
       void notificationService.stopConnection();
     };
   }, [isAuthenticated]);
@@ -136,8 +139,10 @@ const NotificationBell: React.FC = () => {
       <button
         type="button"
         onClick={handleToggle}
-        className="relative p-2 rounded-full text-gray-600 hover:text-[#0084ff] hover:bg-gray-100 transition-colors cursor-pointer border-none bg-transparent"
+        className="relative w-10 h-10 flex items-center justify-center rounded-full text-gray-600 hover:text-[#0084ff] hover:bg-gray-100 transition-colors cursor-pointer border-none bg-transparent"
         title="Thông báo"
+        aria-label="Thông báo"
+        aria-expanded={isOpen}
       >
         <FiBell size={20} />
         {unreadCount > 0 && (
@@ -149,7 +154,7 @@ const NotificationBell: React.FC = () => {
 
       {/* Notification Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white border border-gray-100 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+        <div className="notification-popover absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white border border-gray-100 rounded-lg shadow-2xl overflow-hidden z-50">
           {/* Header */}
           <div className="p-4 bg-slate-50 border-b border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -173,7 +178,7 @@ const NotificationBell: React.FC = () => {
           </div>
 
           {/* List */}
-          <div className="max-h-96 overflow-y-auto divide-y divide-gray-50">
+          <div className="notification-list max-h-96 overflow-y-auto divide-y divide-gray-50">
             {loading && notifications.length === 0 ? (
               <div className="p-8 text-center text-xs text-gray-400">Đang tải thông báo...</div>
             ) : notifications.length === 0 ? (

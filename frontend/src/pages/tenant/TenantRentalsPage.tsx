@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Modal from '../../components/common/Modal';
 import {
   FiFileText,
   FiDollarSign,
@@ -36,11 +37,12 @@ import { getApiErrorMessage } from '../../utils/apiError';
 const requestStatus = (status: number): { label: string; tone: StatusTone } => ({
   0: { label: 'Đang chờ chủ trọ duyệt', tone: 'pending' }, 1: { label: 'Đã chấp nhận', tone: 'success' },
   2: { label: 'Đã từ chối', tone: 'danger' }, 3: { label: 'Đã hủy', tone: 'danger' }, 4: { label: 'Đã tạo hợp đồng', tone: 'info' },
+  5: { label: 'Đã hết hạn đặt cọc', tone: 'danger' },
 }[status] as { label: string; tone: StatusTone } || { label: 'Không xác định', tone: 'neutral' });
 const depositStatus = (status: number): { label: string; tone: StatusTone } => ({
   0: { label: 'Chờ thanh toán', tone: 'pending' }, 1: { label: 'Đã thanh toán - chờ xác nhận', tone: 'info' },
   2: { label: 'Đã xác nhận', tone: 'success' }, 3: { label: 'Đang yêu cầu hoàn', tone: 'pending' },
-  4: { label: 'Đã hoàn tiền', tone: 'neutral' }, 5: { label: 'Đã hủy', tone: 'danger' },
+  4: { label: 'Đã hoàn tiền', tone: 'neutral' }, 5: { label: 'Đã hủy', tone: 'danger' }, 6: { label: 'Đã hết hạn', tone: 'danger' },
 }[status] as { label: string; tone: StatusTone } || { label: 'Không xác định', tone: 'neutral' });
 const billStatus = (status: number): { label: string; tone: StatusTone } => ({
   0: { label: 'Chưa thanh toán', tone: 'pending' }, 1: { label: 'Đã thanh toán', tone: 'success' },
@@ -51,6 +53,7 @@ const billStatus = (status: number): { label: string; tone: StatusTone } => ({
 const TenantRentalsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'requests' | 'contracts' | 'bills' | 'incidents' | 'reviews'>('bills');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   const [requests, setRequests] = useState<RentalRequestDto[]>([]);
   const [deposits, setDeposits] = useState<DepositDto[]>([]);
@@ -75,6 +78,7 @@ const TenantRentalsPage: React.FC = () => {
 
   async function loadData() {
     setLoading(true);
+    setLoadError('');
     try {
       const [reqRes, depRes, conRes, billsRes, incRes, revRes] = await Promise.all([
         rentalService.getMyRentalRequests(),
@@ -92,7 +96,7 @@ const TenantRentalsPage: React.FC = () => {
       setIncidents(incRes.data || []);
       setReviews(revRes.data || []);
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Không thể tải dữ liệu thuê phòng.'));
+      setLoadError(getApiErrorMessage(error, 'Không thể tải dữ liệu thuê phòng.'));
     } finally {
       setLoading(false);
     }
@@ -128,6 +132,7 @@ const TenantRentalsPage: React.FC = () => {
 
   const handleCreateIncident = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingIncident) return;
     if (!selectedContractId || !incidentTitle.trim() || !incidentDesc.trim()) {
       toast.warning('Vui lòng điền đầy đủ tiêu đề và nội dung sự cố.');
       return;
@@ -154,6 +159,7 @@ const TenantRentalsPage: React.FC = () => {
 
   const handleCreateReview = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingReview) return;
     if (!reviewContractId) return;
 
     setSubmittingReview(true);
@@ -196,17 +202,10 @@ const TenantRentalsPage: React.FC = () => {
     catch (error) { toast.error(getApiErrorMessage(error, 'Không thể hủy yêu cầu thuê phòng.')); }
   };
 
-  const handleCreateDeposit = async (requestId: number) => {
-    const amountText = window.prompt('Nhập số tiền đặt cọc (VNĐ):');
-    if (amountText === null) return;
-    const amount = Number(amountText.replace(/\D/g, ''));
-    if (!Number.isFinite(amount) || amount <= 0) { toast.warning('Số tiền đặt cọc không hợp lệ.'); return; }
-    try { await rentalService.createDeposit({ yeuCauThueId: requestId, soTien: amount }); toast.success('Đã tạo khoản cọc. Bạn có thể thanh toán qua VNPay.'); await loadData(); }
-    catch (error) { toast.error(getApiErrorMessage(error, 'Không thể tạo khoản cọc.')); }
-  };
+  if (loadError && !loading) return <div className="tenant-page max-w-6xl mx-auto px-4 py-8"><PageState type="error" message={loadError} onRetry={loadData} /></div>;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="tenant-page max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-[#0084ff] font-bold mb-1">
@@ -239,7 +238,7 @@ const TenantRentalsPage: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 border-b border-slate-200 mb-6 pb-2">
+      <div className="rental-tabs grid grid-cols-2 sm:flex sm:items-center gap-2 border-b border-slate-200 mb-6 pb-2">
         <button
           onClick={() => setActiveTab('bills')}
           className={`px-3 py-2.5 rounded-lg font-semibold text-xs sm:text-sm transition-all sm:whitespace-nowrap flex items-center justify-center gap-2 cursor-pointer ${
@@ -316,7 +315,7 @@ const TenantRentalsPage: React.FC = () => {
                       T{bill.thang}
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-lg font-bold text-slate-900">
                           Hóa đơn tiền phòng tháng {bill.thang}/{bill.nam}
                         </h3>
@@ -519,6 +518,7 @@ const TenantRentalsPage: React.FC = () => {
                       <span className="text-xs text-slate-400 font-semibold block">Tiền đặt cọc #{dep.id}</span>
                       <div className="text-xl font-black text-slate-900 mt-0.5">{formatPrice(dep.soTien)}</div>
                       <div className="mt-2"><StatusBadge label={depositStatus(dep.trangThai).label} tone={depositStatus(dep.trangThai).tone} /></div>
+                      {dep.hanThanhToan && dep.trangThai === DEPOSIT_STATUS.PENDING && <p className="mt-2 text-xs text-amber-700">Hạn thanh toán: {new Date(dep.hanThanhToan).toLocaleString('vi-VN')}</p>}
                     </div>
 
                     {dep.trangThai === DEPOSIT_STATUS.PENDING ? (
@@ -569,7 +569,7 @@ const TenantRentalsPage: React.FC = () => {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {item.trangThai === RENTAL_REQUEST_STATUS.PENDING && <button onClick={() => handleCancelRequest(item.id)} className="rounded-md border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50">Hủy yêu cầu</button>}
-                      {item.trangThai === RENTAL_REQUEST_STATUS.APPROVED && !deposits.some(d => d.yeuCauThueId === item.id) && <button onClick={() => handleCreateDeposit(item.id)} className="rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700">Tạo khoản đặt cọc</button>}
+                      {item.trangThai === RENTAL_REQUEST_STATUS.APPROVED && !deposits.some(d => d.yeuCauThueId === item.id) && <p className="text-xs font-medium text-amber-700">Chủ trọ đang thiết lập khoản đặt cọc cho yêu cầu này.</p>}
                     </div>
                   </div>
                 ))}
@@ -640,15 +640,11 @@ const TenantRentalsPage: React.FC = () => {
 
       {/* Modal Báo Sự Cố */}
       {incidentModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl animate-in fade-in zoom-in-95">
-            <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <FiAlertTriangle className="text-amber-500" /> Báo cáo sự cố phòng trọ
-            </h3>
+        <Modal isOpen={incidentModalOpen} onClose={() => { if (!submittingIncident) setIncidentModalOpen(false); }} title="Báo cáo sự cố phòng trọ">
             <form onSubmit={handleCreateIncident} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Tiêu đề sự cố *</label>
-                <input
+                <label htmlFor="field-incidentTitle" className="block text-xs font-bold text-slate-700 mb-1">Tiêu đề sự cố *</label>
+                <input id="field-incidentTitle"
                   type="text"
                   placeholder="Ví dụ: Hỏng vòi nước, chập bóng đèn..."
                   value={incidentTitle}
@@ -658,8 +654,8 @@ const TenantRentalsPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Mô tả chi tiết *</label>
-                <textarea
+                <label htmlFor="field-incidentDesc" className="block text-xs font-bold text-slate-700 mb-1">Mô tả chi tiết *</label>
+                <textarea id="field-incidentDesc"
                   rows={4}
                   placeholder="Mô tả cụ thể tình trạng sự cố để chủ trọ kịp thời xử lý..."
                   value={incidentDesc}
@@ -685,17 +681,12 @@ const TenantRentalsPage: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Modal Đánh Giá Phòng */}
       {reviewModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl animate-in fade-in zoom-in-95">
-            <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <FiStar className="text-amber-400" /> Đánh giá trải nghiệm phòng trọ
-            </h3>
+        <Modal isOpen={reviewModalOpen} onClose={() => { if (!submittingReview) setReviewModalOpen(false); }} title="Đánh giá trải nghiệm phòng trọ">
             <form onSubmit={handleCreateReview} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2">Số sao đánh giá *</label>
@@ -704,6 +695,8 @@ const TenantRentalsPage: React.FC = () => {
                     <button
                       key={s}
                       type="button"
+                      aria-label={`Đánh giá ${s} sao`}
+                      aria-pressed={reviewRating === s}
                       onClick={() => setReviewRating(s)}
                       className="cursor-pointer hover:scale-110 transition-transform bg-transparent border-none"
                     >
@@ -714,8 +707,8 @@ const TenantRentalsPage: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Nhận xét chi tiết</label>
-                <textarea
+                <label htmlFor="field-reviewComment" className="block text-xs font-bold text-slate-700 mb-1">Nhận xét chi tiết</label>
+                <textarea id="field-reviewComment"
                   rows={4}
                   placeholder="Chia sẻ trải nghiệm về phòng trọ, sự hỗ trợ của chủ trọ, an ninh khu vực..."
                   value={reviewComment}
@@ -740,8 +733,7 @@ const TenantRentalsPage: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

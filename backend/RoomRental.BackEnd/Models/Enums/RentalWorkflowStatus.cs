@@ -7,6 +7,7 @@ public static class RentalRequestStatus
     public const int Rejected = 2;
     public const int Cancelled = 3;
     public const int ConvertedToContract = 4;
+    public const int Expired = 5;
 }
 
 public static class DepositStatus
@@ -17,6 +18,7 @@ public static class DepositStatus
     public const int RefundRequested = 3;
     public const int Refunded = 4;
     public const int Cancelled = 5;
+    public const int Expired = 6;
 }
 
 public static class RentalContractStatus

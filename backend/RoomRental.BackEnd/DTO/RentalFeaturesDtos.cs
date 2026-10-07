@@ -10,12 +10,14 @@ public class CapNhatTrangThaiDto
 {
     public int TrangThai { get; set; }
     public string? GhiChu { get; set; }
+    public decimal? SoTienDatCoc { get; set; }
+    public DateTime? HanThanhToanCoc { get; set; }
 }
 
-public class TaoDatCocDto
+public class ThietLapDatCocDto
 {
-    public int YeuCauThueId { get; set; }
     public decimal SoTien { get; set; }
+    public DateTime HanThanhToan { get; set; }
 }
 
 public class TaoHopDongDto
@@ -70,6 +72,7 @@ public class DatCocDto
     public int YeuCauThueId { get; set; }
     public decimal SoTien { get; set; }
     public int TrangThai { get; set; }
+    public DateTime? HanThanhToan { get; set; }
     public DateTime? NgayThanhToan { get; set; }
     public DateTime NgayTao { get; set; }
 }

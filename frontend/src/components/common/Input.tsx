@@ -1,4 +1,4 @@
-import React, { InputHTMLAttributes, forwardRef } from 'react';
+import React, { InputHTMLAttributes, forwardRef, useId } from 'react';
 import clsx from 'clsx';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -9,10 +9,13 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, helperText, className, ...props }, ref) => {
+    const generatedId = useId();
+    const inputId = props.id || generatedId;
+    const messageId = `${inputId}-message`;
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-1">
             {label}
             {props.required && <span className="text-red-500 ml-1">*</span>}
           </label>
@@ -29,14 +32,17 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             className
           )}
           {...props}
+          id={inputId}
+          aria-invalid={!!error}
+          aria-describedby={error || helperText ? messageId : props['aria-describedby']}
         />
         
         {error && (
-          <p className="mt-1 text-sm text-red-600">{error}</p>
+          <p id={messageId} role="alert" className="mt-1 text-sm text-red-600">{error}</p>
         )}
         
         {helperText && !error && (
-          <p className="mt-1 text-sm text-gray-500">{helperText}</p>
+          <p id={messageId} className="mt-1 text-sm text-gray-500">{helperText}</p>
         )}
       </div>
     );

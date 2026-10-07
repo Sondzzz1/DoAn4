@@ -188,6 +188,7 @@ const RoomListPage: React.FC = () => {
             <input
               type="text"
               placeholder="Tìm kiếm theo địa điểm"
+              aria-label="Tìm kiếm phòng theo địa điểm hoặc từ khóa"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
             />

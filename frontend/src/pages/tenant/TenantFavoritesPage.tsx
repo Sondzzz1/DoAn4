@@ -6,18 +6,21 @@ import { favoriteService } from '../../services/favoriteService';
 import { PostListItem } from '../../types/post.types';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { formatPrice } from '../../utils/helpers';
+import PageState from '../../components/common/PageState';
 
 const TenantFavoritesPage: React.FC = () => {
   const [favorites, setFavorites] = useState<PostListItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState('');
 
   async function loadFavorites() {
     setLoading(true);
+    setLoadError('');
     try {
       const response = await favoriteService.getMyFavorites();
       setFavorites(response.data || []);
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Không thể tải danh sách phòng yêu thích.'));
+      setLoadError(getApiErrorMessage(error, 'Không thể tải danh sách phòng yêu thích.'));
     } finally {
       setLoading(false);
     }
@@ -41,7 +44,7 @@ const TenantFavoritesPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="tenant-page max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
@@ -71,7 +74,7 @@ const TenantFavoritesPage: React.FC = () => {
             </div>
           ))}
         </div>
-      ) : favorites.length === 0 ? (
+      ) : loadError ? <PageState type="error" message={loadError} onRetry={loadFavorites} /> : favorites.length === 0 ? (
         <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center shadow-sm max-w-lg mx-auto">
           <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
             <FiHeart />

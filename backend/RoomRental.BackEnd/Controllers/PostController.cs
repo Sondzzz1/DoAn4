@@ -111,6 +111,27 @@ public class PostController : ControllerBase
     }
 
     /// <summary>
+    /// Chủ trọ xem chi tiết một tin của mình, kể cả khi tin chưa được duyệt hoặc phòng đang giữ chỗ.
+    /// </summary>
+    [HttpGet("cua-toi/{id:int}")]
+    [Authorize(Roles = "Landlord")]
+    [ProducesResponseType(typeof(ApiResponse<PostDto>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<PostDto>), 404)]
+    public async Task<IActionResult> GetMyPostById(int id)
+    {
+        try
+        {
+            var post = await _postService.GetMyPostByIdAsync(GetCurrentUserId(), id);
+            return Ok(ApiResponse<PostDto>.SuccessResponse(post, "Lấy chi tiết tin đăng của bạn thành công"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi lấy tin đăng {Id} của chủ trọ hiện tại", id);
+            return this.BusinessError<PostDto>(ex);
+        }
+    }
+
+    /// <summary>
     /// Landlord chỉnh sửa tin đã đăng (Mục 13: PUT /api/posts/{id})
     /// </summary>
     [HttpPut("{id:int}")]

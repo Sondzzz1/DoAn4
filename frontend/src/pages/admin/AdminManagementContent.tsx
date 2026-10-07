@@ -1,8 +1,11 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { FiCheck, FiEdit2, FiFileText, FiPlus, FiSearch, FiTrash2, FiUnlock, FiUser, FiX } from 'react-icons/fi';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { FiCheck, FiChevronLeft, FiChevronRight, FiEdit2, FiFileText, FiPlus, FiRefreshCw, FiSearch, FiTrash2, FiUnlock, FiUser, FiX } from 'react-icons/fi';
+import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
 import { adminService, AdminCatalogItem, AdminReport, AdminRoom, AdminUser } from '../../services/adminService';
 import { PostListItem, PostStatus } from '../../types/post.types';
+import Modal from '../../components/common/Modal';
+import { getApiErrorMessage } from '../../utils/apiError';
 import './AdminManagementContent.css';
 
 type AdminModule = 'users' | 'posts' | 'approval' | 'rooms' | 'categories' | 'amenities' | 'reports';
@@ -33,6 +36,12 @@ const AdminManagementContent: React.FC<{ module: AdminModule }> = ({ module }) =
   const [status, setStatus] = useState('');
   const [modal, setModal] = useState<{ id?: number; type: 'category' | 'amenity' } | null>(null);
   const [form, setForm] = useState<CatalogForm>({ name: '', description: '', icon: '' });
+  const [formError, setFormError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const [rejectId, setRejectId] = useState<number | null>(null);
+  const [reason, setReason] = useState('');
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -53,44 +62,57 @@ const AdminManagementContent: React.FC<{ module: AdminModule }> = ({ module }) =
     void Promise.resolve().then(load);
   }, [load]);
 
+  const runAction = async (action: () => Promise<unknown>, message: string) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    try { await action(); toast.success(message); await load(); }
+    catch (e) { toast.error(getApiErrorMessage(e, 'Không thể hoàn tất thao tác.')); }
+    finally { busyRef.current = false; setBusy(false); }
+  };
+
   const handlePost = async (id: number, action: 'approve' | 'reject' | 'hide') => {
     if (action === 'approve') {
-      await adminService.approvePost(id);
+      await runAction(() => adminService.approvePost(id), 'Đã duyệt tin đăng.');
     } else if (action === 'reject') {
-      const reason = window.prompt('Nhập lý do từ chối bài đăng:', 'Thông tin bài đăng không hợp lệ');
-      if (!reason) return;
-      await adminService.rejectPost(id, reason);
+      setReason(''); setFormError(''); setRejectId(id);
     } else {
-      await adminService.hidePost(id);
+      await runAction(() => adminService.hidePost(id), 'Đã ẩn tin đăng.');
     }
-    load();
   };
   const handleUser = async (item: AdminUser) => {
-    if (item.isActive) await adminService.lockUser(item.id);
-    else await adminService.unlockUser(item.id);
-    load();
+    await runAction(() => item.isActive ? adminService.lockUser(item.id) : adminService.unlockUser(item.id), item.isActive ? 'Đã khóa tài khoản.' : 'Đã mở khóa tài khoản.');
   };
   const handleCatalog = async (event: React.FormEvent) => {
     event.preventDefault();
-    const data = module === 'amenities' ? { name: form.name, description: form.description, icon: form.icon } : { name: form.name, description: form.description };
-    if (module === 'amenities') {
-      if (form.id) await adminService.updateAmenity(form.id, data);
-      else await adminService.createAmenity(data);
-    } else if (form.id) await adminService.updateCategory(form.id, data);
-    else await adminService.createCategory(data);
-    setModal(null); setForm({ name: '', description: '', icon: '' }); load();
+    if (busyRef.current) return;
+    if (!form.name.trim()) { setFormError('Vui lòng nhập tên.'); return; }
+    busyRef.current = true; setBusy(true); setFormError('');
+    const data = module === 'amenities' ? { name: form.name.trim(), description: form.description.trim(), icon: form.icon.trim() } : { name: form.name.trim(), description: form.description.trim() };
+    try {
+      if (module === 'amenities') {
+        if (form.id) await adminService.updateAmenity(form.id, data);
+        else await adminService.createAmenity(data);
+      } else if (form.id) await adminService.updateCategory(form.id, data);
+      else await adminService.createCategory(data);
+      setModal(null); setForm({ name: '', description: '', icon: '' }); toast.success('Đã lưu thay đổi.'); await load();
+    } catch (e) { setFormError(getApiErrorMessage(e, 'Không thể lưu. Vui lòng thử lại.')); }
+    finally { busyRef.current = false; setBusy(false); }
   };
-  const editCatalog = (item: AdminCatalogItem) => { setForm({ id: item.id, name: item.name, description: item.description || '', icon: item.icon || '' }); setModal({ id: item.id, type: module as 'category' | 'amenity' }); };
+  const editCatalog = (item: AdminCatalogItem) => { setFormError(''); setForm({ id: item.id, name: item.name, description: item.description || '', icon: item.icon || '' }); setModal({ id: item.id, type: module === 'amenities' ? 'amenity' : 'category' }); };
   const deleteCatalog = async (id: number) => {
     if (!window.confirm('Bạn có chắc muốn xóa mục này?')) return;
-    if (module === 'amenities') await adminService.deleteAmenity(id);
-    else await adminService.deleteCategory(id);
-    load();
+    await runAction(() => module === 'amenities' ? adminService.deleteAmenity(id) : adminService.deleteCategory(id), 'Đã xóa mục.');
   };
 
   const current = config[module];
   const canCreate = !isLandlord && (module === 'categories' || module === 'amenities');
-  const filteredRows = rows;
+  const filteredRows = module === 'categories' || module === 'amenities'
+    ? rows.filter(item => `${(item as AdminCatalogItem).name} ${(item as AdminCatalogItem).description || ''}`.toLocaleLowerCase('vi').includes(query.trim().toLocaleLowerCase('vi')))
+    : rows;
+  const pageCount = Math.max(1, Math.ceil(filteredRows.length / 10));
+  const currentPage = Math.min(page, pageCount);
+  const pageRows = filteredRows.slice((currentPage - 1) * 10, currentPage * 10);
 
   return (
     <div className="admin-management-content">
@@ -101,7 +123,7 @@ const AdminManagementContent: React.FC<{ module: AdminModule }> = ({ module }) =
           <span>{current.description}</span>
         </div>
         {canCreate && (
-          <button className="admin-content-primary" onClick={() => { setForm({ name: '', description: '', icon: '' }); setModal({ type: module === 'amenities' ? 'amenity' : 'category' }); }}>
+          <button className="admin-content-primary" disabled={busy} onClick={() => { setFormError(''); setForm({ name: '', description: '', icon: '' }); setModal({ type: module === 'amenities' ? 'amenity' : 'category' }); }}>
             <FiPlus /> Thêm mới
           </button>
         )}
@@ -110,17 +132,17 @@ const AdminManagementContent: React.FC<{ module: AdminModule }> = ({ module }) =
       <div className="admin-content-toolbar">
         <label>
           <FiSearch />
-          <input value={query} onChange={e => setQuery(e.target.value)} placeholder={module === 'users' ? 'Tìm theo tên hoặc email...' : 'Tìm kiếm dữ liệu...'} />
+          <input aria-label="Tìm kiếm dữ liệu" value={query} onChange={e => { setQuery(e.target.value); setPage(1); }} placeholder={module === 'users' ? 'Tìm theo tên hoặc email...' : 'Tìm kiếm dữ liệu...'} />
         </label>
         {(module === 'posts' || module === 'rooms' || module === 'reports') && (
-          <select value={status} onChange={e => setStatus(e.target.value)}>
+          <select aria-label="Lọc trạng thái" value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}>
             <option value="">Tất cả trạng thái</option>
             {module === 'posts' && <><option value="0">Chờ duyệt</option><option value="1">Đã duyệt</option><option value="2">Từ chối</option><option value="3">Đã ẩn</option></>}
             {module === 'rooms' && <><option value="0">Còn trống</option><option value="1">Đã thuê</option><option value="3">Tạm ngưng</option></>}
             {module === 'reports' && <><option value="0">Mới tiếp nhận</option><option value="1">Đang xử lý</option><option value="2">Đã xử lý</option></>}
           </select>
         )}
-        <button className="admin-content-refresh" onClick={load}>Làm mới</button>
+        <button className="admin-content-refresh" title="Làm mới dữ liệu" aria-label="Làm mới dữ liệu" disabled={loading || busy} onClick={() => void load()}><FiRefreshCw /></button>
       </div>
 
       <section className="admin-content-table-card">
@@ -146,13 +168,13 @@ const AdminManagementContent: React.FC<{ module: AdminModule }> = ({ module }) =
                 </tr>
               </thead>
               <tbody>
-                {filteredRows.map(item => (
+                {pageRows.map(item => (
                   <tr key={item.id}>
-                    {module === 'users' && <><td><div className="cell-person"><span><FiUser /></span><div><b>{(item as AdminUser).fullName}</b><small>{(item as AdminUser).email}</small></div></div></td><td>{(item as AdminUser).roleName}</td><td>{(item as AdminUser).postCount} tin</td><td><em className={(item as AdminUser).isActive ? 'green' : 'red'}>{(item as AdminUser).isActive ? 'Đang hoạt động' : 'Đã khóa'}</em></td><td><button className="table-action" onClick={() => handleUser(item as AdminUser)}>{(item as AdminUser).isActive ? <FiX /> : <FiUnlock />}</button></td></>}
-                    {(module === 'posts' || module === 'approval') && <><td><b>{(item as PostListItem).title}</b><small className="table-sub">{(item as PostListItem).address || `${(item as PostListItem).province}, ${(item as PostListItem).district}`}</small></td><td>{(item as PostListItem).landlordName || 'Chưa cập nhật'}</td><td>{formatMoney((item as PostListItem).price)}</td><td><em className={`status-${(item as PostListItem).status}`}>{postStatus((item as PostListItem).status)}</em></td><td className="table-actions">{(item as PostListItem).status === 0 && <><button className="table-action approve" onClick={() => handlePost(item.id, 'approve')}><FiCheck /></button><button className="table-action danger" onClick={() => handlePost(item.id, 'reject')}><FiX /></button></>}{module === 'posts' && <button className="table-action" onClick={() => handlePost(item.id, 'hide')}><FiX /></button>}</td></>}
+                    {module === 'users' && <><td><div className="cell-person"><span><FiUser /></span><div><b>{(item as AdminUser).fullName}</b><small>{(item as AdminUser).email}</small></div></div></td><td>{(item as AdminUser).roleName}</td><td>{(item as AdminUser).postCount} tin</td><td><em className={(item as AdminUser).isActive ? 'green' : 'red'}>{(item as AdminUser).isActive ? 'Đang hoạt động' : 'Đã khóa'}</em></td><td><button className="table-action" disabled={busy} title={(item as AdminUser).isActive ? 'Khóa tài khoản' : 'Mở khóa tài khoản'} aria-label={(item as AdminUser).isActive ? 'Khóa tài khoản' : 'Mở khóa tài khoản'} onClick={() => handleUser(item as AdminUser)}>{(item as AdminUser).isActive ? <FiX /> : <FiUnlock />}</button></td></>}
+                    {(module === 'posts' || module === 'approval') && <><td><b>{(item as PostListItem).title}</b><small className="table-sub">{(item as PostListItem).address || `${(item as PostListItem).province}, ${(item as PostListItem).district}`}</small></td><td>{(item as PostListItem).landlordName || 'Chưa cập nhật'}</td><td>{formatMoney((item as PostListItem).price)}</td><td><em className={`status-${(item as PostListItem).status}`}>{postStatus((item as PostListItem).status)}</em></td><td className="table-actions">{(item as PostListItem).status === 0 && <><button className="table-action approve" disabled={busy} title="Duyệt tin đăng" aria-label="Duyệt tin đăng" onClick={() => handlePost(item.id, 'approve')}><FiCheck /></button><button className="table-action danger" disabled={busy} title="Từ chối tin đăng" aria-label="Từ chối tin đăng" onClick={() => handlePost(item.id, 'reject')}><FiX /></button></>}{module === 'posts' && <button className="table-action" disabled={busy} title="Ẩn tin đăng" aria-label="Ẩn tin đăng" onClick={() => handlePost(item.id, 'hide')}><FiX /></button>}</td></>}
                     {module === 'rooms' && <><td><b>{(item as AdminRoom).roomName}</b><small className="table-sub">{(item as AdminRoom).address}</small></td><td>{(item as AdminRoom).landlordName}</td><td>{formatMoney((item as AdminRoom).price)}</td><td><em className={`status-${(item as AdminRoom).status}`}>{roomStatus((item as AdminRoom).status)}</em></td><td /></>}
-                    {(module === 'categories' || module === 'amenities') && <><td><b>{(item as AdminCatalogItem).icon} {(item as AdminCatalogItem).name}</b></td><td>{(item as AdminCatalogItem).description || 'Chưa có mô tả'}</td><td><em className="green">{(item as AdminCatalogItem).isActive === false ? 'Đã ẩn' : 'Đang dùng'}</em></td><td className="table-actions"><button className="table-action" onClick={() => editCatalog(item as AdminCatalogItem)}><FiEdit2 /></button><button className="table-action danger" onClick={() => deleteCatalog(item.id)}><FiTrash2 /></button></td></>}
-                    {module === 'reports' && <><td><b>{(item as AdminReport).postTitle || 'Báo cáo nội dung'}</b><small className="table-sub">{(item as AdminReport).reason || (item as AdminReport).description || 'Không có mô tả'}</small></td><td>{(item as AdminReport).reporterName || 'Ẩn danh'}</td><td>{formatDate((item as AdminReport).createdAt)}</td><td><em className={`status-${(item as AdminReport).status || 0}`}>{(item as AdminReport).statusText || 'Mới tiếp nhận'}</em></td><td><select className="inline-select" value={(item as AdminReport).status || 0} onChange={async e => { await adminService.updateReportStatus(item.id, Number(e.target.value)); load(); }}><option value="0">Mới</option><option value="1">Đang xử lý</option><option value="2">Đã xử lý</option></select></td></>}
+                    {(module === 'categories' || module === 'amenities') && <><td><b>{(item as AdminCatalogItem).icon} {(item as AdminCatalogItem).name}</b></td><td>{(item as AdminCatalogItem).description || 'Chưa có mô tả'}</td><td><em className={(item as AdminCatalogItem).isActive === false ? 'red' : 'green'}>{(item as AdminCatalogItem).isActive === false ? 'Đã ẩn' : 'Đang dùng'}</em></td><td className="table-actions"><button className="table-action" disabled={busy} title="Chỉnh sửa" aria-label="Chỉnh sửa" onClick={() => editCatalog(item as AdminCatalogItem)}><FiEdit2 /></button><button className="table-action danger" disabled={busy} title="Xóa mục" aria-label="Xóa mục" onClick={() => deleteCatalog(item.id)}><FiTrash2 /></button></td></>}
+                    {module === 'reports' && <><td><b>{(item as AdminReport).postTitle || 'Báo cáo nội dung'}</b><small className="table-sub">{(item as AdminReport).reason || (item as AdminReport).description || 'Không có mô tả'}</small></td><td>{(item as AdminReport).reporterName || 'Ẩn danh'}</td><td>{formatDate((item as AdminReport).createdAt)}</td><td><em className={`status-${(item as AdminReport).status || 0}`}>{(item as AdminReport).statusText || 'Mới tiếp nhận'}</em></td><td><select className="inline-select" aria-label="Cập nhật trạng thái báo cáo" disabled={busy} value={(item as AdminReport).status || 0} onChange={e => { const nextStatus = Number(e.target.value); void runAction(() => adminService.updateReportStatus(item.id, nextStatus), 'Đã cập nhật báo cáo.'); }}><option value="0">Mới</option><option value="1">Đang xử lý</option><option value="2">Đã xử lý</option></select></td></>}
                   </tr>
                 ))}
               </tbody>
@@ -161,20 +183,35 @@ const AdminManagementContent: React.FC<{ module: AdminModule }> = ({ module }) =
         )}
       </section>
 
-      {modal && (
-        <div className="admin-content-modal-backdrop" onClick={() => setModal(null)}>
-          <form className="admin-content-modal" onSubmit={handleCatalog} onClick={e => e.stopPropagation()}>
-            <div>
-              <h2>{modal.id ? 'Chỉnh sửa' : 'Thêm'} {modal.type === 'amenity' ? 'tiện ích' : 'danh mục'}</h2>
-              <button type="button" onClick={() => setModal(null)}><FiX /></button>
-            </div>
-            <label>Tên<input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></label>
-            {modal.type === 'amenity' && <label>Biểu tượng<input value={form.icon} onChange={e => setForm({ ...form, icon: e.target.value })} placeholder="Ví dụ: wifi" /></label>}
-            <label>Mô tả<textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></label>
-            <button className="admin-content-primary" type="submit"><FiCheck /> Lưu thay đổi</button>
-          </form>
-        </div>
-      )}
+      {!loading && filteredRows.length > 0 && <nav className="admin-pagination" aria-label="Phân trang dữ liệu">
+        <span>{(currentPage - 1) * 10 + 1}–{Math.min(currentPage * 10, filteredRows.length)} / {filteredRows.length} mục</span>
+        <div><button aria-label="Trang trước" title="Trang trước" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}><FiChevronLeft /></button><span>Trang {currentPage} / {pageCount}</span><button aria-label="Trang sau" title="Trang sau" disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)}><FiChevronRight /></button></div>
+      </nav>}
+
+      <Modal isOpen={!!modal} onClose={() => { if (!busy) setModal(null); }} title={`${modal?.id ? 'Chỉnh sửa' : 'Thêm'} ${modal?.type === 'amenity' ? 'tiện ích' : 'danh mục'}`}>
+        <form className="admin-catalog-form" onSubmit={handleCatalog}>
+          <label>Tên <span className="text-red-600">*</span><input required maxLength={100} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Nhập tên" aria-invalid={!!formError} aria-describedby={formError ? 'catalog-error' : undefined} /></label>
+          {modal?.type === 'amenity' && <label>Biểu tượng<input value={form.icon} onChange={e => setForm({ ...form, icon: e.target.value })} placeholder="Ví dụ: wifi" /></label>}
+          <label>Mô tả<textarea rows={4} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Nhập mô tả" /></label>
+          {formError && <p id="catalog-error" role="alert" className="form-error">{formError}</p>}
+          <div className="form-actions"><button type="button" disabled={busy} onClick={() => setModal(null)}>Hủy</button><button className="admin-content-primary" disabled={busy} type="submit"><FiCheck />{busy ? 'Đang lưu...' : 'Lưu thay đổi'}</button></div>
+        </form>
+      </Modal>
+      <Modal isOpen={rejectId !== null} onClose={() => { if (!busy) setRejectId(null); }} title="Từ chối tin đăng">
+        <form className="admin-catalog-form" onSubmit={async e => {
+          e.preventDefault();
+          if (busyRef.current || rejectId === null) return;
+          if (!reason.trim()) { setFormError('Vui lòng nhập lý do từ chối.'); return; }
+          busyRef.current = true; setBusy(true); setFormError('');
+          try { await adminService.rejectPost(rejectId, reason.trim()); setRejectId(null); toast.success('Đã từ chối tin đăng.'); await load(); }
+          catch (error) { setFormError(getApiErrorMessage(error, 'Không thể từ chối tin đăng.')); }
+          finally { busyRef.current = false; setBusy(false); }
+        }}>
+          <label>Lý do từ chối <span className="text-red-600">*</span><textarea required rows={4} maxLength={500} value={reason} onChange={e => setReason(e.target.value)} placeholder="Nêu thông tin cần chỉnh sửa để chủ trọ gửi duyệt lại" /></label>
+          {formError && <p role="alert" className="form-error">{formError}</p>}
+          <div className="form-actions"><button type="button" disabled={busy} onClick={() => setRejectId(null)}>Hủy</button><button type="submit" disabled={busy} className="admin-content-primary">{busy ? 'Đang xử lý...' : 'Xác nhận từ chối'}</button></div>
+        </form>
+      </Modal>
     </div>
   );
 };

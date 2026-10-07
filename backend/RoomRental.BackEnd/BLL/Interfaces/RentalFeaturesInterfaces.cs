@@ -6,15 +6,16 @@ public interface IRentalRequestService
 {
     Task<YeuCauThueDto> TaoAsync(int nguoiThueId, TaoYeuCauThueDto dto);
     Task<List<YeuCauThueDto>> LayCuaToiAsync(int taiKhoanId, bool chuTro);
-    Task<YeuCauThueDto> CapNhatTrangThaiAsync(int chuTroId, int id, int trangThai, string? ghiChu = null);
+    Task<YeuCauThueDto> CapNhatTrangThaiAsync(int chuTroId, int id, int trangThai, string? ghiChu = null, decimal? soTienDatCoc = null, DateTime? hanThanhToanCoc = null);
+    Task<DatCocDto> ThietLapDatCocAsync(int chuTroId, int id, ThietLapDatCocDto dto);
     Task<YeuCauThueDto> HuyAsync(int nguoiThueId, int id);
 }
 
 public interface IDepositService
 {
-    Task<DatCocDto> TaoAsync(int nguoiThueId, TaoDatCocDto dto);
     Task<List<DatCocDto>> LayCuaToiAsync(int taiKhoanId);
     Task<DatCocDto> CapNhatTrangThaiAsync(int taiKhoanId, int id, int trangThai);
+    Task ReconcileExpiredDepositsAsync(CancellationToken cancellationToken = default);
 }
 
 public interface IRentalContractService

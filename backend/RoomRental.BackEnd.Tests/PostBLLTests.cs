@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RoomRental.BackEnd.BLL;
 using RoomRental.BackEnd.DAL;
 using RoomRental.BackEnd.DTO.Post;
+using RoomRental.BackEnd.DTO.Room;
 using RoomRental.BackEnd.Models;
 using RoomRental.BackEnd.Models.Enums;
 using Xunit;
@@ -43,6 +44,61 @@ public sealed class PostBLLTests
         var distance = PostBLL.CalculateDistance(21.0285, 105.8542, 21.0285, 105.8542);
 
         Assert.Equal(0, distance, precision: 8);
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    [InlineData(false, true)]
+    public async Task Updating_address_discards_stale_coordinates_but_keeps_explicit_new_pin(bool throughPost, bool withPin)
+    {
+        await using var context = CreateContext();
+        await SeedPostsAsync(context);
+        var room = await context.Rooms.SingleAsync(r => r.Id == 1);
+        room.Latitude = 21;
+        room.Longitude = 105;
+        await context.SaveChangesAsync();
+        if (throughPost)
+            await new PostBLL(context).UpdatePostAsync(1, 1, new UpdatePostDto { Address = "New address", Latitude = withPin ? 22 : null, Longitude = withPin ? 106 : null });
+        else
+            await new RoomBLL(context).UpdateRoomAsync(1, 1, new UpdateRoomDto { Address = "New address", Latitude = withPin ? 22 : null, Longitude = withPin ? 106 : null });
+        Assert.Equal(withPin ? 22m : (decimal?)null, room.Latitude);
+        Assert.Equal(withPin ? 106m : (decimal?)null, room.Longitude);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Updating_non_location_fields_preserves_saved_pin(bool throughPost)
+    {
+        await using var context = CreateContext();
+        await SeedPostsAsync(context);
+        var room = await context.Rooms.SingleAsync(r => r.Id == 1);
+        room.Latitude = 21;
+        room.Longitude = 105;
+        await context.SaveChangesAsync();
+        if (throughPost) await new PostBLL(context).UpdatePostAsync(1, 1, new UpdatePostDto { Title = "New title" });
+        else await new RoomBLL(context).UpdateRoomAsync(1, 1, new UpdateRoomDto { RoomName = "New name" });
+        Assert.Equal(21m, room.Latitude);
+        Assert.Equal(105m, room.Longitude);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Explicit_empty_optional_address_parts_clear_old_values(bool throughPost)
+    {
+        await using var context = CreateContext();
+        await SeedPostsAsync(context);
+        var room = await context.Rooms.SingleAsync(r => r.Id == 1);
+        room.Ward = "Old ward";
+        room.District = "Old district";
+        await context.SaveChangesAsync();
+        if (throughPost) await new PostBLL(context).UpdatePostAsync(1, 1, new UpdatePostDto { Ward = "", District = "" });
+        else await new RoomBLL(context).UpdateRoomAsync(1, 1, new UpdateRoomDto { Phuong = "", Quan = "" });
+        Assert.Equal("", room.Ward);
+        Assert.Equal("", room.District);
     }
 
     private static ApplicationDbContext CreateContext()
