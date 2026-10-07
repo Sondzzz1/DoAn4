@@ -6,6 +6,7 @@ import { postService } from '../../services/postService';
 import { PostListItem } from '../../types/post.types';
 import { formatPrice } from '../../utils/helpers';
 import RoomCard from '../../components/room/RoomCard';
+import RoomAvailabilityBadge from '../../components/room/RoomAvailabilityBadge';
 import PageState from '../../components/common/PageState';
 import BlogCard from '../../components/blog/BlogCard';
 import { blogService } from '../../services/blogService';
@@ -218,7 +219,7 @@ const HomePage: React.FC = () => {
               <Link key={room.id} to={`/rooms/${room.id}`} className="recent-card">
                 <RoomImage room={room} className="recent-image" />
                 <div className="recent-content">
-                  <div><h3 className="recent-title">{room.title}</h3><div className="recent-price">{formatPrice(room.price)}/tháng</div></div>
+                  <div><RoomAvailabilityBadge status={room.roomStatus} /><h3 className="recent-title">{room.title}</h3><div className="recent-price">{formatPrice(room.price)}/tháng</div></div>
                   <div className="recent-footer"><span className="flex items-center gap-1"><FiMapPin size={13} />{room.area} m² · {room.district || room.province}</span><span>{formatPostedDate(room.createdAt)}</span></div>
                 </div>
               </Link>

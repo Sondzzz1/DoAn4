@@ -1,3 +1,5 @@
+import type { RoomStatus } from './post.types';
+
 export interface RoomListItem {
   id: number;
   title: string;
@@ -11,7 +13,7 @@ export interface RoomListItem {
   createdAt: string;
   category: 'room' | 'whole-house' | 'apartment' | 'shared';
   landlordName?: string;
-  roomStatus?: string;
+  roomStatus?: RoomStatus;
 }
 
 export interface RoomItem {

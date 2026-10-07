@@ -1,0 +1,65 @@
+{
+  "fixtureMode": true,
+  "checks": [
+    {
+      "width": 1440,
+      "test": "Home featured and recent rented posts remain visible with sold-out label"
+    },
+    {
+      "width": 1440,
+      "test": "Rented listing opens detail and cannot book or request rental"
+    },
+    {
+      "width": 1440,
+      "test": "Reserved detail is read-only for new bookings and rentals"
+    },
+    {
+      "width": 1440,
+      "test": "Available room keeps rental actions; similar rented room is correctly labelled"
+    },
+    {
+      "width": 1440,
+      "test": "Favorites show sold-out room; no React errors or mobile overflow"
+    },
+    {
+      "width": 768,
+      "test": "Home featured and recent rented posts remain visible with sold-out label"
+    },
+    {
+      "width": 768,
+      "test": "Rented listing opens detail and cannot book or request rental"
+    },
+    {
+      "width": 768,
+      "test": "Reserved detail is read-only for new bookings and rentals"
+    },
+    {
+      "width": 768,
+      "test": "Available room keeps rental actions; similar rented room is correctly labelled"
+    },
+    {
+      "width": 768,
+      "test": "Favorites show sold-out room; no React errors or mobile overflow"
+    },
+    {
+      "width": 375,
+      "test": "Home featured and recent rented posts remain visible with sold-out label"
+    },
+    {
+      "width": 375,
+      "test": "Rented listing opens detail and cannot book or request rental"
+    },
+    {
+      "width": 375,
+      "test": "Reserved detail is read-only for new bookings and rentals"
+    },
+    {
+      "width": 375,
+      "test": "Available room keeps rental actions; similar rented room is correctly labelled"
+    },
+    {
+      "width": 375,
+      "test": "Favorites show sold-out room; no React errors or mobile overflow"
+    }
+  ]
+}

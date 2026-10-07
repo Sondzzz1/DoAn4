@@ -5,6 +5,7 @@ import { postService } from '../../services/postService';
 import { PostListItem } from '../../types/post.types';
 import { formatCurrency } from '../../utils/helpers';
 import { ROUTES } from '../../utils/constants';
+import RoomAvailabilityBadge from './RoomAvailabilityBadge';
 
 interface SimilarRoomsProps {
   currentPostId: number;
@@ -79,7 +80,7 @@ const SimilarRooms: React.FC<SimilarRoomsProps> = ({ currentPostId, categoryId }
               ) : (
                 <div className="flex h-full items-center justify-center text-sm text-gray-500">Chưa có ảnh</div>
               )}
-              <div className="absolute left-3 top-3 rounded bg-[#00a651] px-2.5 py-1 text-[12px] font-semibold text-white">Còn trống</div>
+              <RoomAvailabilityBadge status={room.roomStatus} className="absolute left-3 top-3" />
             </div>
 
             <div className="p-4">

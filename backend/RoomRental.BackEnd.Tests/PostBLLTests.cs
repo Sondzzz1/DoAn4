@@ -1,8 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using RoomRental.BackEnd.BLL;
 using RoomRental.BackEnd.DAL;
 using RoomRental.BackEnd.DTO.Post;
 using RoomRental.BackEnd.DTO.Room;
+using RoomRental.BackEnd.DTO.Rental;
+using RoomRental.BackEnd.DTO.ViewingAppointment;
 using RoomRental.BackEnd.Models;
 using RoomRental.BackEnd.Models.Enums;
 using Xunit;
@@ -12,7 +15,7 @@ namespace RoomRental.BackEnd.Tests;
 public sealed class PostBLLTests
 {
     [Fact]
-    public async Task SearchPostsAsync_returns_only_approved_posts_with_available_rooms()
+    public async Task SearchPostsAsync_returns_approved_posts_including_reserved_rooms()
     {
         await using var context = CreateContext();
         await SeedPostsAsync(context);
@@ -20,10 +23,10 @@ public sealed class PostBLLTests
 
         var posts = await service.SearchPostsAsync(new PostQueryParameters());
 
-        var post = Assert.Single(posts);
-        Assert.Equal("Tin cong khai", post.Title);
-        Assert.Equal(PostStatus.Approved, post.Status);
-        Assert.Equal(RoomStatus.Available, post.RoomStatus);
+        Assert.Equal(2, posts.Count);
+        Assert.All(posts, post => Assert.Equal(PostStatus.Approved, post.Status));
+        Assert.Contains(posts, post => post.Id == 1 && post.RoomStatus == RoomStatus.Available);
+        Assert.Contains(posts, post => post.Id == 2 && post.RoomStatus == RoomStatus.Reserved);
     }
 
     [Fact]
@@ -33,7 +36,7 @@ public sealed class PostBLLTests
         await SeedPostsAsync(context);
         var service = new PostBLL(context);
 
-        var exception = await Assert.ThrowsAsync<BusinessRuleException>(() => service.GetPublicPostByIdAsync(2));
+        var exception = await Assert.ThrowsAsync<BusinessRuleException>(() => service.GetPublicPostByIdAsync(3));
 
         Assert.Equal(404, exception.StatusCode);
     }
@@ -99,6 +102,77 @@ public sealed class PostBLLTests
         else await new RoomBLL(context).UpdateRoomAsync(1, 1, new UpdateRoomDto { Phuong = "", Quan = "" });
         Assert.Equal("", room.Ward);
         Assert.Equal("", room.District);
+    }
+
+    public static IEnumerable<object[]> VisibilityCases =>
+        from postStatus in Enum.GetValues<PostStatus>()
+        from roomStatus in Enum.GetValues<RoomStatus>()
+        select new object[] { postStatus, roomStatus };
+
+    [Theory]
+    [MemberData(nameof(VisibilityCases))]
+    public async Task Public_list_and_detail_have_consistent_visibility(PostStatus postStatus, RoomStatus roomStatus)
+    {
+        await using var context = CreateContext();
+        await SeedPostsAsync(context);
+        var post = await context.Posts.Include(p => p.Room).SingleAsync(p => p.Id == 1);
+        post.Status = postStatus;
+        post.Room.Status = roomStatus;
+        await context.SaveChangesAsync();
+        var service = new PostBLL(context);
+        var visible = postStatus == PostStatus.Approved && roomStatus != RoomStatus.TemporarilyUnavailable;
+        var posts = await service.SearchPostsAsync(new PostQueryParameters());
+        Assert.Equal(visible, posts.Any(p => p.Id == 1));
+        if (visible)
+        {
+            Assert.Equal(roomStatus, (await service.GetPublicPostByIdAsync(1)).RoomStatus);
+            Assert.Equal(roomStatus, posts.Single(p => p.Id == 1).RoomStatus);
+        }
+        else
+        {
+            var error = await Assert.ThrowsAsync<BusinessRuleException>(() => service.GetPublicPostByIdAsync(1));
+            Assert.Equal(404, error.StatusCode);
+            Assert.Equal(0, post.ViewCount);
+        }
+    }
+
+    [Theory]
+    [InlineData(RoomStatus.Rented)]
+    [InlineData(RoomStatus.Reserved)]
+    public async Task Visible_unavailable_rooms_still_reject_rental_requests_and_viewings(RoomStatus status)
+    {
+        await using var context = CreateContext();
+        await SeedPostsAsync(context);
+        var room = await context.Rooms.SingleAsync(r => r.Id == 1);
+        room.Status = status;
+        context.Users.Add(new User { Id = 10, UserName = "tenant", PasswordHash = "test", FullName = "Tenant", Email = "tenant@example.test", RoleId = 1 });
+        await context.SaveChangesAsync();
+        // Rejection must happen before notification dispatch or persistence.
+        var rentals = new RentalRequestBLL(context, null!, NullLogger<RentalRequestBLL>.Instance);
+        var rentalError = await Assert.ThrowsAsync<BusinessRuleException>(() => rentals.TaoAsync(10, new TaoYeuCauThueDto { BaiDangId = 1 }));
+        var appointmentError = await Assert.ThrowsAsync<BusinessRuleException>(() => new ViewingAppointmentBLL(context).CreateAppointmentAsync(10,
+            new CreateAppointmentDto { PostId = 1, ScheduledAt = DateTime.Now.AddDays(1) }));
+        Assert.Equal(409, rentalError.StatusCode);
+        Assert.Equal(409, appointmentError.StatusCode);
+        Assert.Empty(await context.RentalRequests.ToListAsync());
+        Assert.Empty(await context.ViewingAppointments.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Renting_and_releasing_room_updates_availability_without_hiding_post()
+    {
+        await using var context = CreateContext();
+        await SeedPostsAsync(context);
+        var room = await context.Rooms.SingleAsync(r => r.Id == 1);
+        var service = new PostBLL(context);
+        foreach (var status in new[] { RoomStatus.Available, RoomStatus.Reserved, RoomStatus.Rented, RoomStatus.Available })
+        {
+            room.Status = status;
+            await context.SaveChangesAsync();
+            var list = await service.SearchPostsAsync(new PostQueryParameters { Keyword = "Tin cong khai", MinPrice = 2_000_000, MaxPrice = 4_000_000 });
+            Assert.Equal(status, Assert.Single(list).RoomStatus);
+            Assert.Equal(status, (await service.GetPublicPostByIdAsync(1)).RoomStatus);
+        }
     }
 
     private static ApplicationDbContext CreateContext()

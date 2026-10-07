@@ -1,5 +1,6 @@
 import React from 'react';
 import { Post, RoomStatus } from '../../types/post.types';
+import { getRoomAvailabilityLabel } from '../../utils/roomAvailability';
 import { FiPhone, FiMessageSquare, FiCalendar, FiAlertCircle, FiUser, FiSend, FiHeart } from 'react-icons/fi';
 
 interface LandlordContactCardProps {
@@ -66,7 +67,7 @@ const LandlordContactCard: React.FC<LandlordContactCardProps> = ({
           </button>
 
           {/* Book Viewing Button */}
-          {isAvailable ? <button onClick={onBookViewing} className="w-full flex items-center justify-center gap-2 px-5 h-[46px] rounded-lg bg-[#0084ff] text-white text-sm font-bold hover:bg-[#0073df] transition-all shadow-md shadow-blue-500/20 cursor-pointer border-none"><FiCalendar className="w-4 h-4" />Đặt lịch xem phòng</button> : <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-center text-sm font-semibold text-slate-600">Phòng hiện không còn trống.</div>}
+          {isAvailable ? <button onClick={onBookViewing} className="w-full flex items-center justify-center gap-2 px-5 h-[46px] rounded-lg bg-[#0084ff] text-white text-sm font-bold hover:bg-[#0073df] transition-all shadow-md shadow-blue-500/20 cursor-pointer border-none"><FiCalendar className="w-4 h-4" />Đặt lịch xem phòng</button> : <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-center text-sm text-rose-800"><strong className="block mb-1">{getRoomAvailabilityLabel(post.roomStatus)}</strong>Phòng hiện không nhận đặt lịch hoặc yêu cầu thuê mới.</div>}
 
           {/* Request Rental Button */}
           {isAvailable && onRequestRental && (

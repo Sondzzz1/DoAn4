@@ -6,6 +6,7 @@ import { categoryService, RoomCategory } from '../../services/categoryService';
 import { postService, PostQueryParams } from '../../services/postService';
 import { PostListItem } from '../../types/post.types';
 import RoomSidebar from '../../components/room/RoomSidebar';
+import RoomAvailabilityBadge from '../../components/room/RoomAvailabilityBadge';
 import { formatPrice } from '../../utils/helpers';
 import './RoomListPage.css';
 
@@ -162,6 +163,7 @@ const RoomListPage: React.FC = () => {
     province: post.province,
     createdAt: post.createdAt,
     category: 'room' as const,
+    roomStatus: post.roomStatus,
   }));
 
   return (
@@ -341,6 +343,7 @@ const RoomListPage: React.FC = () => {
 
                     {/* Content */}
                     <div className="room-list-card-content">
+                      <RoomAvailabilityBadge status={post.roomStatus} />
                       <h3 className="room-list-card-title">{post.title}</h3>
 
                       <div className="room-list-card-address">

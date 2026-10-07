@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { postService } from '../../services/postService';
 import { favoriteService } from '../../services/favoriteService';
-import { Post } from '../../types/post.types';
+import { Post, RoomStatus } from '../../types/post.types';
 import { ROUTES, ROLES } from '../../utils/constants';
 import { toast } from 'react-toastify';
 import { FiChevronRight, FiAlertCircle, FiRefreshCw, FiArrowLeft } from 'react-icons/fi';
@@ -138,6 +138,7 @@ const RoomDetailPage: React.FC = () => {
 
   // Booking viewing handler
   const handleBookViewing = () => {
+    if (!post || post.roomStatus !== RoomStatus.Available) return;
     if (!isAuthenticated) {
       toast.info('Vui lòng đăng nhập để đặt lịch xem phòng.');
       navigate(ROUTES.LOGIN);
@@ -154,6 +155,7 @@ const RoomDetailPage: React.FC = () => {
 
   // Request rental handler
   const handleRequestRental = () => {
+    if (!post || post.roomStatus !== RoomStatus.Available) return;
     if (!isAuthenticated) {
       toast.info('Vui lòng đăng nhập để gửi yêu cầu thuê phòng.');
       navigate(ROUTES.LOGIN);
@@ -349,14 +351,14 @@ const RoomDetailPage: React.FC = () => {
 
       {/* BOOKING MODAL */}
       <BookingModal
-        isOpen={isBookingModalOpen}
+        isOpen={isBookingModalOpen && post.roomStatus === RoomStatus.Available}
         onClose={() => setIsBookingModalOpen(false)}
         post={post}
       />
 
       {/* RENTAL REQUEST MODAL */}
       <RentalRequestModal
-        isOpen={isRentalModalOpen}
+        isOpen={isRentalModalOpen && post.roomStatus === RoomStatus.Available}
         onClose={() => setIsRentalModalOpen(false)}
         postId={post.id}
         postTitle={post.title}

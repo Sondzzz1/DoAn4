@@ -36,8 +36,9 @@ public class PostBLL : IPostService
                 .ThenInclude(l => l.Account)
             .AsNoTracking();
 
-        // Public search must never expose pending, rejected, hidden, expired, or unavailable posts.
-        query = query.Where(p => p.Status == PostStatus.Approved && p.Room.Status == RoomStatus.Available);
+        // Moderated posts remain visible when rented or reserved; booking checks availability separately.
+        query = query.Where(p => p.Status == PostStatus.Approved &&
+            (p.Room.Status == RoomStatus.Available || p.Room.Status == RoomStatus.Rented || p.Room.Status == RoomStatus.Reserved));
 
         // Lọc theo Landlord
         if (q.LandlordId.HasValue)
@@ -261,7 +262,8 @@ public class PostBLL : IPostService
             .FirstOrDefaultAsync(p => p.Id == postId);
 
         if (post == null || (requirePublicVisibility &&
-            (post.Status != PostStatus.Approved || post.Room.Status != RoomStatus.Available)))
+            (post.Status != PostStatus.Approved ||
+             post.Room.Status is not (RoomStatus.Available or RoomStatus.Rented or RoomStatus.Reserved))))
             throw BusinessRuleException.NotFound("Không tìm thấy tin đăng");
 
         if (incrementView)

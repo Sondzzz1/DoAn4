@@ -1,0 +1,18 @@
+.room-availability-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: 5px 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+.room-availability-badge[data-status="0"] { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.room-availability-badge[data-status="1"] { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+.room-availability-badge[data-status="2"] { background: #fffbeb; color: #92400e; border-color: #fde68a; }

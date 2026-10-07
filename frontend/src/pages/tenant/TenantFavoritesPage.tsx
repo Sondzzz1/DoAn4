@@ -7,6 +7,7 @@ import { PostListItem } from '../../types/post.types';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { formatPrice } from '../../utils/helpers';
 import PageState from '../../components/common/PageState';
+import RoomAvailabilityBadge from '../../components/room/RoomAvailabilityBadge';
 
 const TenantFavoritesPage: React.FC = () => {
   const [favorites, setFavorites] = useState<PostListItem[]>([]);
@@ -130,6 +131,7 @@ const TenantFavoritesPage: React.FC = () => {
 
                 {/* Body */}
                 <div className="p-5">
+                  <RoomAvailabilityBadge status={post.roomStatus} className="mb-2" />
                   <h3 className="font-bold text-slate-900 text-base mb-2 line-clamp-2 hover:text-[#0084ff] transition-colors">
                     <Link to={`/rooms/${post.id}`}>{post.title}</Link>
                   </h3>

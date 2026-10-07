@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiHeart, FiHome, FiMapPin, FiUsers } from 'react-icons/fi';
 import { toast } from 'react-toastify';
-import { PostListItem } from '../../types/post.types';
+import { PostListItem, RoomStatus } from '../../types/post.types';
+import RoomAvailabilityBadge from './RoomAvailabilityBadge';
 import { formatPrice } from '../../utils/helpers';
 import { useAuth } from '../../hooks/useAuth';
 import { favoriteService } from '../../services/favoriteService';
@@ -62,7 +63,9 @@ const RoomCard: React.FC<RoomCardProps> = ({ post, badge }) => {
         )}
         </Link>
         {/* Price Badge */}
-        {badge && <span className="room-card-badge">{badge}</span>}
+        {badge && post.roomStatus === RoomStatus.Available
+          ? <span className="room-card-badge">{badge}</span>
+          : <RoomAvailabilityBadge status={post.roomStatus} className="absolute top-3 left-3" />}
         <button type="button" className={`room-card-heart ${saved && isTenant ? 'is-saved' : ''}`} onClick={() => void toggleFavorite()} disabled={saving} aria-pressed={saved && isTenant} aria-label={saved && isTenant ? 'Bỏ lưu tin' : 'Lưu tin'} title={saved && isTenant ? 'Bỏ lưu tin' : 'Lưu tin'}><FiHeart size={18} /></button>
       </div>
 

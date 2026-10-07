@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { FiChevronRight } from 'react-icons/fi';
 import { RoomListItem } from '../../types/room.types';
+import RoomAvailabilityBadge from './RoomAvailabilityBadge';
 
 interface RoomSidebarProps {
   latestRooms: RoomListItem[];
@@ -98,6 +99,7 @@ const RoomSidebar: React.FC<RoomSidebarProps> = ({ latestRooms }) => {
 
               {/* Info */}
               <div className="flex-1 min-w-0">
+                {room.roomStatus !== undefined && <RoomAvailabilityBadge status={room.roomStatus} className="mb-2" />}
                 <h4 className="text-sm font-bold text-slate-900 line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors leading-tight">
                   {room.title}
                 </h4>

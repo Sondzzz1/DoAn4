@@ -2,6 +2,7 @@ import React from 'react';
 import { Post } from '../../types/post.types';
 import { FiHome, FiUsers, FiMapPin, FiDollarSign } from 'react-icons/fi';
 import { formatCurrency } from '../../utils/helpers';
+import RoomAvailabilityBadge from './RoomAvailabilityBadge';
 
 interface RoomInformationProps {
   post: Post;
@@ -12,6 +13,7 @@ const RoomInformation: React.FC<RoomInformationProps> = ({ post }) => {
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
       {/* Title and Price */}
       <div className="mb-6">
+        <RoomAvailabilityBadge status={post.roomStatus} className="mb-3" />
         <h1 className="text-[26px] font-bold text-gray-900 leading-tight mb-4">
           {post.title}
         </h1>
