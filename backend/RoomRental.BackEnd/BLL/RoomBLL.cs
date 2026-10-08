@@ -249,7 +249,10 @@ public class RoomBLL : IRoomService
 
         await ValidateRoomAsync(room);
         if (!publicSnapshot.SequenceEqual(RoomPublicationPolicy.Capture(room)))
+        {
+            await RoomPublicationPolicy.InvalidatePendingRequestsAsync(_context, room.Id);
             await RoomPublicationPolicy.ReapproveAsync(_context, room);
+        }
         await RoomPublicationPolicy.SaveAsync(_context);
         if (transaction != null) await transaction.CommitAsync();
 

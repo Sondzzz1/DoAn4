@@ -7,6 +7,7 @@ public interface IRentalRequestService
     Task<YeuCauThueDto> TaoAsync(int nguoiThueId, TaoYeuCauThueDto dto);
     Task<List<YeuCauThueDto>> LayCuaToiAsync(int taiKhoanId, bool chuTro);
     Task<YeuCauThueDto> CapNhatTrangThaiAsync(int chuTroId, int id, int trangThai, string? ghiChu = null, decimal? soTienDatCoc = null, DateTime? hanThanhToanCoc = null);
+    [Obsolete("Legacy repair only: normal approval creates the deposit atomically.")]
     Task<DatCocDto> ThietLapDatCocAsync(int chuTroId, int id, ThietLapDatCocDto dto);
     Task<YeuCauThueDto> HuyAsync(int nguoiThueId, int id);
 }

@@ -7,6 +7,7 @@ public class RentalRequest
     public int TenantAccountId { get; set; }
     public int LandlordAccountId { get; set; }
     public string? Note { get; set; }
+    public string? CancellationReason { get; set; }
     public int Status { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
     public DateTime? UpdatedAt { get; set; }

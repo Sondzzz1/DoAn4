@@ -36,6 +36,19 @@ internal static class RoomPublicationPolicy
         }
     }
 
+    public static async Task InvalidatePendingRequestsAsync(ApplicationDbContext db, int roomId)
+    {
+        var requests = db.RentalRequests.Where(r => r.Post.RoomId == roomId);
+        if (await requests.AnyAsync(r => r.Status == RentalRequestStatus.Approved))
+            throw BusinessRuleException.Conflict("Phòng đang có yêu cầu đã duyệt chờ hoàn tất cọc/hợp đồng. Không thể thay đổi giá hoặc điều kiện đã được người thuê chấp nhận.");
+        foreach (var request in await requests.Where(r => r.Status == RentalRequestStatus.Pending).ToListAsync())
+        {
+            request.Status = RentalRequestStatus.Cancelled;
+            request.CancellationReason = "Thông tin giá hoặc điều kiện phòng đã thay đổi. Vui lòng xem lại và gửi yêu cầu mới sau khi tin được duyệt lại.";
+            request.UpdatedAt = DateTime.Now;
+        }
+    }
+
     public static async Task SaveAsync(ApplicationDbContext db)
     {
         try { await db.SaveChangesAsync(); }

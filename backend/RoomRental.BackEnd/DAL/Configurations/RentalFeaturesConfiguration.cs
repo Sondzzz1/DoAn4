@@ -11,6 +11,7 @@ public class RentalRequestConfiguration : IEntityTypeConfiguration<RentalRequest
         builder.ToTable("YeuCauThuePhong");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Note).HasColumnName("GhiChu").HasMaxLength(1000);
+        builder.Property(x => x.CancellationReason).HasColumnName("LyDoHuy").HasMaxLength(500);
         builder.Property(x => x.Status).HasColumnName("TrangThai").HasDefaultValue(0);
         builder.Property(x => x.CreatedAt).HasColumnName("NgayTao").HasDefaultValueSql("SYSDATETIME()");
         builder.Property(x => x.UpdatedAt).HasColumnName("NgayCapNhat");

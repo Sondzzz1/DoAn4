@@ -18,7 +18,15 @@ public class RentalRequestController : ControllerBase
     [HttpGet("cua-toi")] public async Task<IActionResult> CuaToi() => Ok(ApiResponse<List<YeuCauThueDto>>.SuccessResponse(await _service.LayCuaToiAsync(Id(), false)));
     [HttpGet("chu-tro")][Authorize(Roles="Landlord,Admin")] public async Task<IActionResult> CuaChuTro() => Ok(ApiResponse<List<YeuCauThueDto>>.SuccessResponse(await _service.LayCuaToiAsync(Id(), true)));
     [HttpPut("{id:int}/trang-thai")][Authorize(Roles="Landlord,Admin")] public async Task<IActionResult> TrangThai(int id, [FromBody] CapNhatTrangThaiDto dto) => Ok(ApiResponse<YeuCauThueDto>.SuccessResponse(await _service.CapNhatTrangThaiAsync(Id(), id, dto.TrangThai, dto.GhiChu, dto.SoTienDatCoc, dto.HanThanhToanCoc)));
-    [HttpPost("{id:int}/dat-coc")][Authorize(Roles="Landlord,Admin")] public async Task<IActionResult> ThietLapDatCoc(int id, [FromBody] ThietLapDatCocDto dto) => Ok(ApiResponse<DatCocDto>.SuccessResponse(await _service.ThietLapDatCocAsync(Id(), id, dto), "Đã thiết lập khoản đặt cọc"));
+    [HttpPost("{id:int}/dat-coc")]
+    [Authorize(Roles="Landlord")]
+    [ApiExplorerSettings(IgnoreApi = true)]
+    [Obsolete("Legacy repair only. Use approval with deposit terms for new requests.")]
+    public async Task<IActionResult> ThietLapDatCoc(int id, [FromBody] ThietLapDatCocDto dto)
+    {
+        Response.Headers["X-Legacy-Deposit-Repair"] = "true";
+        return Ok(ApiResponse<DatCocDto>.SuccessResponse(await _service.ThietLapDatCocAsync(Id(), id, dto), "Đã bổ sung cọc cho dữ liệu cũ"));
+    }
     [HttpPut("{id:int}/huy")][Authorize(Roles="Tenant")] public async Task<IActionResult> Huy(int id) => Ok(ApiResponse<YeuCauThueDto>.SuccessResponse(await _service.HuyAsync(Id(), id), "Hủy yêu cầu thuê phòng thành công"));
     private int Id() => int.Parse(User.FindFirst("UserId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 }

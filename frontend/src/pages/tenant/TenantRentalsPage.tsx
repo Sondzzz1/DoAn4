@@ -565,6 +565,7 @@ const TenantRentalsPage: React.FC = () => {
                           <FiCalendar size={14} /> Ngày gửi: {new Date(item.ngayTao).toLocaleDateString('vi-VN')}
                         </p>
                         {item.ghiChu && <p className="text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs">Ghi chú: {item.ghiChu}</p>}
+                        {item.lyDoHuy && <p className="text-sm text-rose-700">{item.lyDoHuy}</p>}
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2">

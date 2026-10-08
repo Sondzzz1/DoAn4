@@ -1,0 +1,61 @@
+{
+  "fixtureMode": false,
+  "database": "RoomRentalDB",
+  "postId": 7,
+  "checks": [
+    {
+      "width": 375,
+      "role": "tenant",
+      "name": "search",
+      "status": "PASS"
+    },
+    {
+      "width": 375,
+      "role": "tenant",
+      "name": "filter-reload",
+      "status": "PASS"
+    },
+    {
+      "width": 375,
+      "role": "tenant",
+      "name": "detail-map",
+      "status": "PASS"
+    },
+    {
+      "width": 375,
+      "role": "tenant",
+      "name": "appointment-modal",
+      "status": "PASS"
+    },
+    {
+      "width": 375,
+      "role": "tenant",
+      "name": "paid-bill",
+      "status": "PASS"
+    },
+    {
+      "width": 375,
+      "role": "tenant",
+      "name": "terminated-contract",
+      "status": "PASS"
+    },
+    {
+      "width": 375,
+      "role": "tenant",
+      "name": "request-reason",
+      "status": "PASS"
+    },
+    {
+      "width": 375,
+      "role": "tenant",
+      "name": "Console, warnings, API errors and failed requests",
+      "status": "PASS"
+    },
+    {
+      "width": 375,
+      "role": "landlord",
+      "name": "room-form",
+      "status": "PASS"
+    }
+  ]
+}

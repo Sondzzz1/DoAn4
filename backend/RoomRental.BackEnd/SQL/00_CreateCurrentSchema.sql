@@ -262,6 +262,7 @@ CREATE TABLE [YeuCauThuePhong] (
     [TenantAccountId] int NOT NULL,
     [LandlordAccountId] int NOT NULL,
     [GhiChu] nvarchar(1000) NULL,
+    [LyDoHuy] nvarchar(500) NULL,
     [TrangThai] int NOT NULL DEFAULT 0,
     [NgayTao] datetime2 NOT NULL DEFAULT (SYSDATETIME()),
     [NgayCapNhat] datetime2 NULL,

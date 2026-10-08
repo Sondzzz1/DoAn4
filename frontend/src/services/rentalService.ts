@@ -14,6 +14,7 @@ export interface RentalRequestDto {
   sdtNguoiThue?: string;
   trangThai: number; // 0 pending, 1 approved, 2 rejected, 3 cancelled, 4 converted
   ghiChu?: string;
+  lyDoHuy?: string;
   ngayTao: string;
 }
 
@@ -102,8 +103,8 @@ export const rentalService = {
     return response.data;
   },
 
-  // Đặt cọc do chủ trọ thiết lập sau khi duyệt yêu cầu
-  setupDeposit: async (requestId: number, data: { soTien: number; hanThanhToan: string }): Promise<ApiResponse<DepositDto>> => {
+  // Compatibility repair for historical Approved requests missing a deposit.
+  repairLegacyDeposit: async (requestId: number, data: { soTien: number; hanThanhToan: string }): Promise<ApiResponse<DepositDto>> => {
     const response = await api.post<ApiResponse<DepositDto>>(`/yeu-cau-thue/${requestId}/dat-coc`, data);
     return response.data;
   },

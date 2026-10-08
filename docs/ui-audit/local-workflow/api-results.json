@@ -1,0 +1,87 @@
+{
+  "prefix": "qa20261007235319",
+  "database": "RoomRentalDB",
+  "paymentMode": "signed-local-test-callback-NOT-bank-sandbox",
+  "roomId": 11,
+  "postId": 7,
+  "requestId": 7,
+  "oldRequestId": 6,
+  "depositId": 4,
+  "contractId": 3,
+  "billId": 2,
+  "appointmentId": 7,
+  "checks": [
+    {
+      "name": "Create Post never creates another Room",
+      "status": "PASS"
+    },
+    {
+      "name": "Tenant filter finds Approved \u002B Available post",
+      "status": "PASS"
+    },
+    {
+      "name": "Detail resolves physical room",
+      "status": "PASS"
+    },
+    {
+      "name": "Price update: Post Pending and removed from search",
+      "status": "PASS"
+    },
+    {
+      "name": "Old Pending request cancelled with separate reason and original note preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "Appointment created and confirmed via real API",
+      "status": "PASS"
+    },
+    {
+      "name": "Approval reserves room and excludes it from search",
+      "status": "PASS"
+    },
+    {
+      "name": "Exactly one deposit automatically created with landlord amount",
+      "status": "PASS"
+    },
+    {
+      "name": "Approved request prevents silent price changes before contract",
+      "status": "PASS"
+    },
+    {
+      "name": "Reservation cancels future appointment",
+      "status": "PASS"
+    },
+    {
+      "name": "deposit payment signed test IPN accepted",
+      "status": "PASS"
+    },
+    {
+      "name": "deposit duplicate IPN idempotent",
+      "status": "PASS"
+    },
+    {
+      "name": "Landlord confirms paid deposit",
+      "status": "PASS"
+    },
+    {
+      "name": "Both signatures activate contract and mark room Rented",
+      "status": "PASS"
+    },
+    {
+      "name": "bill payment signed test IPN accepted",
+      "status": "PASS"
+    },
+    {
+      "name": "bill duplicate IPN idempotent",
+      "status": "PASS"
+    },
+    {
+      "name": "Monthly bill paid via signed local test callback",
+      "status": "PASS"
+    },
+    {
+      "name": "Termination releases Room Available and returns it to search",
+      "status": "PASS"
+    }
+  ]
+}

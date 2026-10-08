@@ -26,6 +26,8 @@ public class RentalRequestBLL : IRentalRequestService
 
     public async Task<YeuCauThueDto> TaoAsync(int nguoiThueId, TaoYeuCauThueDto dto)
     {
+        await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        await WorkflowLock.AcquireAsync(_db);
         var tenant = await _db.Users.FirstOrDefaultAsync(x => x.Id == nguoiThueId)
             ?? throw BusinessRuleException.NotFound("Không tìm thấy người thuê.");
         if (tenant.RoleId != 1) throw BusinessRuleException.Forbidden("Chỉ người thuê mới có thể gửi yêu cầu thuê phòng.");
@@ -40,6 +42,7 @@ public class RentalRequestBLL : IRentalRequestService
         var item = new RentalRequest { PostId = post.Id, TenantAccountId = nguoiThueId, LandlordAccountId = post.Landlord.AccountId, Note = dto.GhiChu, Status = RentalRequestStatus.Pending };
         _db.RentalRequests.Add(item);
         await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
         await SendNotificationAsync(
             post.Landlord.AccountId,
             "Yêu cầu thuê phòng mới",
@@ -52,7 +55,7 @@ public class RentalRequestBLL : IRentalRequestService
     {
         var q = _db.RentalRequests.Include(x => x.Post).AsQueryable();
         q = chuTro ? q.Where(x => x.LandlordAccountId == taiKhoanId) : q.Where(x => x.TenantAccountId == taiKhoanId);
-        return await q.OrderByDescending(x => x.CreatedAt).Select(x => new YeuCauThueDto { Id=x.Id, BaiDangId=x.PostId, NguoiThueId=x.TenantAccountId, ChuTroId=x.LandlordAccountId, TieuDeBaiDang=x.Post.Title, AnhPhong=x.Post.Room.Images.OrderByDescending(i => i.IsThumbnail).Select(i => i.ImageUrl).FirstOrDefault(), GiaThue=x.Post.Room.Price, DiaChi=x.Post.Room.Address, TenNguoiThue=_db.Users.Where(u => u.Id == x.TenantAccountId).Select(u => u.FullName).FirstOrDefault(), SdtNguoiThue=_db.Users.Where(u => u.Id == x.TenantAccountId).Select(u => u.Phone).FirstOrDefault(), TrangThai=x.Status, GhiChu=x.Note, NgayTao=x.CreatedAt }).ToListAsync();
+        return await q.OrderByDescending(x => x.CreatedAt).Select(x => new YeuCauThueDto { Id=x.Id, BaiDangId=x.PostId, NguoiThueId=x.TenantAccountId, ChuTroId=x.LandlordAccountId, TieuDeBaiDang=x.Post.Title, AnhPhong=x.Post.Room.Images.OrderByDescending(i => i.IsThumbnail).Select(i => i.ImageUrl).FirstOrDefault(), GiaThue=x.Post.Room.Price, DiaChi=x.Post.Room.Address, TenNguoiThue=_db.Users.Where(u => u.Id == x.TenantAccountId).Select(u => u.FullName).FirstOrDefault(), SdtNguoiThue=_db.Users.Where(u => u.Id == x.TenantAccountId).Select(u => u.Phone).FirstOrDefault(), TrangThai=x.Status, GhiChu=x.Note, LyDoHuy=x.CancellationReason, NgayTao=x.CreatedAt }).ToListAsync();
     }
 
     public async Task<YeuCauThueDto> CapNhatTrangThaiAsync(int chuTroId, int id, int trangThai, string? ghiChu = null, decimal? soTienDatCoc = null, DateTime? hanThanhToanCoc = null)
@@ -112,6 +115,7 @@ public class RentalRequestBLL : IRentalRequestService
         return await Map(item);
     }
 
+    [Obsolete("Legacy repair only: normal approval creates the deposit atomically.")]
     public async Task<DatCocDto> ThietLapDatCocAsync(int chuTroId, int id, ThietLapDatCocDto dto)
     {
         await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
@@ -121,13 +125,21 @@ public class RentalRequestBLL : IRentalRequestService
             .FirstOrDefaultAsync(x => x.Id == id)
             ?? throw BusinessRuleException.NotFound("Không tìm thấy yêu cầu thuê phòng.");
 
-        if (chuTroId != 0 && request.LandlordAccountId != chuTroId)
+        if (request.LandlordAccountId != chuTroId || !await _db.Users.AnyAsync(u => u.Id == chuTroId && u.RoleId == 2 && u.IsActive))
             throw BusinessRuleException.Forbidden("Bạn không có quyền thiết lập khoản cọc cho yêu cầu này.");
         if (request.Status != RentalRequestStatus.Approved)
             throw BusinessRuleException.Conflict("Chỉ có thể thiết lập cọc cho yêu cầu đã được duyệt.");
 
+        if (request.Post.Status != PostStatus.Approved || request.Post.Room.Status is not (RoomStatus.Available or RoomStatus.Reserved))
+            throw BusinessRuleException.Conflict("Tin hoặc phòng không còn phù hợp để bổ sung cọc cho dữ liệu cũ.");
+        if (await _db.RentalContracts.AnyAsync(c => c.RentalRequestId == id ||
+            (c.Post!.RoomId == request.Post.RoomId && RentalContractStatus.EffectiveStatuses.Contains(c.Status))) ||
+            await _db.RentalRequests.AnyAsync(r => r.Id != id && r.Post.RoomId == request.Post.RoomId && r.Status == RentalRequestStatus.Approved))
+            throw BusinessRuleException.Conflict("Phòng đã có hợp đồng hoặc một yêu cầu giữ chỗ khác.");
+
         ValidateDepositTerms(dto.SoTien, dto.HanThanhToan);
         var deposit = await CreateDepositAsync(request, dto.SoTien, dto.HanThanhToan);
+        request.Post.Room.Status = RoomStatus.Reserved;
         await _db.SaveChangesAsync();
         await transaction.CommitAsync();
 
@@ -241,7 +253,7 @@ public class RentalRequestBLL : IRentalRequestService
         }
     }
 
-    private async Task<YeuCauThueDto> Map(RentalRequest x) => await _db.RentalRequests.Where(y => y.Id == x.Id).Select(y => new YeuCauThueDto { Id=y.Id, BaiDangId=y.PostId, NguoiThueId=y.TenantAccountId, ChuTroId=y.LandlordAccountId, TieuDeBaiDang=y.Post.Title, AnhPhong=y.Post.Room.Images.OrderByDescending(i => i.IsThumbnail).Select(i => i.ImageUrl).FirstOrDefault(), GiaThue=y.Post.Room.Price, DiaChi=y.Post.Room.Address, TenNguoiThue=_db.Users.Where(u => u.Id == y.TenantAccountId).Select(u => u.FullName).FirstOrDefault(), SdtNguoiThue=_db.Users.Where(u => u.Id == y.TenantAccountId).Select(u => u.Phone).FirstOrDefault(), TrangThai=y.Status, GhiChu=y.Note, NgayTao=y.CreatedAt }).FirstAsync();
+    private async Task<YeuCauThueDto> Map(RentalRequest x) => await _db.RentalRequests.Where(y => y.Id == x.Id).Select(y => new YeuCauThueDto { Id=y.Id, BaiDangId=y.PostId, NguoiThueId=y.TenantAccountId, ChuTroId=y.LandlordAccountId, TieuDeBaiDang=y.Post.Title, AnhPhong=y.Post.Room.Images.OrderByDescending(i => i.IsThumbnail).Select(i => i.ImageUrl).FirstOrDefault(), GiaThue=y.Post.Room.Price, DiaChi=y.Post.Room.Address, TenNguoiThue=_db.Users.Where(u => u.Id == y.TenantAccountId).Select(u => u.FullName).FirstOrDefault(), SdtNguoiThue=_db.Users.Where(u => u.Id == y.TenantAccountId).Select(u => u.Phone).FirstOrDefault(), TrangThai=y.Status, GhiChu=y.Note, LyDoHuy=y.CancellationReason, NgayTao=y.CreatedAt }).FirstAsync();
 }
 
 public class DepositBLL : IDepositService

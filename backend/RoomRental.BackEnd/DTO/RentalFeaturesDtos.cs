@@ -63,6 +63,7 @@ public class YeuCauThueDto
     public string? SdtNguoiThue { get; set; }
     public int TrangThai { get; set; }
     public string? GhiChu { get; set; }
+    public string? LyDoHuy { get; set; }
     public DateTime NgayTao { get; set; }
 }
 

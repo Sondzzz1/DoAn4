@@ -344,7 +344,7 @@ const LandlordContractsPage: React.FC = () => {
         });
         toast.success('Đã duyệt yêu cầu và tạo khoản cọc cho khách thuê.');
       } else {
-        await rentalService.setupDeposit(depositRequest.id, { soTien: depositAmount, hanThanhToan: dueAt });
+        await rentalService.repairLegacyDeposit(depositRequest.id, { soTien: depositAmount, hanThanhToan: dueAt });
         toast.success('Đã thiết lập khoản cọc cho khách thuê.');
       }
       setDepositModalOpen(false);
@@ -886,10 +886,11 @@ const LandlordContractsPage: React.FC = () => {
                         onClick={() => openDepositModal(req, 'setup')}
                         className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm cursor-pointer transition-all border-none flex items-center gap-1.5"
                       >
-                        <FiPlus /> Thiết Lập Đặt Cọc
+                        <FiPlus /> Bổ sung cọc (dữ liệu cũ)
                       </button>
                     )}
                     {req.trangThai === RENTAL_REQUEST_STATUS.APPROVED && !deposits.some(d => d.yeuCauThueId === req.id && d.trangThai === DEPOSIT_STATUS.CONFIRMED) && <p className="text-xs font-medium text-amber-700">Chờ người thuê thanh toán và chủ trọ xác nhận cọc trước khi tạo hợp đồng.</p>}
+                    {req.lyDoHuy && <p className="text-sm text-rose-700">{req.lyDoHuy}</p>}
                   </div>
                 </div>
               ))}
