@@ -4,7 +4,10 @@
 >
 > Noi dung ben duoi mo ta schema demo cu `RoomRentalDb_Dev` (`Posts`, `Rooms`, `Users`). Khong chay `RoomRentalDb_Schema_And_Data.sql` len `RoomRentalDB` dang duoc backend su dung.
 
-## Schema Current (2026-10-07)
+## Schema Current (2026-10-08)
+
+- Sau chuoi nang cap ben duoi, database cu can chay `06_RentalRequestCancellationReason.sql`: them `YeuCauThuePhong.LyDoHuy` nullable, khong ghi de ghi chu cu. Script chay lai an toan; da ap dung len RoomRentalDB local. Bootstrap moi da bao gom cot nay.
+- Ket qua kiem thu database that va policy yeu cau cu: `docs/LOCAL_WORKFLOW_VERIFICATION.md` tai thu muc goc project.
 
 - Database trang: tao/chon dung database trong SSMS, chay `00_CreateCurrentSchema.sql`. Script sinh tu EF model hien tai, tao 24 bang va cac index/FK/check constraint, gom `DatCoc.HanThanhToan` va `UX_TinDang_Room_Active`. Chay lai khong tao lai bang. Khong chay chuoi legacy cho database moi nay.
 - Database cu: backup truoc; xem `WorkflowUpgrade-Runbook.md`, chay `00_Preflight_WorkflowUpgrade.sql`, `01_Deploy_WorkflowUpgrade.sql`, `04_AddDepositDeadline.sql` neu deadline chua duoc nang cap, `05_RoomPostPublication.sql`, sau do `02_Verify_WorkflowUpgrade.sql`. Cac script upgrade cu co `USE RoomRentalDB`; phai xac nhan dung database.

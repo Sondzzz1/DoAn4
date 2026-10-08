@@ -32,6 +32,7 @@ try {
       });
       page.on('response', r => { if (r.status() >= 400 && new URL(r.url()).pathname.startsWith('/api/')) badResponses.push(r.url() + ': ' + r.status()); });
       const inspect = async name => {
+        await page.evaluate(() => window.scrollTo(0, 0));
         await page.screenshot({ path: path.join(output, `${role}-${name}-${width}.png`), fullPage: true });
         const overflow = await page.evaluate(() => ({
           page: document.documentElement.scrollWidth > innerWidth + 1,
@@ -76,6 +77,7 @@ try {
         await page.locator('.leaflet-container').waitFor();
         await inspect('room-form');
         await page.goto(base + '/landlord/contracts');
+        await page.getByRole('button', { name: /Danh Sách Hợp Đồng/ }).click();
         await page.getByText(/Đã chấm dứt/).first().waitFor();
         await inspect('workflow');
       } else {

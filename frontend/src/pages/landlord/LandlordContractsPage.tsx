@@ -38,7 +38,7 @@ import { getApiErrorMessage } from '../../utils/apiError';
 
 const requestStatus = (status: number): { label: string; tone: StatusTone } => ({
   0: { label: 'Chờ duyệt', tone: 'pending' }, 1: { label: 'Đã duyệt', tone: 'success' }, 2: { label: 'Đã từ chối', tone: 'danger' },
-  3: { label: 'Người thuê đã hủy', tone: 'danger' }, 4: { label: 'Đã tạo hợp đồng', tone: 'info' }, 5: { label: 'Đã hết hạn cọc', tone: 'danger' },
+  3: { label: 'Đã hủy', tone: 'danger' }, 4: { label: 'Đã tạo hợp đồng', tone: 'info' }, 5: { label: 'Đã hết hạn cọc', tone: 'danger' },
 }[status] as { label: string; tone: StatusTone } || { label: 'Không xác định', tone: 'neutral' });
 
 const dateInputAfterDays = (days: number) => {
