@@ -46,7 +46,7 @@ public class CategoryBLL : ICategoryService
 
         if (category == null)
         {
-            throw new Exception("Không tìm thấy danh mục phòng");
+            throw BusinessRuleException.NotFound("Không tìm thấy danh mục phòng");
         }
 
         return new CategoryDto
@@ -65,13 +65,13 @@ public class CategoryBLL : ICategoryService
         var name = createDto.GetName();
         if (string.IsNullOrWhiteSpace(name))
         {
-            throw new Exception("Tên danh mục không được để trống");
+            throw new BusinessRuleException("Tên danh mục không được để trống");
         }
 
         var exists = await _context.RoomCategories.AnyAsync(c => c.Name == name);
         if (exists)
         {
-            throw new Exception("Tên danh mục này đã tồn tại");
+            throw BusinessRuleException.Conflict("Tên danh mục này đã tồn tại");
         }
 
         var category = new RoomCategory
@@ -93,7 +93,7 @@ public class CategoryBLL : ICategoryService
         var category = await _context.RoomCategories.FirstOrDefaultAsync(c => c.Id == id);
         if (category == null)
         {
-            throw new Exception("Không tìm thấy danh mục phòng");
+            throw BusinessRuleException.NotFound("Không tìm thấy danh mục phòng");
         }
 
         var name = updateDto.GetName();
@@ -130,7 +130,7 @@ public class CategoryBLL : ICategoryService
 
         if (category == null)
         {
-            throw new Exception("Không tìm thấy danh mục phòng");
+            throw BusinessRuleException.NotFound("Không tìm thấy danh mục phòng");
         }
 
         if (category.Rooms.Any())

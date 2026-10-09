@@ -1,0 +1,114 @@
+.landlord-dashboard-shell { --landlord-accent: #258861; }
+.landlord-dashboard-shell .admin-dashboard-content { max-width: 1500px; }
+.landlord-dashboard-shell :is(h1,h2,h3,h4,p,span,strong,label,button), .landlord-modal { letter-spacing: 0; }
+.landlord-dashboard-shell :is(h1,h2,h3,h4,p), .landlord-modal :is(h2,h3,p) { overflow-wrap: anywhere; }
+.landlord-dashboard-shell :is(button,a,input,select,textarea):focus-visible, .landlord-modal :is(button,a,input,select,textarea):focus-visible { outline: 2px solid #258861; outline-offset: 3px; }
+.landlord-account-menu { position: relative; }
+.landlord-account-menu summary { cursor: pointer; list-style: none; }
+.landlord-account-menu summary::-webkit-details-marker { display: none; }
+.landlord-account-options { position: absolute; right: 0; top: calc(100% + 18px); display: grid; gap: 5px; min-width: 210px; max-width: calc(100vw - 32px); padding: 12px; border: 1px solid #e8edf3; border-radius: 8px; background: white; box-shadow: 0 8px 24px #17203315; }
+.landlord-account-options strong { padding: 8px; overflow-wrap: anywhere; font-size: 13px; }
+.landlord-account-options :is(a,button) { display: flex; gap: 8px; align-items: center; padding: 9px 8px; border: 0; background: white; text-align: left; font-size: 13px; color: #596577; }
+.landlord-account-options :is(a,button):hover { background: #f7f9fc; }
+.landlord-page-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.landlord-page-heading p { color: #258861; font-size: 11px; font-weight: 700; margin-bottom: 6px; }
+.landlord-page-heading h1, .landlord-dashboard-shell .room-management-page h1, .landlord-dashboard-shell .contracts-header-info h1, .landlord-dashboard-shell .dashboard-welcome h1 { color: #172033; font: 700 28px/1.3 'Segoe UI', sans-serif; }
+.landlord-button, .landlord-icon-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 9px 14px; border: 1px solid #e8edf3; border-radius: 6px; background: white; color: #596577; font-size: 13px; font-weight: 600; cursor: pointer; }
+.landlord-button.primary { background: #172033; border-color: #172033; color: white; }
+.landlord-icon-button { width: 36px; min-height: 36px; padding: 0; flex: none; }
+.landlord-icon-button.danger { color: #c05252; }
+.landlord-button:hover, .landlord-icon-button:hover { filter: brightness(.97); }
+.landlord-button:disabled, .landlord-modal button:disabled { opacity: .55; cursor: not-allowed; }
+.landlord-metrics { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 16px; margin-bottom: 24px; }
+.landlord-metrics > div { padding: 16px 20px; border-left: 3px solid #7de2c4; background: white; }
+.landlord-metrics span { display: block; color: #7d8798; font-size: 12px; }
+.landlord-metrics strong { display: block; color: #172033; font-size: 26px; margin-top: 6px; }
+.landlord-toolbar { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.landlord-search { display: flex; align-items: center; gap: 10px; flex: 1; min-width: min(260px,100%); border: 1px solid #e8edf3; border-radius: 6px; padding: 0 12px; background: white; color: #7d8798; }
+.landlord-search input { border: 0; width: 100%; min-width: 0; padding: 10px 0; background: transparent; font-size: 13px; outline: none; }
+.landlord-toolbar select { min-height: 40px; border: 1px solid #e8edf3; border-radius: 6px; padding: 8px 12px; background: white; font-size: 13px; max-width: 100%; }
+.landlord-table-wrap { overflow-x: auto; border: 1px solid #e8edf3; border-radius: 8px; background: white; }
+.landlord-table { width: 100%; min-width: 880px; border-collapse: collapse; font-size: 13px; }
+.landlord-table th { padding: 14px 18px; background: #fbfcfe; color: #7d8798; text-align: left; font-size: 11px; font-weight: 600; }
+.landlord-table td { padding: 16px 18px; border-top: 1px solid #eef1f5; color: #596577; vertical-align: middle; }
+.landlord-table strong { display: block; color: #172033; }
+.landlord-table small { display: block; margin-top: 5px; font-size: 11px; color: #7d8798; }
+.landlord-post-cell { display: flex; align-items: center; gap: 12px; width: 340px; }
+.landlord-post-cell > div { min-width: 0; overflow-wrap: anywhere; }
+.landlord-post-cell img, .landlord-thumbnail { width: 64px; height: 54px; flex: none; object-fit: cover; border-radius: 6px; background: #f1f5f9; }
+.landlord-thumbnail { display: grid; place-items: center; }
+.landlord-row-actions { display: flex; gap: 6px; }
+.landlord-status { display: inline-flex; padding: 5px 8px; border-radius: 5px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.landlord-status.status-0 { background: #fff5db; color: #a87717; }
+.landlord-status.status-1 { background: #e7f7f0; color: #258861; }
+.landlord-status.status-2 { background: #fff0ef; color: #c05252; }
+.landlord-status.status-3, .landlord-status.status-4 { background: #eef1f5; color: #748093; }
+.landlord-empty { display: grid; justify-items: center; gap: 12px; padding: 48px 20px; color: #7d8798; font-size: 14px; }
+.landlord-dashboard-shell .room-management-page > div:first-child > div > p { color: #258861; }
+.landlord-dashboard-shell .room-management-page :is(input,select,.border) { border-color: #e0e6ee; }
+.landlord-dashboard-shell .room-management-page .space-y-4 > div { border-radius: 8px; background: white; padding: 20px; }
+.landlord-dashboard-shell .room-management-page button { border-radius: 6px; font-size: 13px; box-shadow: none; }
+.landlord-dashboard-shell .room-management-page > div:first-child > button { background: #172033; }
+.landlord-dashboard-shell .landlord-contracts-page { min-height: 0; padding: 0; background: transparent; }
+.landlord-dashboard-shell .contracts-header { background: transparent; padding: 0; border: 0; border-radius: 0; box-shadow: none; margin-bottom: 24px; }
+.landlord-dashboard-shell .contracts-header-badge { color: #258861; font-size: 11px; margin-bottom: 8px; }
+.landlord-dashboard-shell :is(.btn-primary,.btn-success,.btn-danger,.btn-icon) { min-height: 38px; padding: 9px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; box-shadow: none; transform: none; }
+.landlord-dashboard-shell .btn-primary { background: #172033; color: white; }
+.landlord-dashboard-shell .btn-success { background: white; color: #258861; border: 1px solid #cce7dc; }
+.landlord-dashboard-shell .btn-danger { background: #fff0ef; color: #b44b4b; border: 1px solid #f2d5d2; }
+.landlord-dashboard-shell .kpi-stats-grid { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 16px; margin-bottom: 24px; }
+.landlord-dashboard-shell .kpi-card { min-width: 0; padding: 16px; border: 0; border-left: 3px solid #7de2c4; border-radius: 0; box-shadow: none; transform: none; }
+.landlord-dashboard-shell .kpi-card-value { font-size: 24px; line-height: 1.3; overflow-wrap: anywhere; }
+.landlord-dashboard-shell .kpi-card-label { font-size: 11px; font-weight: 600; }
+.landlord-dashboard-shell .contracts-tabs { flex-wrap: wrap; gap: 8px; border-bottom-width: 1px; padding-bottom: 12px; }
+.landlord-dashboard-shell .tab-button { min-height: 40px; border-radius: 6px; padding: 9px 12px; font-size: 12px; font-weight: 600; box-shadow: none; }
+.landlord-dashboard-shell .tab-button.active { background: #e7f7f0; color: #258861; border-color: #cce7dc; }
+.landlord-dashboard-shell .filter-bar { background: transparent; border: 0; border-radius: 0; padding: 0; box-shadow: none; }
+.landlord-dashboard-shell :is(.filter-select,.bill-month-badge) { border-radius: 6px; }
+.landlord-dashboard-shell :is(.bill-card,.contract-card,.empty-state,.loading-state) { border-radius: 8px; padding: 20px; box-shadow: none; transform: none; }
+.landlord-dashboard-shell .bill-title { font-size: 16px; }
+.landlord-dashboard-shell .bill-total-amount { font-size: 24px; color: #258861; }
+.landlord-dashboard-shell .bill-month-badge { width: 44px; height: 44px; background: #edf7f3; border: 0; color: #258861; font-size: 16px; }
+.landlord-dashboard-shell .meter-breakdown { background: transparent; border: 0; border-top: 1px solid #eef1f5; border-radius: 0; padding: 16px 0 0; margin-top: 16px; }
+.landlord-dashboard-shell .contract-details { background: transparent; border: 0; border-radius: 0; padding: 0; }
+.landlord-dashboard-shell .contracts-grid { grid-template-columns: repeat(auto-fit,minmax(min(360px,100%),1fr)); }
+.landlord-dashboard-shell .contract-card-actions { flex-wrap: wrap; }
+.landlord-dashboard-shell .contract-card-actions button { border-radius: 6px; padding: 9px 12px; font-weight: 600; }
+.landlord-dashboard-shell .landlord-contracts-container .rounded-2xl { border-radius: 8px; box-shadow: none; }
+.landlord-dashboard-shell .landlord-contracts-container .rounded-xl { border-radius: 6px; }
+.landlord-dashboard-shell .landlord-contracts-container .space-y-3 > .flex.items-center { flex-wrap: wrap; }
+.landlord-dashboard-shell .landlord-contracts-container .flex.items-start { flex-wrap: wrap; }
+.landlord-dashboard-shell .landlord-contracts-container .text-xl { font-size: 18px; }
+.landlord-dashboard-shell .dashboard-welcome h1 { letter-spacing: 0; }
+.landlord-dashboard-shell .dashboard-note-panel { background: transparent; box-shadow: none; border-radius: 0; border: 0; }
+.landlord-dashboard-shell :is(.dashboard-panel,.dashboard-metric) { border-radius: 8px; box-shadow: none; }
+.landlord-dashboard-shell .dashboard-primary-button { background: #172033; border-radius: 6px; box-shadow: none; }
+.landlord-dashboard-shell .dashboard-panel h2 { font-family: 'Segoe UI',sans-serif; font-size: 18px; }
+.landlord-modal { color: #172033; font-size: 14px; overflow-wrap: anywhere; }
+.landlord-modal :is(input,select,textarea) { min-width: 0; max-width: 100%; border-color: #dce3eb; border-radius: 6px; font-size: 14px; }
+.landlord-modal :is(input,select) { min-height: 40px; }
+.landlord-modal :is(button,.rounded-xl,.rounded-2xl) { border-radius: 6px; box-shadow: none; }
+.landlord-modal .bg-gradient-to-r { background: #172033; }
+.landlord-modal .post-editor-page { background: white; }
+.landlord-modal .room-location-card { border: 0; padding: 16px 0 0; border-top: 1px solid #e8edf3; border-radius: 0; box-shadow: none; }
+.landlord-modal .room-location-title { font-size: 18px; }
+.landlord-field { display: grid; gap: 8px; font-size: 13px; font-weight: 600; }
+.landlord-field textarea { width: 100%; padding: 10px; border: 1px solid #dce3eb; font-weight: 400; resize: vertical; }
+.landlord-modal-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; padding-top: 16px; border-top: 1px solid #e8edf3; }
+@media (max-width: 1100px) {
+  .landlord-dashboard-shell .kpi-stats-grid, .landlord-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 640px) {
+  .landlord-page-heading { align-items: flex-start; flex-direction: column; }
+  .landlord-page-heading h1, .landlord-dashboard-shell .room-management-page h1, .landlord-dashboard-shell .contracts-header-info h1, .landlord-dashboard-shell .dashboard-welcome h1 { font-size: 23px; }
+  .landlord-dashboard-shell .contracts-tabs { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .landlord-dashboard-shell .tab-button { text-align: left; align-items: flex-start; }
+  .landlord-dashboard-shell :is(.bill-card,.contract-card) { padding: 16px; }
+  .landlord-dashboard-shell .filter-controls { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+  .landlord-dashboard-shell .filter-group { min-width: 0; }
+  .landlord-dashboard-shell .contracts-header-actions { gap: 8px; }
+  .landlord-modal .grid-cols-3 { grid-template-columns: minmax(0,1fr); }
+  .landlord-modal .flex.items-center.justify-between { flex-wrap: wrap; gap: 8px; }
+  .landlord-modal .flex.justify-end { flex-wrap: wrap; }
+  .landlord-modal .text-right { text-align: left; }
+}

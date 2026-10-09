@@ -38,7 +38,7 @@ public class CategoryController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy danh mục phòng");
-            return BadRequest(ApiResponse<List<CategoryDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<CategoryDto>>(ex);
         }
     }
 
@@ -58,7 +58,7 @@ public class CategoryController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy chi tiết danh mục ID: {Id}", id);
-            return BadRequest(ApiResponse<CategoryDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<CategoryDto>(ex);
         }
     }
 
@@ -78,7 +78,7 @@ public class CategoryController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi tạo danh mục mới");
-            return BadRequest(ApiResponse<CategoryDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<CategoryDto>(ex);
         }
     }
 
@@ -98,7 +98,7 @@ public class CategoryController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi cập nhật danh mục ID: {Id}", id);
-            return BadRequest(ApiResponse<CategoryDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<CategoryDto>(ex);
         }
     }
 
@@ -118,7 +118,7 @@ public class CategoryController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi xóa danh mục ID: {Id}", id);
-            return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
+            return this.BusinessError<object>(ex);
         }
     }
 }

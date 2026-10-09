@@ -1,3 +1,6 @@
+using System.Globalization;
+using RoomRental.BackEnd.BLL;
+
 namespace RoomRental.BackEnd.DTO.ViewingAppointment;
 
 /// <summary>
@@ -26,17 +29,18 @@ public class CreateAppointmentDto
     {
         if (ScheduledAt.HasValue) return ScheduledAt.Value;
 
-        if (!string.IsNullOrWhiteSpace(NgayXem))
+        if (!string.IsNullOrWhiteSpace(NgayXem) && !string.IsNullOrWhiteSpace(GioXem))
         {
             var dateStr = NgayXem.Trim();
-            var timeStr = !string.IsNullOrWhiteSpace(GioXem) ? GioXem.Trim() : "09:00";
-            if (DateTime.TryParse($"{dateStr} {timeStr}", out var dt))
+            var timeStr = GioXem.Trim();
+            if (DateTime.TryParseExact($"{dateStr} {timeStr}", new[] { "yyyy-MM-dd HH:mm", "yyyy-MM-dd HH:mm:ss" },
+                CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
             {
                 return dt;
             }
         }
 
-        return DateTime.UtcNow.AddDays(1);
+        throw new BusinessRuleException("Cần chọn ngày và giờ xem phòng hợp lệ.");
     }
 
     public string? GetNote() => !string.IsNullOrWhiteSpace(TenantNote) ? TenantNote : GhiChu;

@@ -59,7 +59,7 @@ public class RoomBLL : IRoomService
 
         if (room == null)
         {
-            throw new Exception("Không tìm thấy thông tin phòng trọ");
+            throw BusinessRuleException.NotFound("Không tìm thấy thông tin phòng trọ");
         }
 
         return MapToDto(room);
@@ -86,7 +86,7 @@ public class RoomBLL : IRoomService
         var roomName = createDto.GetRoomName();
         if (string.IsNullOrWhiteSpace(roomName))
         {
-            throw new Exception("Tên phòng không được để trống");
+            throw new BusinessRuleException("Tên phòng không được để trống");
         }
 
         var room = new Room
@@ -125,9 +125,10 @@ public class RoomBLL : IRoomService
             room.RoomAmenities = amenities.ToList();
         }
 
-        if (createDto.ImageUrls != null && createDto.ImageUrls.Any())
+        var imageUrls = NormalizeImageUrls(createDto.ImageUrls ?? new());
+        if (imageUrls.Count > 0)
         {
-            var images = createDto.ImageUrls.Select((url, index) => new PostImage
+            var images = imageUrls.Select((url, index) => new PostImage
             {
                 Room = room,
                 ImageUrl = url,
@@ -161,7 +162,7 @@ public class RoomBLL : IRoomService
 
         if (room == null)
         {
-            throw new Exception("Không tìm thấy phòng");
+            throw BusinessRuleException.NotFound("Không tìm thấy phòng");
         }
 
         if (room.LandlordId != landlord.Id)
@@ -169,6 +170,7 @@ public class RoomBLL : IRoomService
             throw BusinessRuleException.Forbidden("Bạn không có quyền chỉnh sửa phòng này");
         }
 
+        var imageUrls = updateDto.ImageUrls == null ? null : NormalizeImageUrls(updateDto.ImageUrls);
         var publicSnapshot = RoomPublicationPolicy.Capture(room);
         var updateName = updateDto.GetRoomName();
         if (!string.IsNullOrWhiteSpace(updateName))
@@ -232,10 +234,10 @@ public class RoomBLL : IRoomService
             foreach (var item in added) room.RoomAmenities.Add(item);
         }
 
-        if (updateDto.ImageUrls != null)
+        if (imageUrls != null)
         {
             _context.PostImages.RemoveRange(room.Images);
-            var images = updateDto.ImageUrls.Select((url, index) => new PostImage
+            var images = imageUrls.Select((url, index) => new PostImage
             {
                 RoomId = room.Id,
                 ImageUrl = url,
@@ -271,7 +273,7 @@ public class RoomBLL : IRoomService
         var room = await _context.Rooms.FirstOrDefaultAsync(r => r.Id == roomId);
         if (room == null)
         {
-            throw new Exception("Không tìm thấy phòng");
+            throw BusinessRuleException.NotFound("Không tìm thấy phòng");
         }
 
         if (room.LandlordId != landlord.Id)
@@ -319,7 +321,7 @@ public class RoomBLL : IRoomService
 
         if (room == null)
         {
-            throw new Exception("Không tìm thấy phòng");
+            throw BusinessRuleException.NotFound("Không tìm thấy phòng");
         }
 
         if (room.LandlordId != landlord.Id)
@@ -342,6 +344,26 @@ public class RoomBLL : IRoomService
 
         await _context.SaveChangesAsync();
         if (transaction != null) await transaction.CommitAsync();
+    }
+
+    private static List<string> NormalizeImageUrls(IEnumerable<string> urls)
+    {
+        var result = new List<string>();
+        foreach (var value in urls)
+        {
+            var url = value?.Trim() ?? string.Empty;
+            var upload = url.StartsWith("/uploads/", StringComparison.Ordinal) &&
+                Uri.TryCreate(new Uri("https://uploads.invalid"), url, out var uploadUri) &&
+                uploadUri.AbsolutePath.StartsWith("/uploads/", StringComparison.Ordinal) &&
+                !Uri.UnescapeDataString(uploadUri.AbsolutePath).Split('/').Any(part => part is "." or "..");
+            var remote = Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps) &&
+                !string.IsNullOrWhiteSpace(uri.Host) && uri.IsWellFormedOriginalString();
+            if (url.Length == 0 || url.Length > 1000 || url.Contains('\\') || (!upload && !remote))
+                throw new BusinessRuleException("Ảnh phòng chỉ chấp nhận URL http://, https:// hoặc /uploads/... (tối đa 1000 ký tự), không chấp nhận Base64.");
+            if (!result.Contains(url, StringComparer.Ordinal)) result.Add(url);
+        }
+        return result;
     }
 
     private async Task ValidateRoomAsync(Room room)
@@ -405,7 +427,7 @@ public class RoomBLL : IRoomService
 
         if (user == null)
         {
-            throw new Exception("Người dùng không tồn tại");
+            throw BusinessRuleException.NotFound("Người dùng không tồn tại");
         }
 
         if (user.RoleId != 2)
@@ -415,7 +437,7 @@ public class RoomBLL : IRoomService
 
         if (user.IsBlocked)
         {
-            throw new Exception("Tài khoản của bạn đã bị khóa");
+            throw BusinessRuleException.Forbidden("Tài khoản của bạn đã bị khóa");
         }
 
         if (user.LandlordProfile != null)

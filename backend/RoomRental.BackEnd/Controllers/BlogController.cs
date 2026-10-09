@@ -39,7 +39,7 @@ public class BlogController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy danh sách blog");
-            return BadRequest(ApiResponse<List<BlogPostDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<BlogPostDto>>(ex);
         }
     }
 
@@ -59,7 +59,7 @@ public class BlogController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy danh sách blog cho admin");
-            return BadRequest(ApiResponse<List<BlogPostDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<BlogPostDto>>(ex);
         }
     }
 
@@ -121,7 +121,7 @@ public class BlogController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi tạo bài viết mới");
-            return BadRequest(ApiResponse<BlogPostDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<BlogPostDto>(ex);
         }
     }
 
@@ -141,7 +141,7 @@ public class BlogController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi cập nhật bài viết ID: {Id}", id);
-            return BadRequest(ApiResponse<BlogPostDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<BlogPostDto>(ex);
         }
     }
 
@@ -161,7 +161,7 @@ public class BlogController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi xóa bài viết ID: {Id}", id);
-            return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
+            return this.BusinessError<object>(ex);
         }
     }
 
@@ -183,7 +183,7 @@ public class BlogController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi thêm bình luận");
-            return BadRequest(ApiResponse<BlogCommentDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<BlogCommentDto>(ex);
         }
     }
 
@@ -206,7 +206,7 @@ public class BlogController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi xóa bình luận ID: {Id}", id);
-            return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
+            return this.BusinessError<object>(ex);
         }
     }
 

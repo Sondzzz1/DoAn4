@@ -20,6 +20,7 @@ public sealed class SqlServerFactAttribute : FactAttribute
     }
 }
 
+[Collection("SqlServerWorkflow")]
 public class SqlServerWorkflowTests
 {
     [SqlServerFact]

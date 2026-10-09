@@ -23,7 +23,7 @@ public class FavoriteBLL : IFavoriteService
         var post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == postId && p.Status == PostStatus.Approved && p.Room.Status != RoomStatus.TemporarilyUnavailable);
         if (post == null)
         {
-            throw new Exception("Tin đăng không tồn tại");
+            throw BusinessRuleException.NotFound("Tin đăng không tồn tại");
         }
 
         var existing = await _context.Favorites
@@ -144,7 +144,7 @@ public class FavoriteBLL : IFavoriteService
 
         if (user.IsBlocked)
         {
-            throw new Exception("Tài khoản của bạn đã bị khóa");
+            throw BusinessRuleException.Forbidden("Tài khoản của bạn đã bị khóa");
         }
 
         if (user.TenantProfile != null)

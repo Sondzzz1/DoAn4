@@ -41,7 +41,7 @@ public class UserController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy thông tin profile");
-            return BadRequest(ApiResponse<UserDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<UserDto>(ex);
         }
     }
 
@@ -72,7 +72,7 @@ public class UserController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi cập nhật profile");
-            return BadRequest(ApiResponse<UserDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<UserDto>(ex);
         }
     }
 
@@ -103,7 +103,7 @@ public class UserController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi đổi mật khẩu");
-            return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
+            return this.BusinessError<object>(ex);
         }
     }
 

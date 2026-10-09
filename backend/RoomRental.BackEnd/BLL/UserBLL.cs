@@ -30,7 +30,7 @@ public class UserBLL : IUserService
 
         if (user == null)
         {
-            throw new Exception("Không tìm thấy người dùng");
+            throw BusinessRuleException.NotFound("Không tìm thấy người dùng");
         }
 
         return new UserDto
@@ -60,7 +60,7 @@ public class UserBLL : IUserService
 
         if (user == null)
         {
-            throw new Exception("Không tìm thấy người dùng");
+            throw BusinessRuleException.NotFound("Không tìm thấy người dùng");
         }
 
         var fullName = updateDto.GetFullName();
@@ -113,7 +113,7 @@ public class UserBLL : IUserService
 
         if (user == null)
         {
-            throw new Exception("Không tìm thấy người dùng");
+            throw BusinessRuleException.NotFound("Không tìm thấy người dùng");
         }
 
         var currentPassword = changePasswordDto.GetCurrentPassword();
@@ -121,12 +121,12 @@ public class UserBLL : IUserService
 
         if (string.IsNullOrWhiteSpace(currentPassword))
         {
-            throw new Exception("Vui lòng nhập mật khẩu hiện tại");
+            throw new BusinessRuleException("Vui lòng nhập mật khẩu hiện tại");
         }
 
         if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
         {
-            throw new Exception("Mật khẩu mới phải có ít nhất 6 ký tự");
+            throw new BusinessRuleException("Mật khẩu mới phải có ít nhất 6 ký tự");
         }
 
         // Verify mật khẩu hiện tại
@@ -137,7 +137,7 @@ public class UserBLL : IUserService
 
         if (!isCurrentPasswordValid)
         {
-            throw new Exception("Mật khẩu hiện tại không đúng");
+            throw new BusinessRuleException("Mật khẩu hiện tại không đúng");
         }
 
         // Hash mật khẩu mới

@@ -35,8 +35,11 @@ type Metric = {
 const formatNumber = (value: number) =>
   new Intl.NumberFormat('vi-VN').format(value || 0);
 
-const DashboardContent: React.FC = () => {
+const DashboardContent: React.FC<{ onCreatePost?: () => void }> = ({ onCreatePost }) => {
   const { user, isAdmin } = useAuth();
+  const handleCreatePost = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (onCreatePost) { event.preventDefault(); onCreatePost(); }
+  };
 
   const [landlord, setLandlord] = useState<LandlordDashboard | null>(null);
   const [admin, setAdmin] = useState<AdminDashboard | null>(null);
@@ -170,7 +173,7 @@ const DashboardContent: React.FC = () => {
             Duyệt tin mới
           </Link>
         ) : (
-          <Link to={ROUTES.LANDLORD_CREATE_POST} className="dashboard-primary-button">
+          <Link to={ROUTES.LANDLORD_CREATE_POST} onClick={handleCreatePost} className="dashboard-primary-button">
             <FiPlus />
             Đăng tin mới
           </Link>
@@ -303,7 +306,7 @@ const DashboardContent: React.FC = () => {
             ).map((item) => {
               const Icon = item.icon;
               return (
-                <Link to={item.href} key={item.label}>
+                <Link to={item.href} key={item.label} onClick={!isAdmin && item.href === ROUTES.LANDLORD_CREATE_POST ? handleCreatePost : undefined}>
                   <span className="dashboard-quick-icon">
                     <Icon />
                   </span>
@@ -400,7 +403,7 @@ const DashboardContent: React.FC = () => {
                   Ảnh sáng, tiêu đề cụ thể và thông tin chi phí minh bạch giúp tăng lượt
                   xem chất lượng.
                 </p>
-                <Link to={ROUTES.LANDLORD_CREATE_POST}>
+                <Link to={ROUTES.LANDLORD_CREATE_POST} onClick={handleCreatePost}>
                   Tối ưu tin đăng
                   <FiArrowUpRight />
                 </Link>

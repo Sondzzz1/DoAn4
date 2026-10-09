@@ -41,7 +41,7 @@ public class LandlordController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy dữ liệu Dashboard Chủ trọ");
-            return BadRequest(ApiResponse<LandlordDashboardDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<LandlordDashboardDto>(ex);
         }
     }
 

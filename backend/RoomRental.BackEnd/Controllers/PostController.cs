@@ -48,7 +48,7 @@ public class PostController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi tìm kiếm bài đăng");
-            return BadRequest(ApiResponse<List<PostListDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<PostListDto>>(ex);
         }
     }
 
@@ -114,7 +114,7 @@ public class PostController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy danh sách tin đăng của chủ trọ");
-            return BadRequest(ApiResponse<List<PostListDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<PostListDto>>(ex);
         }
     }
 
@@ -179,7 +179,7 @@ public class PostController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi xóa tin đăng ID: {Id}", id);
-            return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
+            return this.BusinessError<object>(ex);
         }
     }
 

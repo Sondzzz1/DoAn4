@@ -10,10 +10,15 @@ namespace RoomRental.BackEnd.BLL;
 public class ViewingAppointmentBLL : IViewingAppointmentService
 {
     private readonly ApplicationDbContext _context;
+    private readonly INotificationService? _notifications;
+    private readonly ILogger<ViewingAppointmentBLL> _logger;
 
-    public ViewingAppointmentBLL(ApplicationDbContext context)
+    public ViewingAppointmentBLL(ApplicationDbContext context, INotificationService? notifications = null,
+        ILogger<ViewingAppointmentBLL>? logger = null)
     {
         _context = context;
+        _notifications = notifications;
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ViewingAppointmentBLL>.Instance;
     }
 
     /// <summary>
@@ -81,6 +86,7 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
 
         _context.ViewingAppointments.Add(appointment);
         await _context.SaveChangesAsync();
+        await NotifyAsync(post.Landlord.AccountId, appointment, "Có lịch xem phòng mới", "/landlord/appointments");
 
         return await GetAppointmentByIdAsync(tenantAccountId, appointment.Id);
     }
@@ -149,7 +155,7 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
         appointment.UpdatedAt = DateTime.Now;
 
         await _context.SaveChangesAsync();
-
+        await NotifyAsync(appointment.Landlord.AccountId, appointment, "Khách thuê đã hủy lịch xem phòng", "/landlord/appointments");
         return MapToDto(appointment);
     }
 
@@ -199,7 +205,7 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
         appointment.UpdatedAt = DateTime.Now;
 
         await _context.SaveChangesAsync();
-
+        await NotifyAsync(appointment.Tenant.AccountId, appointment, "Lịch xem phòng đã được xác nhận", "/tenant/appointments");
         return MapToDto(appointment);
     }
 
@@ -218,7 +224,7 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
         appointment.UpdatedAt = DateTime.Now;
 
         await _context.SaveChangesAsync();
-
+        await NotifyAsync(appointment.Tenant.AccountId, appointment, "Lịch xem phòng bị từ chối", "/tenant/appointments");
         return MapToDto(appointment);
     }
 
@@ -238,7 +244,7 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
         appointment.UpdatedAt = DateTime.Now;
 
         await _context.SaveChangesAsync();
-
+        await NotifyAsync(appointment.Tenant.AccountId, appointment, "Lịch xem phòng đã hoàn thành", "/tenant/appointments");
         return MapToDto(appointment);
     }
 
@@ -300,6 +306,20 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
         return appointment;
     }
 
+    private async Task NotifyAsync(int accountId, ViewingAppointment appointment, string title, string link)
+    {
+        if (_notifications == null) return;
+        try
+        {
+            await _notifications.CreateNotificationAsync(accountId, title,
+                $"Lịch xem phòng #{appointment.Id}, thời gian {appointment.ScheduledAt:dd/MM/yyyy HH:mm}.", 1, link);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Không thể gửi thông báo lịch hẹn {AppointmentId}", appointment.Id);
+        }
+    }
+
     private static AppointmentDto MapToDto(ViewingAppointment a)
     {
         return new AppointmentDto
@@ -344,7 +364,7 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
 
         if (user.IsBlocked)
         {
-            throw new Exception("Tài khoản của bạn đã bị khóa");
+            throw BusinessRuleException.Forbidden("Tài khoản của bạn đã bị khóa");
         }
 
         if (user.TenantProfile != null)
@@ -367,17 +387,17 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
 
         if (user == null)
         {
-            throw new Exception("Người dùng không tồn tại");
+            throw BusinessRuleException.NotFound("Người dùng không tồn tại");
         }
 
         if (user.RoleId != 2)
         {
-            throw new Exception("Chỉ chủ trọ mới có quyền thực hiện");
+            throw BusinessRuleException.Forbidden("Chỉ chủ trọ mới có quyền thực hiện");
         }
 
         if (user.IsBlocked)
         {
-            throw new Exception("Tài khoản của bạn đã bị khóa");
+            throw BusinessRuleException.Forbidden("Tài khoản của bạn đã bị khóa");
         }
 
         if (user.LandlordProfile != null)

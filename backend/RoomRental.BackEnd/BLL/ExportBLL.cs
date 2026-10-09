@@ -30,15 +30,12 @@ public class ExportBLL : IExportService
             .Include(c => c.Post)
                 .ThenInclude(p => p!.Room)
             .FirstOrDefaultAsync(c => c.Id == hopDongId && (c.TenantAccountId == taiKhoanId || c.LandlordAccountId == taiKhoanId || taiKhoanId == 0))
-            ?? throw new Exception("Không tìm thấy hợp đồng hoặc bạn không có quyền xem.");
+            ?? throw BusinessRuleException.Forbidden("Không tìm thấy hợp đồng hoặc bạn không có quyền xem.");
 
         var landlord = await _db.Users.FirstOrDefaultAsync(u => u.Id == contract.LandlordAccountId);
         var tenant = await _db.Users.FirstOrDefaultAsync(u => u.Id == contract.TenantAccountId);
         var post = contract.Post ?? await _db.Posts.Include(p => p.Room).FirstOrDefaultAsync(p => p.Id == contract.PostId);
         var room = post?.Room;
-
-        var deposit = await _db.Deposits.FirstOrDefaultAsync(d => d.RentalRequestId == contract.RentalRequestId && d.Status == 1);
-        var depositAmount = deposit?.Amount ?? contract.MonthlyRent;
 
         var document = Document.Create(container =>
         {
@@ -46,7 +43,7 @@ public class ExportBLL : IExportService
             {
                 page.Size(PageSizes.A4);
                 page.Margin(30);
-                page.DefaultTextStyle(x => x.FontSize(11).FontFamily("Arial"));
+                page.DefaultTextStyle(x => x.FontSize(11).FontFamily("Lato"));
 
                 page.Header().Column(col =>
                 {
@@ -104,10 +101,10 @@ public class ExportBLL : IExportService
                     {
                         c.Item().Text("ĐIỀU 3: GIÁ THUÊ VÀ CHI PHÍ ĐIỆN NƯỚC").Bold();
                         c.Item().PaddingLeft(10).Text($"• Tiền thuê phòng: {contract.MonthlyRent:N0} VNĐ / tháng (Bằng chữ: thanh toán theo thỏa thuận).");
-                        c.Item().PaddingLeft(10).Text($"• Tiền đặt cọc đã ghi nhận: {depositAmount:N0} VNĐ.");
-                        c.Item().PaddingLeft(10).Text($"• Đơn giá điện: {room?.ElectricityPrice ?? 3500:N0} VNĐ/kWh (tính theo chỉ số đồng hồ thực tế hàng tháng).");
-                        c.Item().PaddingLeft(10).Text($"• Đơn giá nước: {room?.WaterPrice ?? 20000:N0} VNĐ/m³ (tính theo chỉ số đồng hồ thực tế hàng tháng).");
-                        c.Item().PaddingLeft(10).Text($"• Phí dịch vụ khác (nếu có): {room?.ServiceFee ?? 0:N0} VNĐ/tháng.");
+                        c.Item().PaddingLeft(10).Text($"• Tiền đặt cọc đã ghi nhận: {contract.DepositAmount:N0} VNĐ.");
+                        c.Item().PaddingLeft(10).Text($"• Đơn giá điện: {contract.ElectricityPrice:N0} VNĐ/kWh (tính theo chỉ số đồng hồ thực tế hàng tháng).");
+                        c.Item().PaddingLeft(10).Text($"• Đơn giá nước: {contract.WaterPrice:N0} VNĐ/m³ (tính theo chỉ số đồng hồ thực tế hàng tháng).");
+                        c.Item().PaddingLeft(10).Text($"• Phí dịch vụ khác (nếu có): {contract.ServiceFee:N0} VNĐ/tháng.");
                     });
 
                     // Điều 4 & 5

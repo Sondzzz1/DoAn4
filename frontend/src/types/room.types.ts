@@ -69,7 +69,7 @@ export interface CreateRoomRequest {
   latitude?: number | null;
   longitude?: number | null;
   tienIchIds?: number[];
-  danhSachAnh?: string[];
+  imageUrls?: string[];
 }
 
 export type UpdateRoomRequest = CreateRoomRequest;

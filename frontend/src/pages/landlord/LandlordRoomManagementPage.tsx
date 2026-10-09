@@ -10,6 +10,10 @@ import Input from '../../components/common/Input';
 import PageState from '../../components/common/PageState';
 import LeafletMapPicker from '../../components/map/LeafletMapPicker';
 import { buildLocationQuery, type LocationResult } from '../../services/locationService';
+import LandlordModal from '../../components/landlord/LandlordModal';
+import useLandlordAction from '../../components/landlord/useLandlordAction';
+import RoomImageEditor from '../../components/landlord/RoomImageEditor';
+import { normalizeRoomImageUrls } from '../../utils/roomImageUrls';
 
 const roomStatusLabel = (status: number) => ({ 0: 'Còn trống', 1: 'Đã thuê', 2: 'Đã giữ chỗ', 3: 'Tạm ngưng' }[status] || 'Không rõ');
 
@@ -33,7 +37,7 @@ const emptyForm = {
   latitude: undefined as number | undefined,
   longitude: undefined as number | undefined,
   tienIchIds: [] as number[],
-  danhSachAnh: [] as string[],
+  imageUrls: [] as string[],
 };
 
 const LandlordRoomManagementPage: React.FC = () => {
@@ -52,6 +56,8 @@ const LandlordRoomManagementPage: React.FC = () => {
   const [locationSearch, setLocationSearch] = useState<{ query: string; revision: number }>();
   const addressEdited = useRef(false);
   const [mapSession, setMapSession] = useState(0);
+  const [formOpen, setFormOpen] = useState(false);
+  const { openAction, dialog } = useLandlordAction();
 
   const changeAddress = (field: 'diaChi' | 'phuong' | 'quan' | 'thanhPho', value: string) => {
     addressEdited.current = true;
@@ -123,17 +129,24 @@ const LandlordRoomManagementPage: React.FC = () => {
       setFormError('Giá thuê, diện tích và số người tối đa phải lớn hơn 0.');
       return;
     }
+    let imageUrls: string[];
+    try { imageUrls = normalizeRoomImageUrls(form.imageUrls); }
+    catch (error) {
+      setFormError(error instanceof Error ? error.message : 'URL ảnh không hợp lệ.');
+      return;
+    }
     setSaving(true);
     setFormError('');
     try {
       if (editingId) {
-        await roomService.updateRoom(editingId, { ...form, danhSachAnh: form.danhSachAnh.map(v => v.trim()).filter(Boolean) });
+        await roomService.updateRoom(editingId, { ...form, imageUrls });
         toast.success('Cập nhật phòng thành công');
       } else {
-        await roomService.createRoom({ ...form, danhSachAnh: form.danhSachAnh.map(v => v.trim()).filter(Boolean) });
+        await roomService.createRoom({ ...form, imageUrls });
         toast.success('Thêm phòng thành công');
       }
       clearForm();
+      setFormOpen(false);
       await loadRooms();
     } catch (error) {
       setFormError(getApiErrorMessage(error, 'Có lỗi xảy ra khi lưu phòng.'));
@@ -143,6 +156,8 @@ const LandlordRoomManagementPage: React.FC = () => {
   };
 
   const handleEdit = (room: RoomItem) => {
+    setFormError('');
+    setFormOpen(true);
     setMapSession(previous => previous + 1);
     addressEdited.current = false;
     setLocationSearch(undefined);
@@ -167,19 +182,18 @@ const LandlordRoomManagementPage: React.FC = () => {
       latitude: room.latitude ?? undefined,
       longitude: room.longitude ?? undefined,
       tienIchIds: room.amenityIds || [],
-      danhSachAnh: room.imageUrls || [],
+      imageUrls: [...new Set((room.imageUrls || []).map(url => url.trim()))],
     });
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Bạn có chắc muốn tạm ngưng phòng này?')) return;
-
     try {
       await roomService.deleteRoom(id);
       toast.success('Phòng đã được tạm ngưng');
       await loadRooms();
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Không thể tạm ngưng phòng.'));
+      return false;
     }
   };
 
@@ -192,6 +206,7 @@ const LandlordRoomManagementPage: React.FC = () => {
       await loadRooms();
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Không thể cập nhật trạng thái phòng.'));
+      return false;
     }
   };
 
@@ -203,14 +218,14 @@ const LandlordRoomManagementPage: React.FC = () => {
           <h1 className="text-3xl font-bold text-slate-900">Phòng trọ của tôi</h1>
         </div>
         <button
-          onClick={() => { clearForm(); document.getElementById('room-form')?.scrollIntoView({ behavior: 'smooth' }); }}
+          onClick={() => { clearForm(); setFormOpen(true); }}
           className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
         >
           <FiPlus /> Thêm phòng
         </button>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1.3fr_0.7fr] gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <div className="min-w-0">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
             <div className="relative w-full md:max-w-sm">
@@ -278,10 +293,10 @@ const LandlordRoomManagementPage: React.FC = () => {
                     <button onClick={() => handleEdit(room)} className="inline-flex items-center gap-1 bg-amber-100 text-amber-700 px-3 py-2 rounded-lg text-sm font-medium">
                       <FiEdit2 /> Sửa
                     </button>
-                    <button disabled={room.status === 1 || room.status === 2} title={room.status === 1 ? 'Phòng đang có hợp đồng hiệu lực' : 'Đổi giữa còn trống và tạm ngưng'} onClick={() => handleStatusToggle(room.id, room.status)} className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-3 py-2 rounded-lg text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50">
+                    <button disabled={room.status === 1 || room.status === 2} title={room.status === 1 ? 'Phòng đang có hợp đồng hiệu lực' : 'Đổi giữa còn trống và tạm ngưng'} onClick={() => openAction({ title: 'Đổi trạng thái phòng', message: `${room.roomName}: chuyển sang ${room.status === 0 ? 'Tạm ngưng' : 'Còn trống'}?`, run: () => handleStatusToggle(room.id, room.status) })} className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-3 py-2 rounded-lg text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50">
                       <FiCheck /> Đổi trạng thái
                     </button>
-                    <button disabled={room.status === 1 || room.status === 2} onClick={() => handleDelete(room.id)} className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-3 py-2 rounded-lg text-sm font-medium">
+                    <button disabled={room.status === 1 || room.status === 2} onClick={() => openAction({ title: 'Tạm ngưng phòng', message: `Bạn có chắc muốn tạm ngưng phòng ${room.roomName}?`, run: () => handleDelete(room.id) })} className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50">
                       <FiTrash2 /> Tạm ngưng
                     </button>
                   </div>
@@ -291,9 +306,8 @@ const LandlordRoomManagementPage: React.FC = () => {
           )}
         </div>
 
-        <div id="room-form" className="rounded-2xl border bg-white shadow-sm p-4 h-fit">
-          <h2 className="text-xl font-semibold mb-4">{editingId ? 'Cập nhật phòng' : 'Thêm phòng mới'}</h2>
-
+        <LandlordModal isOpen={formOpen} onClose={() => { if (!saving && !locationBusy) setFormOpen(false); }} title={editingId ? 'Cập nhật phòng' : 'Thêm phòng mới'} size="xl">
+        <div id="room-form">
           <form onSubmit={handleSubmit} className="space-y-3">
             <label className="block text-sm font-medium">Loại phòng
               <select aria-label="Loại phòng" value={form.danhMucId} onChange={e => setForm({ ...form, danhMucId: Number(e.target.value) })} className="mt-1 w-full border rounded-lg px-3 py-2.5">
@@ -328,12 +342,12 @@ const LandlordRoomManagementPage: React.FC = () => {
                 <input type="checkbox" checked={form.tienIchIds.includes(a.id)} onChange={e => setForm({ ...form, tienIchIds: e.target.checked ? [...form.tienIchIds, a.id] : form.tienIchIds.filter(v => v !== a.id) })} />{a.name}
               </label>)}</div>
             </fieldset>
-            <label className="block text-sm font-medium">Ảnh phòng (mỗi dòng một URL)
-              <textarea aria-label="Ảnh phòng" value={form.danhSachAnh.join('\n')} onChange={e => setForm({ ...form, danhSachAnh: e.target.value.split('\n') })} rows={3} className="mt-1 w-full border rounded-lg px-3 py-2.5" />
-            </label>
+            <RoomImageEditor key={mapSession} imageUrls={form.imageUrls} disabled={saving}
+              onChange={imageUrls => setForm(previous => ({ ...previous, imageUrls }))} />
             {formError && <p role="alert" className="text-sm text-red-600">{formError}</p>}
 
             <div className="flex gap-3 pt-2">
+              <button type="button" disabled={saving || locationBusy} onClick={() => setFormOpen(false)} className="landlord-button">Hủy</button>
               <button type="submit" disabled={saving || locationBusy} className="flex-1 bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-60">
                 {saving ? 'Đang lưu...' : editingId ? 'Lưu thay đổi' : 'Thêm phòng'}
               </button>
@@ -343,7 +357,9 @@ const LandlordRoomManagementPage: React.FC = () => {
             </div>
           </form>
         </div>
+        </LandlordModal>
       </div>
+      {dialog}
     </div>
   );
 };

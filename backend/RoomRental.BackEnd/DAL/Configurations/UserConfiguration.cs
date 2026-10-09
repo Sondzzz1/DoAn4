@@ -45,7 +45,8 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.RoleId)
             .HasColumnName("VaiTro")
             .IsRequired()
-            .HasDefaultValue(1);
+            .HasDefaultValue(1)
+            .HasSentinel(1);
 
         builder.Property(u => u.IsActive)
             .HasColumnName("TrangThai")

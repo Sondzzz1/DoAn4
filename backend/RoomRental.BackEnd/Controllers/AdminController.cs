@@ -42,7 +42,7 @@ public class AdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy dữ liệu Dashboard Admin");
-            return BadRequest(ApiResponse<AdminDashboardDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<AdminDashboardDto>(ex);
         }
     }
 
@@ -61,7 +61,7 @@ public class AdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy danh sách người dùng");
-            return BadRequest(ApiResponse<List<AdminUserDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<AdminUserDto>>(ex);
         }
     }
 
@@ -80,7 +80,7 @@ public class AdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi khóa tài khoản ID: {Id}", id);
-            return BadRequest(ApiResponse<AdminUserDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<AdminUserDto>(ex);
         }
     }
 
@@ -99,7 +99,7 @@ public class AdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi mở khóa tài khoản ID: {Id}", id);
-            return BadRequest(ApiResponse<AdminUserDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<AdminUserDto>(ex);
         }
     }
 
@@ -118,7 +118,7 @@ public class AdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy danh sách chủ trọ");
-            return BadRequest(ApiResponse<List<AdminLandlordDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<AdminLandlordDto>>(ex);
         }
     }
 
@@ -137,7 +137,7 @@ public class AdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy danh sách bài đăng cho Admin");
-            return BadRequest(ApiResponse<List<PostListDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<PostListDto>>(ex);
         }
     }
 
@@ -213,7 +213,7 @@ public class AdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy danh sách phòng cho Admin");
-            return BadRequest(ApiResponse<List<RoomDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<RoomDto>>(ex);
         }
     }
 }

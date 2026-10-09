@@ -203,12 +203,12 @@ public class AdminBLL : IAdminService
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
         if (user == null)
         {
-            throw new Exception("Không tìm thấy người dùng");
+            throw BusinessRuleException.NotFound("Không tìm thấy người dùng");
         }
 
         if (user.RoleId == 0)
         {
-            throw new Exception("Không thể khóa tài khoản Admin");
+            throw new BusinessRuleException("Không thể khóa tài khoản Admin");
         }
 
         user.IsActive = false;
@@ -237,7 +237,7 @@ public class AdminBLL : IAdminService
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
         if (user == null)
         {
-            throw new Exception("Không tìm thấy người dùng");
+            throw BusinessRuleException.NotFound("Không tìm thấy người dùng");
         }
 
         user.IsActive = true;
@@ -331,7 +331,7 @@ public class AdminBLL : IAdminService
         var post = await _context.Posts.Include(p => p.Room).FirstOrDefaultAsync(p => p.Id == postId);
         if (post == null)
         {
-            throw new Exception("Không tìm thấy bài đăng");
+            throw BusinessRuleException.NotFound("Không tìm thấy bài đăng");
         }
 
         if (post.Status != PostStatus.Pending)
@@ -361,7 +361,7 @@ public class AdminBLL : IAdminService
         var post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == postId);
         if (post == null)
         {
-            throw new Exception("Không tìm thấy bài đăng");
+            throw BusinessRuleException.NotFound("Không tìm thấy bài đăng");
         }
 
         if (post.Status != PostStatus.Pending)
@@ -387,7 +387,7 @@ public class AdminBLL : IAdminService
         var post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == postId);
         if (post == null)
         {
-            throw new Exception("Không tìm thấy bài đăng");
+            throw BusinessRuleException.NotFound("Không tìm thấy bài đăng");
         }
 
         post.Status = PostStatus.Hidden;

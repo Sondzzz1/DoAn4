@@ -56,7 +56,7 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi đăng ký tài khoản");
-            return BadRequest(ApiResponse<AuthResponseDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<AuthResponseDto>(ex);
         }
     }
 
@@ -95,7 +95,7 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi đăng nhập");
-            return BadRequest(ApiResponse<AuthResponseDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<AuthResponseDto>(ex);
         }
     }
 }

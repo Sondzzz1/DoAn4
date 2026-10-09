@@ -31,7 +31,7 @@ public class ExportController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(new { success = false, message = ex.Message });
+            return this.BusinessError<object>(ex);
         }
     }
 
@@ -52,7 +52,7 @@ public class ExportController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(new { success = false, message = ex.Message });
+            return this.BusinessError<object>(ex);
         }
     }
 

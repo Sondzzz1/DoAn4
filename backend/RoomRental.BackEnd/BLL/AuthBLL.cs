@@ -40,27 +40,27 @@ public class AuthBLL : IAuthService
 
         if (string.IsNullOrWhiteSpace(fullName))
         {
-            throw new Exception("Họ tên là bắt buộc");
+            throw new BusinessRuleException("Họ tên là bắt buộc");
         }
 
         if (string.IsNullOrWhiteSpace(email))
         {
-            throw new Exception("Email là bắt buộc");
+            throw new BusinessRuleException("Email là bắt buộc");
         }
 
         if (string.IsNullOrWhiteSpace(phone))
         {
-            throw new Exception("Số điện thoại là bắt buộc");
+            throw new BusinessRuleException("Số điện thoại là bắt buộc");
         }
 
         if (string.IsNullOrWhiteSpace(password) || password.Length < 6)
         {
-            throw new Exception("Mật khẩu phải có ít nhất 6 ký tự");
+            throw new BusinessRuleException("Mật khẩu phải có ít nhất 6 ký tự");
         }
 
         if (password != confirmPassword)
         {
-            throw new Exception("Mật khẩu xác nhận không khớp");
+            throw new BusinessRuleException("Mật khẩu xác nhận không khớp");
         }
 
         var existingUser = await _context.Users
@@ -68,7 +68,7 @@ public class AuthBLL : IAuthService
 
         if (existingUser != null)
         {
-            throw new Exception("Email hoặc số điện thoại đã được sử dụng");
+            throw BusinessRuleException.Conflict("Email hoặc số điện thoại đã được sử dụng");
         }
 
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(password);
@@ -124,7 +124,7 @@ public class AuthBLL : IAuthService
 
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
         {
-            throw new Exception("Email và mật khẩu là bắt buộc");
+            throw new BusinessRuleException("Email và mật khẩu là bắt buộc");
         }
 
         var user = await _context.Users
@@ -132,20 +132,20 @@ public class AuthBLL : IAuthService
 
         if (user == null)
         {
-            throw new Exception("Email hoặc mật khẩu không đúng");
+            throw new BusinessRuleException("Email hoặc mật khẩu không đúng");
         }
 
         // Kiểm tra tài khoản có bị khóa không
         if (user.IsBlocked)
         {
-            throw new Exception("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin");
+            throw BusinessRuleException.Forbidden("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin");
         }
 
         var isPasswordValid = BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
 
         if (!isPasswordValid)
         {
-            throw new Exception("Email hoặc mật khẩu không đúng");
+            throw new BusinessRuleException("Email hoặc mật khẩu không đúng");
         }
 
         // Tạo JWT Token
@@ -168,7 +168,7 @@ public class AuthBLL : IAuthService
     private string GenerateJwtToken(User user)
     {
         var jwtSettings = _configuration.GetSection("JwtSettings");
-        var secretKey = jwtSettings["SecretKey"] ?? throw new Exception("JWT SecretKey không được cấu hình");
+        var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey không được cấu hình");
         var issuer = jwtSettings["Issuer"] ?? "RoomRentalAPI";
         var audience = jwtSettings["Audience"] ?? "RoomRentalClient";
         var expiryInMinutes = int.Parse(jwtSettings["ExpiryInMinutes"] ?? "1440"); // Default 24h
@@ -206,8 +206,8 @@ public class AuthBLL : IAuthService
         {
             "tenant" or "nguoidung" or "người dùng" or "user" or "1" => 1,
             "landlord" or "chutro" or "chủ trọ" or "2" => 2,
-            "admin" or "0" => throw new Exception("Không thể đăng ký với quyền Admin"),
-            _ => throw new Exception("Role không hợp lệ. Chỉ hỗ trợ Tenant hoặc Landlord")
+            "admin" or "0" => throw new BusinessRuleException("Không thể đăng ký với quyền Admin"),
+            _ => throw new BusinessRuleException("Role không hợp lệ. Chỉ hỗ trợ Tenant hoặc Landlord")
         };
     }
 }

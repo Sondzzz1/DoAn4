@@ -42,7 +42,7 @@ public class AmenityBLL : IAmenityService
         var amenity = await _context.Amenities.FirstOrDefaultAsync(a => a.Id == id);
         if (amenity == null)
         {
-            throw new Exception("Không tìm thấy tiện ích");
+            throw BusinessRuleException.NotFound("Không tìm thấy tiện ích");
         }
 
         return new AmenityDto
@@ -60,13 +60,13 @@ public class AmenityBLL : IAmenityService
         var name = createDto.GetName();
         if (string.IsNullOrWhiteSpace(name))
         {
-            throw new Exception("Tên tiện ích không được để trống");
+            throw new BusinessRuleException("Tên tiện ích không được để trống");
         }
 
         var exists = await _context.Amenities.AnyAsync(a => a.Name == name);
         if (exists)
         {
-            throw new Exception("Tiện ích này đã tồn tại");
+            throw BusinessRuleException.Conflict("Tiện ích này đã tồn tại");
         }
 
         var amenity = new Amenity
@@ -88,7 +88,7 @@ public class AmenityBLL : IAmenityService
         var amenity = await _context.Amenities.FirstOrDefaultAsync(a => a.Id == id);
         if (amenity == null)
         {
-            throw new Exception("Không tìm thấy tiện ích");
+            throw BusinessRuleException.NotFound("Không tìm thấy tiện ích");
         }
 
         var name = updateDto.GetName();
@@ -122,7 +122,7 @@ public class AmenityBLL : IAmenityService
         var amenity = await _context.Amenities.FirstOrDefaultAsync(a => a.Id == id);
         if (amenity == null)
         {
-            throw new Exception("Không tìm thấy tiện ích");
+            throw BusinessRuleException.NotFound("Không tìm thấy tiện ích");
         }
 
         amenity.IsActive = false;

@@ -15,6 +15,7 @@ import {
   FiHome,
   FiCheck,
   FiAlertCircle,
+  FiSearch,
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import {
@@ -31,7 +32,8 @@ import { exportService } from '../../services/exportService';
 import { formatPrice } from '../../utils/helpers';
 import './LandlordContractsPage.css';
 import StatusBadge, { StatusTone } from '../../components/common/StatusBadge';
-import Modal from '../../components/common/Modal';
+import Modal from '../../components/landlord/LandlordModal';
+import useLandlordAction from '../../components/landlord/useLandlordAction';
 import PageState from '../../components/common/PageState';
 import { CONTRACT_STATUS, DEPOSIT_STATUS, MONTHLY_BILL_STATUS, RENTAL_REQUEST_STATUS } from '../../utils/constants';
 import { getApiErrorMessage } from '../../utils/apiError';
@@ -62,6 +64,8 @@ const getSelectedTab = (tab: string | null): LandlordTab => (
 const LandlordContractsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = getSelectedTab(searchParams.get('tab'));
+  const depositSection = activeTab === 'requests' && searchParams.get('section') === 'deposits';
+  const { openAction, dialog } = useLandlordAction();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [formErrors, setFormErrors] = useState<Partial<Record<'bill' | 'edit' | 'deposit' | 'contract', string>>>({});
@@ -71,6 +75,8 @@ const LandlordContractsPage: React.FC = () => {
   const [contracts, setContracts] = useState<ContractDto[]>([]);
   const [requests, setRequests] = useState<RentalRequestDto[]>([]);
   const [deposits, setDeposits] = useState<DepositDto[]>([]);
+  const [query, setQuery] = useState('');
+  const matchesQuery = (...values: (string | number | undefined)[]) => values.some(value => String(value ?? '').toLowerCase().includes(query.trim().toLowerCase()));
 
   // Filter states for Bills
   const currentYear = new Date().getFullYear();
@@ -293,7 +299,6 @@ const LandlordContractsPage: React.FC = () => {
 
   // Handle Mark Bill as Paid
   const handleConfirmBillPaid = async (billId: number) => {
-    if (!window.confirm('Xác nhận hóa đơn này đã được khách thuê thanh toán đầy đủ?')) return;
     try {
       await monthlyBillService.payBill(billId, {
         phuongThucThanhToan: 'Chủ trọ xác nhận đã nhận tiền',
@@ -302,18 +307,19 @@ const LandlordContractsPage: React.FC = () => {
       await loadData();
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Không thể cập nhật trạng thái.'));
+      return false;
     }
   };
 
   // Handle Delete Bill
   const handleDeleteBill = async (billId: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn hủy hóa đơn này? Hóa đơn vẫn được lưu trong lịch sử.')) return;
     try {
       await monthlyBillService.deleteBill(billId);
       toast.success('Hủy hóa đơn thành công!');
       await loadData();
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Không thể hủy hóa đơn.'));
+      return false;
     }
   };
 
@@ -356,22 +362,20 @@ const LandlordContractsPage: React.FC = () => {
     }
   };
 
-  const handleRejectRequest = async (requestId: number) => {
-    const reason = window.prompt('Nhập lý do từ chối yêu cầu thuê phòng:');
-    if (reason === null) return;
+  const handleRejectRequest = async (requestId: number, reason: string) => {
     try {
       await rentalService.updateRentalRequestStatus(requestId, RENTAL_REQUEST_STATUS.REJECTED, reason.trim() || 'Yêu cầu chưa phù hợp.');
       toast.info('Đã từ chối yêu cầu thuê phòng.');
       await loadData();
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Không thể từ chối yêu cầu.'));
+      return false;
     }
   };
 
   const handleConfirmDeposit = async (depositId: number) => {
-    if (!window.confirm('Xác nhận bạn đã nhận đúng khoản tiền cọc này?')) return;
     try { await rentalService.confirmDeposit(depositId); toast.success('Đã xác nhận khoản cọc.'); await loadData(); }
-    catch (error) { toast.error(getApiErrorMessage(error, 'Không thể xác nhận khoản cọc.')); }
+    catch (error) { toast.error(getApiErrorMessage(error, 'Không thể xác nhận khoản cọc.')); return false; }
   };
 
   // Handle Create Contract from Request
@@ -385,8 +389,8 @@ const LandlordContractsPage: React.FC = () => {
     e.preventDefault();
     setFormErrors(current => ({ ...current, contract: undefined }));
     if (submittingContract) return;
-    if (contractEndDate <= contractStartDate || contractRent <= 0) {
-      toast.warning('Ngày kết thúc phải sau ngày bắt đầu và tiền thuê phải lớn hơn 0.');
+    if (contractEndDate < contractStartDate || contractRent <= 0) {
+      toast.warning('Ngày thuê cuối cùng không được trước ngày bắt đầu và tiền thuê phải lớn hơn 0.');
       return;
     }
     if (!selectedRequestId) return;
@@ -395,8 +399,8 @@ const LandlordContractsPage: React.FC = () => {
     try {
       await rentalService.createContract({
         yeuCauThueId: selectedRequestId,
-        ngayBatDau: new Date(contractStartDate).toISOString(),
-        ngayKetThuc: new Date(contractEndDate).toISOString(),
+        ngayBatDau: contractStartDate,
+        ngayKetThuc: contractEndDate,
         tienThueHangThang: contractRent,
       });
 
@@ -411,9 +415,7 @@ const LandlordContractsPage: React.FC = () => {
   };
 
   // Handle Terminate Contract
-  const handleTerminateContract = async (contractId: number) => {
-    const reason = window.prompt('Nhập lý do chấm dứt hợp đồng (hoặc để trống):');
-    if (reason === null) return;
+  const handleTerminateContract = async (contractId: number, reason: string) => {
 
     try {
       await rentalService.terminateContract(contractId, reason || undefined);
@@ -421,17 +423,18 @@ const LandlordContractsPage: React.FC = () => {
       await loadData();
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Không thể chấm dứt hợp đồng.'));
+      return false;
     }
   };
 
   const handleConfirmContract = async (contractId: number) => {
-    if (!window.confirm('Xác nhận ký hợp đồng này?')) return;
     try { await rentalService.confirmContract(contractId); toast.success('Đã xác nhận hợp đồng.'); await loadData(); }
-    catch (error) { toast.error(getApiErrorMessage(error, 'Không thể xác nhận hợp đồng.')); }
+    catch (error) { toast.error(getApiErrorMessage(error, 'Không thể xác nhận hợp đồng.')); return false; }
   };
 
   // Filter bills
   const filteredBills = bills.filter((b) => {
+    if (!matchesQuery(b.id, b.tenPhong, b.tenNguoiThue, b.diaChiPhong)) return false;
     if (filterYear && b.nam !== filterYear) return false;
     if (filterMonth !== 'all' && b.thang !== filterMonth) return false;
     if (filterStatus !== 'all' && b.trangThai !== filterStatus) return false;
@@ -463,12 +466,7 @@ const LandlordContractsPage: React.FC = () => {
               <div className="contracts-header-badge">
                 {isRequestTab ? <FiUsers /> : <FiZap />} {isRequestTab ? 'Quản lý khách thuê' : 'Quản lý PMS & Điện Nước'}
               </div>
-              <h1>{isRequestTab ? 'Yêu Cầu Thuê & Đặt Cọc' : 'Quản Lý Hợp Đồng & Chỉ Số Điện Nước'}</h1>
-              <p>
-                {isRequestTab
-                  ? 'Duyệt yêu cầu thuê, theo dõi thanh toán cọc và tạo hợp đồng sau khi đã xác nhận tiền cọc.'
-                  : 'Tính toán tự động tiền điện, tiền nước, phụ phí và quản lý hợp đồng pháp lý cho chủ trọ.'}
-              </p>
+              <h1>{isRequestTab ? depositSection ? 'Quản lý cọc' : 'Yêu cầu thuê phòng' : activeTab === 'contracts' ? 'Hợp đồng thuê' : 'Hóa đơn điện nước & tiền phòng'}</h1>
             </div>
 
             {!isRequestTab && <div className="contracts-header-actions">
@@ -522,13 +520,15 @@ const LandlordContractsPage: React.FC = () => {
           </button>
           <button
             onClick={() => selectTab('requests')}
-            className={`tab-button ${activeTab === 'requests' ? 'active' : ''}`}
+            className={`tab-button ${activeTab === 'requests' && !depositSection ? 'active' : ''}`}
           >
             <FiUsers /> Yêu Cầu Thuê Phòng ({requests.length})
           </button>
+          <button onClick={() => setSearchParams({ tab: 'requests', section: 'deposits' })} className={`tab-button ${depositSection ? 'active' : ''}`}><FiCheckCircle /> Quản lý cọc ({deposits.length})</button>
         </div>
 
       {/* Tab 1: BILLS & UTILITY METERS */}
+      <div className="landlord-toolbar"><label className="landlord-search"><FiSearch /><input aria-label="Tìm khách thuê hoặc phòng" placeholder="Tìm khách thuê, phòng hoặc mã..." value={query} onChange={event => setQuery(event.target.value)} /></label></div>
       {activeTab === 'bills' && (
         <div className="space-y-4">
           {/* Filters Bar */}
@@ -632,7 +632,7 @@ const LandlordContractsPage: React.FC = () => {
                   <div className="bill-card-actions">
                     {(bill.trangThai === MONTHLY_BILL_STATUS.UNPAID || bill.trangThai === MONTHLY_BILL_STATUS.OVERDUE || bill.trangThai === MONTHLY_BILL_STATUS.PENDING_PAYMENT) && (
                       <button
-                        onClick={() => handleConfirmBillPaid(bill.id)}
+                        onClick={() => openAction({ title: 'Xác nhận thanh toán hóa đơn', message: 'Xác nhận hóa đơn này đã được khách thuê thanh toán đầy đủ?', run: () => handleConfirmBillPaid(bill.id) })}
                         className="btn-icon success"
                         title="Xác nhận đã nhận tiền"
                       >
@@ -647,7 +647,7 @@ const LandlordContractsPage: React.FC = () => {
                       <FiEdit2 /> Sửa
                     </button>}
                     {(bill.trangThai === MONTHLY_BILL_STATUS.UNPAID || bill.trangThai === MONTHLY_BILL_STATUS.OVERDUE) && <button
-                      onClick={() => handleDeleteBill(bill.id)}
+                      onClick={() => openAction({ title: 'Hủy hóa đơn', message: 'Bạn có chắc chắn muốn hủy hóa đơn này? Hóa đơn vẫn được lưu trong lịch sử.', run: () => handleDeleteBill(bill.id) })}
                       className="btn-icon delete"
                       title="Hủy hóa đơn"
                     >
@@ -712,7 +712,7 @@ const LandlordContractsPage: React.FC = () => {
             </div>
           ) : (
             <div className="contracts-grid">
-              {contracts.map((con) => (
+              {contracts.filter(con => matchesQuery(con.id, con.tenPhong, con.tenNguoiThue, con.diaChiPhong)).map((con) => (
                 <div key={con.id} className="contract-card">
                   <div>
                     <div className="contract-card-header">
@@ -757,7 +757,7 @@ const LandlordContractsPage: React.FC = () => {
                   </div>
 
                   <div className="contract-card-actions mt-4 flex items-center gap-2 flex-wrap">
-                    {con.trangThai === CONTRACT_STATUS.PENDING_SIGNATURE && !con.chuTroDaXacNhan && <button type="button" onClick={() => handleConfirmContract(con.id)} className="btn-primary"><FiCheck /> Ký hợp đồng</button>}
+                    {con.trangThai === CONTRACT_STATUS.PENDING_SIGNATURE && !con.chuTroDaXacNhan && <button type="button" onClick={() => openAction({ title: 'Ký hợp đồng', message: `Xác nhận ký hợp đồng #${con.id}?`, run: () => handleConfirmContract(con.id) })} className="btn-primary"><FiCheck /> Ký hợp đồng</button>}
                     <button
                       type="button"
                       onClick={() => exportService.downloadContractPdf(con.id)}
@@ -765,7 +765,7 @@ const LandlordContractsPage: React.FC = () => {
                     >
                       <FiDownload /> Tải HĐ (PDF)
                     </button>
-                    {con.trangThai === CONTRACT_STATUS.ACTIVE && (
+                    {[CONTRACT_STATUS.ACTIVE, CONTRACT_STATUS.EXPIRED, CONTRACT_STATUS.TERMINATED].some(status => status === con.trangThai) && (
                       <>
                         <button
                           type="button"
@@ -777,14 +777,14 @@ const LandlordContractsPage: React.FC = () => {
                         >
                           <FiZap /> Lập Hóa Đơn
                         </button>
-                        <button
+                        {con.trangThai === CONTRACT_STATUS.ACTIVE && <button
                           type="button"
-                          onClick={() => handleTerminateContract(con.id)}
+                          onClick={() => openAction({ title: 'Chấm dứt hợp đồng', message: 'Xác nhận chấm dứt hợp đồng và trả phòng về còn trống?', reasonLabel: 'Lý do chấm dứt (không bắt buộc)', run: reason => handleTerminateContract(con.id, reason) })}
                           className="btn-danger"
                           title="Chấm dứt hợp đồng và trả phòng về còn trống"
                         >
                           <FiAlertCircle /> Chấm Dứt HĐ
-                        </button>
+                        </button>}
                       </>
                     )}
                   </div>
@@ -798,20 +798,23 @@ const LandlordContractsPage: React.FC = () => {
       {/* Tab 3: RENTAL REQUESTS */}
       {activeTab === 'requests' && (
         <div className="space-y-4">
-          {deposits.length > 0 && <section className="mb-6">
+          {deposits.length > 0 && <section className="mb-6" id="landlord-deposits">
             <h3 className="mb-3 text-base font-bold text-slate-900">Tiền cọc cần theo dõi</h3>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {deposits.map(dep => {
                 const request = requests.find(r => r.id === dep.yeuCauThueId);
+                if (!matchesQuery(dep.id, request?.tieuDeBaiDang, request?.tenNguoiThue)) return null;
                 return <div key={dep.id} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-bold text-slate-900">{request?.tieuDeBaiDang || `Khoản cọc #${dep.id}`}</p><p className="mt-1 text-xl font-bold text-blue-600">{formatPrice(dep.soTien)}</p></div><StatusBadge label={dep.trangThai === DEPOSIT_STATUS.PENDING ? 'Chờ thanh toán' : dep.trangThai === DEPOSIT_STATUS.PAID ? 'Đã thanh toán' : dep.trangThai === DEPOSIT_STATUS.CONFIRMED ? 'Đã xác nhận' : dep.trangThai === DEPOSIT_STATUS.EXPIRED ? 'Đã hết hạn' : 'Đã đóng'} tone={dep.trangThai === DEPOSIT_STATUS.CONFIRMED ? 'success' : dep.trangThai === DEPOSIT_STATUS.PAID ? 'info' : dep.trangThai === DEPOSIT_STATUS.EXPIRED ? 'danger' : 'pending'} /></div>
                   {dep.hanThanhToan && dep.trangThai === DEPOSIT_STATUS.PENDING && <p className="mt-2 text-xs text-amber-700">Hạn thanh toán: {new Date(dep.hanThanhToan).toLocaleString('vi-VN')}</p>}
                   {dep.ngayThanhToan && <p className="mt-2 text-xs text-slate-500">Thanh toán: {new Date(dep.ngayThanhToan).toLocaleString('vi-VN')}</p>}
-                  {dep.trangThai === DEPOSIT_STATUS.PAID && <button onClick={() => handleConfirmDeposit(dep.id)} className="mt-3 rounded-md bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700">Xác nhận đã nhận cọc</button>}
+                  {dep.trangThai === DEPOSIT_STATUS.PAID && <button onClick={() => openAction({ title: 'Xác nhận đã nhận cọc', message: `Xác nhận bạn đã nhận đúng khoản tiền cọc ${formatPrice(dep.soTien)}?`, run: () => handleConfirmDeposit(dep.id) })} className="mt-3 rounded-md bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700">Xác nhận đã nhận cọc</button>}
                 </div>;
               })}
             </div>
           </section>}
+          {depositSection && deposits.length === 0 && <PageState type="empty" message="Chưa có khoản cọc nào." />}
+          <div hidden={depositSection}>
           {requests.length === 0 ? (
             <div className="empty-state">
               <FiUsers className="empty-state-icon" />
@@ -820,7 +823,7 @@ const LandlordContractsPage: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {requests.map((req) => (
+              {requests.filter(req => matchesQuery(req.id, req.tieuDeBaiDang, req.tenNguoiThue, req.diaChi)).map((req) => (
                 <div
                   key={req.id}
                   className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow transition-all space-y-3"
@@ -863,7 +866,7 @@ const LandlordContractsPage: React.FC = () => {
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleRejectRequest(req.id)}
+                          onClick={() => openAction({ title: 'Từ chối yêu cầu thuê', message: `Từ chối yêu cầu thuê #${req.id}?`, reasonLabel: 'Lý do từ chối', run: reason => handleRejectRequest(req.id, reason) })}
                           className="px-3.5 py-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 font-bold text-xs rounded-xl cursor-pointer transition-all border border-slate-200"
                         >
                           Từ Chối
@@ -896,6 +899,7 @@ const LandlordContractsPage: React.FC = () => {
               ))}
             </div>
           )}
+          </div>
         </div>
       )}
 
@@ -959,7 +963,7 @@ const LandlordContractsPage: React.FC = () => {
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:border-[#0084ff] bg-slate-50 font-semibold"
                   >
                     <option value="">-- Chọn hợp đồng --</option>
-                    {contracts.filter((c) => c.trangThai === CONTRACT_STATUS.ACTIVE).map((c) => (
+                    {contracts.filter((c) => [CONTRACT_STATUS.ACTIVE, CONTRACT_STATUS.EXPIRED, CONTRACT_STATUS.TERMINATED].some(status => status === c.trangThai)).map((c) => (
                       <option key={c.id} value={c.id}>
                         HD-{String(c.id).padStart(4, '0')} ({formatPrice(c.tienThueHangThang)}/tháng)
                       </option>
@@ -1292,7 +1296,7 @@ const LandlordContractsPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label htmlFor="field-contractEndDate" className="block font-bold text-slate-700 mb-1">Ngày kết thúc *</label>
+                <label htmlFor="field-contractEndDate" className="block font-bold text-slate-700 mb-1">Ngày thuê cuối cùng *</label>
                 <input id="field-contractEndDate"
                   type="date"
                   value={contractEndDate}
@@ -1333,6 +1337,7 @@ const LandlordContractsPage: React.FC = () => {
             </form>
         </Modal>
       )}
+      {dialog}
       </div>
     </div>
   );

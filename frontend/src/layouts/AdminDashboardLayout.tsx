@@ -16,12 +16,14 @@ import {
   FiTag,
   FiUsers,
   FiX,
+  FiDollarSign,
 } from 'react-icons/fi';
 import { useAuth } from '../hooks/useAuth';
 import { ROUTES } from '../utils/constants';
 import NotificationBell from '../components/common/NotificationBell';
 import ChatDrawer from '../components/chat/ChatDrawer';
 import './AdminDashboardLayout.css';
+import './LandlordWorkspace.css';
 
 /* =========================================================
    MENU ITEMS
@@ -29,11 +31,13 @@ import './AdminDashboardLayout.css';
 
 const landlordMenu = [
   { label: 'Tổng quan', icon: FiGrid, href: ROUTES.LANDLORD_DASHBOARD },
-  { label: 'Tin đăng', icon: FiFileText, href: ROUTES.LANDLORD_POSTS },
   { label: 'Phòng trọ', icon: FiHome, href: '/landlord/rooms' },
+  { label: 'Tin đăng', icon: FiFileText, href: ROUTES.LANDLORD_POSTS },
   { label: 'Lịch hẹn xem phòng', icon: FiCalendar, href: ROUTES.LANDLORD_APPOINTMENTS },
-  { label: 'Yêu cầu thuê & Đặt cọc', icon: FiUsers, href: ROUTES.LANDLORD_RENTAL_REQUESTS },
-  { label: 'Hợp đồng & Hóa đơn', icon: FiShield, href: ROUTES.LANDLORD_CONTRACTS },
+  { label: 'Yêu cầu thuê', icon: FiUsers, href: ROUTES.LANDLORD_RENTAL_REQUESTS },
+  { label: 'Quản lý cọc', icon: FiDollarSign, href: '/landlord/contracts?tab=requests&section=deposits' },
+  { label: 'Hợp đồng', icon: FiShield, href: '/landlord/contracts?tab=contracts' },
+  { label: 'Hóa đơn', icon: FiFileText, href: '/landlord/contracts?tab=bills' },
 ];
 
 const adminMenu = [
@@ -70,6 +74,11 @@ const AdminDashboardLayout: React.FC = () => {
   const isMenuActive = (href: string) => {
     const [pathname, query] = href.split('?');
     if (query) {
+      if (!isAdmin) {
+        const target = new URLSearchParams(query);
+        return location.pathname === pathname && (new URLSearchParams(location.search).get('tab') || 'requests') === target.get('tab')
+          && (new URLSearchParams(location.search).get('section') || '') === (target.get('section') || '');
+      }
       const tab = new URLSearchParams(location.search).get('tab') || 'requests';
       return location.pathname === pathname && (query.includes('requests') ? tab === 'requests' : tab !== 'requests');
     }
@@ -105,7 +114,7 @@ const AdminDashboardLayout: React.FC = () => {
   };
 
   return (
-    <div className="admin-dashboard-shell">
+    <div className={`admin-dashboard-shell${isAdmin ? '' : ' landlord-dashboard-shell'}`}>
       {/* ===================================================
           SIDEBAR
       =================================================== */}
@@ -194,7 +203,17 @@ const AdminDashboardLayout: React.FC = () => {
 
           <div className="admin-dashboard-account flex items-center gap-3">
             <NotificationBell />
-            <div className="admin-dashboard-user">
+            {!isAdmin ? <details className="landlord-account-menu">
+              <summary className="admin-dashboard-user">
+                <div className="admin-dashboard-avatar">{user?.fullName?.charAt(0) || 'U'}</div>
+                <div><strong>{user?.fullName || 'Chủ trọ'}</strong><span>Chủ trọ</span></div>
+              </summary>
+              <div className="landlord-account-options">
+                <strong>{user?.fullName}</strong>
+                <Link to="/">Xem trang chính</Link>
+                <button onClick={handleLogout}><FiLogOut />Đăng xuất</button>
+              </div>
+            </details> : <div className="admin-dashboard-user">
               <div className="admin-dashboard-avatar">
                 {user?.fullName?.charAt(0) || 'U'}
               </div>
@@ -202,7 +221,7 @@ const AdminDashboardLayout: React.FC = () => {
                 <strong>{user?.fullName || 'Người dùng'}</strong>
                 <span>{isAdmin ? 'Quản trị viên' : 'Chủ trọ'}</span>
               </div>
-            </div>
+            </div>}
           </div>
         </header>
 

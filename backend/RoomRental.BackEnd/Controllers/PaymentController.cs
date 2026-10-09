@@ -68,7 +68,8 @@ public class PaymentController : ControllerBase
         {
             _logger.LogError(ex, "Lỗi khi xử lý phản hồi từ VNPay");
             var frontendReturnUrl = _config["VnPay:FrontendReturnUrl"] ?? "http://localhost:5174/payment/result";
-            return Redirect($"{frontendReturnUrl}?success=false&message={Uri.EscapeDataString(ex.Message)}");
+            var (_, message) = BusinessErrorHandling.Describe(ex, HttpContext);
+            return Redirect($"{frontendReturnUrl}?success=false&message={Uri.EscapeDataString(message)}");
         }
     }
 

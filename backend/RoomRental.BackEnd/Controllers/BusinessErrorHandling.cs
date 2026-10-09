@@ -9,11 +9,10 @@ public sealed class BusinessExceptionFilter : IExceptionFilter
 {
     public void OnException(ExceptionContext context)
     {
-        if (context.Exception is not BusinessRuleException exception) return;
-
-        context.Result = new ObjectResult(ApiResponse<object>.ErrorResponse(exception.Message))
+        var (status, message) = BusinessErrorHandling.Describe(context.Exception, context.HttpContext);
+        context.Result = new ObjectResult(ApiResponse<object>.ErrorResponse(message))
         {
-            StatusCode = exception.StatusCode
+            StatusCode = status
         };
         context.ExceptionHandled = true;
     }
@@ -21,11 +20,19 @@ public sealed class BusinessExceptionFilter : IExceptionFilter
 
 public static class BusinessErrorHandling
 {
+    public const string UnexpectedMessage = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
+
+    internal static (int Status, string Message) Describe(Exception exception, HttpContext context)
+    {
+        if (exception is BusinessRuleException business) return (business.StatusCode, business.Message);
+        context.RequestServices.GetService<ILoggerFactory>()?.CreateLogger("ApiErrors")
+            .LogError(exception, "Unexpected API error at {Path}", context.Request.Path);
+        return (StatusCodes.Status500InternalServerError, UnexpectedMessage);
+    }
+
     public static IActionResult BusinessError<T>(this ControllerBase controller, Exception exception)
     {
-        var statusCode = exception is BusinessRuleException business
-            ? business.StatusCode
-            : StatusCodes.Status400BadRequest;
-        return controller.StatusCode(statusCode, ApiResponse<T>.ErrorResponse(exception.Message));
+        var (status, message) = Describe(exception, controller.HttpContext);
+        return controller.StatusCode(status, ApiResponse<T>.ErrorResponse(message));
     }
 }

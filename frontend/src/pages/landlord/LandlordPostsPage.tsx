@@ -1,336 +1,106 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
-import { 
-  FiEdit2, 
-  FiEye, 
-  FiPlus, 
-  FiTrash2, 
-  FiFileText,
-  FiMapPin,
-  FiDollarSign,
-  FiHome,
-  FiUsers,
-  FiClock,
-  FiCheckCircle,
-  FiXCircle,
-  FiRefreshCw
-} from 'react-icons/fi';
+import { FiEdit2, FiEye, FiPlus, FiTrash2, FiFileText, FiSearch, FiRefreshCw } from 'react-icons/fi';
 import { postService } from '../../services/postService';
-import { PostListItem, PostStatus, RoomStatus } from '../../types/post.types';
+import { PostListItem, PostStatus, RoomStatus, type Post } from '../../types/post.types';
 import { getApiErrorMessage } from '../../utils/apiError';
+import LandlordModal from '../../components/landlord/LandlordModal';
+import useLandlordAction from '../../components/landlord/useLandlordAction';
+import { PostEditor } from './CreatePostPage';
+import RoomLocation from '../../components/room/RoomLocation';
+import { Link } from 'react-router-dom';
 
-const postStatusLabel = (status: PostStatus) => {
-  switch (status) {
-    case PostStatus.Pending:
-      return { text: 'Chờ duyệt', className: 'bg-yellow-100 text-yellow-700' };
-    case PostStatus.Approved:
-      return { text: 'Đã duyệt', className: 'bg-green-100 text-green-700' };
-    case PostStatus.Rejected:
-      return { text: 'Bị từ chối', className: 'bg-red-100 text-red-700' };
-    case PostStatus.Hidden:
-      return { text: 'Đã ẩn', className: 'bg-gray-100 text-gray-700' };
-    case PostStatus.Expired:
-      return { text: 'Hết hạn', className: 'bg-slate-100 text-slate-700' };
-    default:
-      return { text: 'Không rõ', className: 'bg-slate-100 text-slate-700' };
-  }
-};
+const postLabels = ['Chờ duyệt', 'Đã duyệt', 'Bị từ chối', 'Đã ẩn', 'Hết hạn'];
+const roomLabels = ['Còn trống', 'Đã cho thuê', 'Đang giữ chỗ', 'Tạm ngưng'];
 
-const roomStatusLabel = (status: RoomStatus) => {
-  switch (status) {
-    case RoomStatus.Available:
-      return { text: 'Còn trống', className: 'bg-blue-100 text-blue-700' };
-    case RoomStatus.Rented:
-      return { text: 'Đã cho thuê', className: 'bg-purple-100 text-purple-700' };
-    case RoomStatus.Reserved:
-      return { text: 'Đang giữ chỗ', className: 'bg-amber-100 text-amber-700' };
-    case RoomStatus.TemporarilyUnavailable:
-      return { text: 'Tạm ngưng', className: 'bg-orange-100 text-orange-700' };
-    default:
-      return { text: 'Không rõ', className: 'bg-slate-100 text-slate-700' };
-  }
-};
-
-const LandlordPostsPage: React.FC = () => {
-  const navigate = useNavigate();
+export default function LandlordPostsPage() {
   const [posts, setPosts] = useState<PostListItem[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('');
+  const [editor, setEditor] = useState<{ id?: string; confirmation?: boolean } | null>(null);
+  const [editorBusy, setEditorBusy] = useState(false);
+  const [detail, setDetail] = useState<Post | null>(null);
+  const { openAction, dialog } = useLandlordAction();
   async function loadPosts() {
     setLoading(true);
     try {
       const response = await postService.getMyPosts();
       setPosts(response.data || []);
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Không thể tải danh sách tin đăng'));
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { toast.error(getApiErrorMessage(error, 'Không thể tải danh sách tin đăng')); }
+    finally { setLoading(false); }
   }
-
-  useEffect(() => {
-    void Promise.resolve().then(loadPosts);
-  }, []);
-
+  useEffect(() => { void Promise.resolve().then(loadPosts); }, []);
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Bạn có chắc muốn xóa tin đăng này?')) return;
-
     try {
       await postService.deletePost(id);
       toast.success('Đã xóa tin đăng');
       await loadPosts();
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Không thể xóa tin đăng'));
+      return false;
     }
   };
-
-  const getPublicVisibilityMessage = (post: PostListItem) => {
-    if (post.status !== PostStatus.Approved) {
-      return 'Tin chưa được công khai. Chỉ tin đã được quản trị viên duyệt mới xuất hiện cho người thuê.';
-    }
-
-    if (post.roomStatus !== RoomStatus.Available) {
-      return 'Tin đang tạm ẩn với người thuê vì phòng không còn ở trạng thái còn trống.';
-    }
-
-    return 'Tin đang hiển thị công khai cho người thuê.';
-  };
-
-  const handleView = (post: PostListItem) => {
+  const handleView = async (post: PostListItem) => {
     if (post.status !== PostStatus.Approved || post.roomStatus !== RoomStatus.Available) {
-      toast.info(getPublicVisibilityMessage(post));
+      toast.info(post.status !== PostStatus.Approved
+        ? 'Tin chưa được công khai. Chỉ tin đã được quản trị viên duyệt mới xuất hiện cho người thuê.'
+        : 'Tin đang tạm ẩn với người thuê vì phòng không còn ở trạng thái còn trống.');
       return;
     }
-
-    navigate(`/rooms/${post.id}`);
+    try { setDetail((await postService.getMyPostById(post.id)).data); }
+    catch (error) { toast.error(getApiErrorMessage(error, 'Không thể tải chi tiết tin đăng.')); }
   };
-
   const handleEdit = (post: PostListItem) => {
-    if (post.status === PostStatus.Approved && !window.confirm('Chỉnh sửa nội dung bài đăng sẽ đưa bài về trạng thái chờ duyệt. Bạn muốn tiếp tục?')) return;
-    navigate(`/landlord/posts/${post.id}/edit`);
+    setEditor({ id: String(post.id), confirmation: post.status === PostStatus.Approved });
   };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg">
-                <FiFileText className="text-white text-2xl" />
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-blue-600 font-semibold">QUẢN LÝ TIN ĐĂNG</p>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Tin đăng của tôi
-                </h1>
-              </div>
-            </div>
-            <p className="text-slate-600 ml-16">Quản lý và theo dõi tất cả tin đăng phòng trọ của bạn</p>
-          </div>
-          <button
-            onClick={() => navigate('/landlord/posts/create')}
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3.5 rounded-xl hover:from-blue-700 hover:to-purple-700 font-semibold shadow-lg hover:shadow-xl transition-all group"
-          >
-            <FiPlus className="group-hover:rotate-90 transition-transform" /> Đăng tin mới
-          </button>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-2xl p-5 border-2 border-blue-100 shadow-md hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600 mb-1">Tổng tin đăng</p>
-                <p className="text-3xl font-bold text-slate-800">{posts.length}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <FiFileText className="text-blue-600 text-xl" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-2xl p-5 border-2 border-yellow-100 shadow-md hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600 mb-1">Chờ duyệt</p>
-                <p className="text-3xl font-bold text-yellow-600">
-                  {posts.filter(p => p.status === PostStatus.Pending).length}
-                </p>
-              </div>
-              <div className="p-3 bg-yellow-100 rounded-xl">
-                <FiClock className="text-yellow-600 text-xl" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-5 border-2 border-green-100 shadow-md hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600 mb-1">Đã duyệt</p>
-                <p className="text-3xl font-bold text-green-600">
-                  {posts.filter(p => p.status === PostStatus.Approved).length}
-                </p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-xl">
-                <FiCheckCircle className="text-green-600 text-xl" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-5 border-2 border-red-100 shadow-md hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600 mb-1">Bị từ chối</p>
-                <p className="text-3xl font-bold text-red-600">
-                  {posts.filter(p => p.status === PostStatus.Rejected).length}
-                </p>
-              </div>
-              <div className="p-3 bg-red-100 rounded-xl">
-                <FiXCircle className="text-red-600 text-xl" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-3xl border-2 border-slate-200 bg-white shadow-xl p-6">
-          {loading ? (
-            <div className="py-20 text-center">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-              <p className="text-slate-600 mt-4">Đang tải danh sách tin đăng...</p>
-            </div>
-          ) : posts.length === 0 ? (
-            <div className="py-20 text-center">
-              <div className="inline-block p-6 bg-blue-50 rounded-full mb-4">
-                <FiFileText className="text-blue-500 text-5xl" />
-              </div>
-              <p className="text-xl text-slate-700 font-semibold mb-2">Bạn chưa có tin đăng nào</p>
-              <p className="text-slate-600 mb-6">Hãy tạo tin đăng đầu tiên để bắt đầu cho thuê phòng trọ</p>
-              <button
-                onClick={() => navigate('/landlord/posts/create')}
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-purple-700 font-semibold shadow-lg"
-              >
-                <FiPlus /> Đăng tin ngay
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-5">
-              {posts.map((post) => {
-                const postStatusInfo = postStatusLabel(post.status);
-                const roomStatusInfo = roomStatusLabel(post.roomStatus);
-
-                return (
-                  <div
-                    key={post.id}
-                    className="border-2 border-slate-200 rounded-2xl p-6 hover:shadow-xl hover:border-blue-200 transition-all duration-300 bg-white"
-                  >
-                    <div className="flex flex-col lg:flex-row gap-6">
-                      {/* Thumbnail */}
-                      <div className="w-full lg:w-64 h-48 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden flex-shrink-0 shadow-md">
-                        {post.thumbnailUrl ? (
-                          <img
-                            src={post.thumbnailUrl}
-                            alt={post.title}
-                            className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-400">
-                            <FiEye size={40} />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1">
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
-                          <h3 className="text-2xl font-bold text-slate-900 hover:text-blue-600 transition-colors">
-                            {post.title}
-                          </h3>
-                          <div className="flex flex-wrap gap-2">
-                            <span className={`px-4 py-1.5 rounded-full text-xs font-semibold ${postStatusInfo.className} shadow-sm`}>
-                              {postStatusInfo.text}
-                            </span>
-                            <span className={`px-4 py-1.5 rounded-full text-xs font-semibold ${roomStatusInfo.className} shadow-sm`}>
-                              {roomStatusInfo.text}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-start gap-2 text-slate-600 mb-4">
-                          <FiMapPin className="mt-1 flex-shrink-0 text-blue-500" />
-                          <p className="text-sm">
-                            {post.address}
-                            {post.ward && `, ${post.ward}`}
-                            {post.district && `, ${post.district}`}
-                            {post.province && `, ${post.province}`}
-                          </p>
-                        </div>
-
-                        <div className="flex flex-wrap gap-4 mb-4">
-                          <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
-                            <FiDollarSign className="text-green-600" />
-                            <span className="font-bold text-green-700">{post.price.toLocaleString()} đ</span>
-                            <span className="text-xs text-green-600">/tháng</span>
-                          </div>
-                          <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-xl border border-blue-200">
-                            <FiHome className="text-blue-600" />
-                            <span className="font-semibold text-blue-700">{post.area} m²</span>
-                          </div>
-                          <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 rounded-xl border border-purple-200">
-                            <FiUsers className="text-purple-600" />
-                            <span className="font-semibold text-purple-700">{post.maxOccupants} người</span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-4 text-xs text-slate-500 mb-4 pb-4 border-b border-slate-100">
-                          <span className="flex items-center gap-1">
-                            <FiClock className="text-slate-400" />
-                            Đăng: {new Date(post.createdAt).toLocaleDateString('vi-VN')}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <FiRefreshCw className="text-slate-400" />
-                            Cập nhật: {new Date(post.updatedAt).toLocaleDateString('vi-VN')}
-                          </span>
-                        </div>
-
-                        <p className={`mb-4 text-sm font-medium ${post.status === PostStatus.Approved && post.roomStatus === RoomStatus.Available ? 'text-emerald-700' : 'text-amber-700'}`}>
-                          {getPublicVisibilityMessage(post)}
-                        </p>
-
-                        {/* Actions */}
-                        <div className="flex flex-wrap gap-3">
-                          <button
-                            onClick={() => handleView(post)}
-                            className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:from-blue-600 hover:to-blue-700 shadow-md hover:shadow-lg transition-all"
-                          >
-                            <FiEye /> Xem chi tiết
-                          </button>
-                          <button
-                            onClick={() => handleEdit(post)}
-                            className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:from-amber-600 hover:to-amber-700 shadow-md hover:shadow-lg transition-all"
-                          >
-                            <FiEdit2 /> Chỉnh sửa
-                          </button>
-                          <button
-                            onClick={() => handleDelete(post.id)}
-                            className="inline-flex items-center gap-2 bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:from-red-600 hover:to-red-700 shadow-md hover:shadow-lg transition-all"
-                          >
-                            <FiTrash2 /> Xóa
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-        )}
-      </div>
+  const visible = posts.filter(post => (filter === '' || post.status === Number(filter))
+    && [post.title, post.address, post.district, post.province].some(value => value?.toLowerCase().includes(query.trim().toLowerCase())));
+  const closeEditor = () => { if (!editorBusy) setEditor(null); };
+  return <div className="landlord-posts-page">
+    <header className="landlord-page-heading">
+      <div><p>QUẢN LÝ</p><h1>Tin đăng của tôi</h1></div>
+      <button className="landlord-button primary" onClick={() => setEditor({})}><FiPlus />Đăng tin mới</button>
+    </header>
+    <div className="landlord-metrics">
+      {[['Tổng tin đăng', posts.length], ['Chờ duyệt', posts.filter(p => p.status === PostStatus.Pending).length], ['Đã duyệt', posts.filter(p => p.status === PostStatus.Approved).length], ['Bị từ chối', posts.filter(p => p.status === PostStatus.Rejected).length]].map(([label, count]) =>
+        <div key={label}><span>{label}</span><strong>{count}</strong></div>)}
     </div>
+    <div className="landlord-toolbar">
+      <label className="landlord-search"><FiSearch /><input aria-label="Tìm tin đăng" placeholder="Tìm tin đăng..." value={query} onChange={e => setQuery(e.target.value)} /></label>
+      <select aria-label="Trạng thái tin đăng" value={filter} onChange={e => setFilter(e.target.value)}><option value="">Tất cả trạng thái</option>{postLabels.map((label, index) => <option key={label} value={index}>{label}</option>)}</select>
+      <button className="landlord-icon-button" aria-label="Tải lại tin đăng" title="Tải lại tin đăng" onClick={loadPosts}><FiRefreshCw /></button>
     </div>
-  );
-};
-
-export default LandlordPostsPage;
+    <div className="landlord-table-wrap">
+      <table className="landlord-table"><thead><tr><th>Tin đăng</th><th>Giá thuê / diện tích</th><th>Trạng thái tin</th><th>Phòng</th><th>Thao tác</th></tr></thead>
+        <tbody>{visible.map(post => <tr key={post.id}>
+          <td><div className="landlord-post-cell">{post.thumbnailUrl ? <img src={post.thumbnailUrl} alt={post.title} /> : <span className="landlord-thumbnail"><FiFileText /></span>}<div><strong>{post.title}</strong><small>{[post.address, post.ward, post.district, post.province].filter(Boolean).join(', ')}</small><small>{post.categoryName} · {post.maxOccupants} người · {new Date(post.createdAt).toLocaleDateString('vi-VN')}</small></div></div></td>
+          <td><strong>{post.price.toLocaleString('vi-VN')} đ/tháng</strong><small>{post.area} m²</small></td>
+          <td><span className={`landlord-status status-${post.status}`}>{postLabels[post.status] || 'Không rõ'}</span></td>
+          <td>{roomLabels[post.roomStatus] || 'Không rõ'}</td>
+          <td><div className="landlord-row-actions">
+            <button className="landlord-icon-button" title="Xem chi tiết" aria-label={`Xem chi tiết ${post.title}`} onClick={() => handleView(post)}><FiEye /></button>
+            <button className="landlord-icon-button" title="Chỉnh sửa" aria-label={`Chỉnh sửa ${post.title}`} onClick={() => handleEdit(post)}><FiEdit2 /></button>
+            <button className="landlord-icon-button danger" title="Xóa tin đăng" aria-label={`Xóa ${post.title}`} onClick={() => openAction({ title: 'Xóa tin đăng', message: 'Bạn có chắc muốn xóa tin đăng "' + post.title + '"?', run: () => handleDelete(post.id) })}><FiTrash2 /></button>
+          </div></td>
+        </tr>)}</tbody>
+      </table>
+      {loading ? <p className="landlord-empty" role="status">Đang tải danh sách tin đăng...</p> : !visible.length && <div className="landlord-empty"><FiFileText /><p>{posts.length ? 'Không có tin đăng phù hợp.' : 'Bạn chưa có tin đăng nào'}</p>{!posts.length && <button className="landlord-button primary" onClick={() => setEditor({})}><FiPlus />Đăng tin ngay</button>}</div>}
+    </div>
+    <LandlordModal isOpen={!!editor} onClose={closeEditor} title={editor?.id ? 'Chỉnh sửa tin đăng' : 'Đăng tin cho thuê'} size="xl">
+      {editor?.confirmation ? <div className="space-y-4"><p>Chỉnh sửa nội dung bài đăng sẽ đưa bài về trạng thái chờ duyệt. Bạn muốn tiếp tục?</p>
+        <div className="landlord-modal-actions"><button className="landlord-button" onClick={closeEditor}>Hủy</button><button className="landlord-button primary" onClick={() => setEditor({ id: editor.id })}>Xác nhận</button></div>
+      </div> : editor && <PostEditor key={editor.id || 'new'} postId={editor.id} onSaved={() => { setEditorBusy(false); setEditor(null); void loadPosts(); }} onCancel={closeEditor} onBusyChange={setEditorBusy} />}
+    </LandlordModal>
+    <LandlordModal isOpen={!!detail} onClose={() => setDetail(null)} title="Chi tiết tin đăng" size="xl">
+      {detail && <div className="space-y-4"><h3 className="text-xl font-semibold">{detail.title}</h3><p>{[detail.address, detail.ward, detail.district, detail.province].filter(Boolean).join(', ')}</p>
+        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4"><div><dt>Giá thuê</dt><dd>{detail.price.toLocaleString('vi-VN')} đ/tháng</dd></div><div><dt>Diện tích</dt><dd>{detail.area} m²</dd></div><div><dt>Số người tối đa</dt><dd>{detail.maxOccupants}</dd></div></dl>
+        <div className="grid grid-cols-2 gap-3">{detail.imageUrls.map((url, i) => <img key={url + i} src={url} alt={detail.title} className="aspect-video w-full object-cover rounded-lg" />)}</div>
+        <p className="whitespace-pre-wrap">{detail.description}</p><p>{detail.amenities.map(item => item.name).join(' · ')}</p>
+        <RoomLocation address={detail.address} ward={detail.ward} district={detail.district} province={detail.province} latitude={detail.latitude} longitude={detail.longitude} title="Vị trí phòng" />
+        <div className="landlord-modal-actions"><Link className="landlord-button" to={`/rooms/${detail.id}`}>Xem tin công khai</Link><button className="landlord-button" onClick={() => setDetail(null)}>Đóng</button></div>
+      </div>}
+    </LandlordModal>
+    {dialog}
+  </div>;
+}

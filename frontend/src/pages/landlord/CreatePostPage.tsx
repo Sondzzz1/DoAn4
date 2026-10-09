@@ -7,9 +7,10 @@ import { postService } from '../../services/postService';
 import { RoomStatus } from '../../types/post.types';
 import type { RoomItem } from '../../types/room.types';
 import { getApiErrorMessage } from '../../utils/apiError';
+import LandlordModal from '../../components/landlord/LandlordModal';
 
-export default function CreatePostPage() {
-  const { id } = useParams();
+export function PostEditor({ postId, onSaved, onCancel, onBusyChange }: { postId?: string; onSaved?: () => void; onCancel?: () => void; onBusyChange?: (busy: boolean) => void }) {
+  const id = postId;
   const navigate = useNavigate();
   const [rooms, setRooms] = useState<RoomItem[]>([]);
   const [roomId, setRoomId] = useState(0);
@@ -18,6 +19,7 @@ export default function CreatePostPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  useEffect(() => { onBusyChange?.(saving); }, [saving, onBusyChange]);
   useEffect(() => {
     let active = true;
     void (async () => {
@@ -56,15 +58,15 @@ export default function CreatePostPage() {
       if (id) await postService.updatePost(Number(id), { title: data.title, description: data.description });
       else await postService.createPost(data);
       toast.success(id ? 'Đã cập nhật tin đăng.' : 'Đã gửi tin chờ duyệt.');
-      navigate('/landlord/posts');
+      if (onSaved) onSaved();
+      else navigate('/landlord/posts');
     } catch (e) {
       setError(getApiErrorMessage(e, 'Không lưu được tin đăng.'));
     } finally { setSaving(false); }
   };
   return (
-    <div className="post-editor-page bg-slate-50">
-      <div className="max-w-4xl mx-auto p-4 sm:p-6">
-        <h1 className="text-2xl font-bold text-slate-900 mb-6">{id ? 'Chỉnh sửa tin đăng' : 'Đăng tin cho thuê'}</h1>
+    <div className="post-editor-page">
+      <div>
         {loading ? <p role="status">Đang tải phòng...</p> : (
           <form onSubmit={submit} className="space-y-6">
             <div>
@@ -105,11 +107,21 @@ export default function CreatePostPage() {
             {error && <p role="alert" className="form-error">{error}</p>}
             <div className="flex flex-wrap gap-3">
               <button type="submit" disabled={saving || (!id && !candidates.length)} className="inline-flex items-center gap-2 bg-blue-600 text-white rounded-lg px-5 py-3 disabled:opacity-50"><FiCheck />{saving ? 'Đang lưu...' : id ? 'Lưu tin đăng' : 'Gửi duyệt'}</button>
-              <button type="button" onClick={() => navigate('/landlord/posts')} className="inline-flex items-center gap-2 border border-slate-300 rounded-lg px-5 py-3"><FiX />Hủy</button>
+              <button type="button" disabled={saving} onClick={() => onCancel ? onCancel() : navigate('/landlord/posts')} className="inline-flex items-center gap-2 border border-slate-300 rounded-lg px-5 py-3"><FiX />Hủy</button>
             </div>
           </form>
         )}
       </div>
     </div>
   );
+}
+
+export default function CreatePostPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const close = () => { if (!busy) navigate('/landlord/posts'); };
+  return <LandlordModal isOpen onClose={close} title={id ? 'Chỉnh sửa tin đăng' : 'Đăng tin cho thuê'} size="xl">
+    <PostEditor postId={id} onSaved={() => navigate('/landlord/posts')} onCancel={close} onBusyChange={setBusy} />
+  </LandlordModal>;
 }

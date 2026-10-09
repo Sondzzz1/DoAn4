@@ -47,7 +47,7 @@ public class BlogBLL : IBlogService
 
         if (blog == null)
         {
-            throw new Exception("Không tìm thấy bài viết");
+            throw BusinessRuleException.NotFound("Không tìm thấy bài viết");
         }
 
         if (incrementView)
@@ -69,7 +69,7 @@ public class BlogBLL : IBlogService
 
         if (blog == null)
         {
-            throw new Exception("Không tìm thấy bài viết");
+            throw BusinessRuleException.NotFound("Không tìm thấy bài viết");
         }
 
         if (incrementView)
@@ -120,7 +120,7 @@ public class BlogBLL : IBlogService
         var title = createDto.GetTitle();
         if (string.IsNullOrWhiteSpace(title))
         {
-            throw new Exception("Tiêu đề bài viết không được để trống");
+            throw new BusinessRuleException("Tiêu đề bài viết không được để trống");
         }
 
         var slug = GenerateSlug(title);
@@ -149,7 +149,7 @@ public class BlogBLL : IBlogService
         var blog = await _context.BlogPosts.FirstOrDefaultAsync(b => b.Id == id);
         if (blog == null)
         {
-            throw new Exception("Không tìm thấy bài viết");
+            throw BusinessRuleException.NotFound("Không tìm thấy bài viết");
         }
 
         var title = updateDto.GetTitle();
@@ -197,7 +197,7 @@ public class BlogBLL : IBlogService
 
         if (blog == null)
         {
-            throw new Exception("Không tìm thấy bài viết");
+            throw BusinessRuleException.NotFound("Không tìm thấy bài viết");
         }
 
         _context.BlogComments.RemoveRange(blog.Comments);
@@ -207,22 +207,22 @@ public class BlogBLL : IBlogService
 
     public async Task<BlogCommentDto> AddCommentAsync(int blogPostId, int accountId, CreateBlogCommentDto createDto)
     {
-        var blog = await _context.BlogPosts.FirstOrDefaultAsync(b => b.Id == blogPostId);
+        var blog = await _context.BlogPosts.FirstOrDefaultAsync(b => b.Id == blogPostId && b.Status == 1);
         if (blog == null)
         {
-            throw new Exception("Không tìm thấy bài viết");
+            throw BusinessRuleException.NotFound("Không tìm thấy bài viết công khai.");
         }
 
         var content = createDto.GetContent();
         if (string.IsNullOrWhiteSpace(content))
         {
-            throw new Exception("Nội dung bình luận không được để trống");
+            throw new BusinessRuleException("Nội dung bình luận không được để trống");
         }
 
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == accountId);
         if (user == null)
         {
-            throw new Exception("Người dùng không tồn tại");
+            throw BusinessRuleException.NotFound("Người dùng không tồn tại");
         }
 
         var comment = new BlogComment
@@ -253,12 +253,12 @@ public class BlogBLL : IBlogService
         var comment = await _context.BlogComments.FirstOrDefaultAsync(c => c.Id == commentId);
         if (comment == null)
         {
-            throw new Exception("Không tìm thấy bình luận");
+            throw BusinessRuleException.NotFound("Không tìm thấy bình luận");
         }
 
         if (comment.AccountId != accountId && !isAdmin)
         {
-            throw new Exception("Bạn không có quyền xóa bình luận này");
+            throw BusinessRuleException.Forbidden("Bạn không có quyền xóa bình luận này");
         }
 
         _context.BlogComments.Remove(comment);

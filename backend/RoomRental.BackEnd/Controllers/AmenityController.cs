@@ -38,7 +38,7 @@ public class AmenityController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy danh sách tiện ích");
-            return BadRequest(ApiResponse<List<AmenityDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<AmenityDto>>(ex);
         }
     }
 
@@ -58,7 +58,7 @@ public class AmenityController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy thông tin tiện ích ID: {Id}", id);
-            return BadRequest(ApiResponse<AmenityDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<AmenityDto>(ex);
         }
     }
 
@@ -78,7 +78,7 @@ public class AmenityController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi thêm tiện ích mới");
-            return BadRequest(ApiResponse<AmenityDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<AmenityDto>(ex);
         }
     }
 
@@ -98,7 +98,7 @@ public class AmenityController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi cập nhật tiện ích ID: {Id}", id);
-            return BadRequest(ApiResponse<AmenityDto>.ErrorResponse(ex.Message));
+            return this.BusinessError<AmenityDto>(ex);
         }
     }
 
@@ -118,7 +118,7 @@ public class AmenityController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi xóa tiện ích ID: {Id}", id);
-            return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
+            return this.BusinessError<object>(ex);
         }
     }
 }

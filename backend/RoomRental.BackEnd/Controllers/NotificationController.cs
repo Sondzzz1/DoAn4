@@ -36,7 +36,7 @@ public class NotificationController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi lấy thông báo");
-            return BadRequest(ApiResponse<List<NotificationDto>>.ErrorResponse(ex.Message));
+            return this.BusinessError<List<NotificationDto>>(ex);
         }
     }
 
@@ -54,7 +54,7 @@ public class NotificationController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(ApiResponse<int>.ErrorResponse(ex.Message));
+            return this.BusinessError<int>(ex);
         }
     }
 
@@ -73,7 +73,7 @@ public class NotificationController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi đánh dấu đã đọc thông báo ID: {Id}", id);
-            return BadRequest(ApiResponse<bool>.ErrorResponse(ex.Message));
+            return this.BusinessError<bool>(ex);
         }
     }
 
@@ -92,7 +92,7 @@ public class NotificationController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi đánh dấu đã đọc tất cả thông báo");
-            return BadRequest(ApiResponse<bool>.ErrorResponse(ex.Message));
+            return this.BusinessError<bool>(ex);
         }
     }
 

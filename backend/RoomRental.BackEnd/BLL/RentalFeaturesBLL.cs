@@ -72,6 +72,7 @@ public class RentalRequestBLL : IRentalRequestService
         if (item.Status != RentalRequestStatus.Pending) throw BusinessRuleException.Conflict("Yêu cầu thuê phòng này không còn ở trạng thái chờ xử lý.");
 
         Deposit? deposit = null;
+        var cancelledAppointments = new List<ViewingAppointment>();
         if (trangThai == RentalRequestStatus.Approved)
         {
             if (item.Post.Status != PostStatus.Approved)
@@ -92,9 +93,9 @@ public class RentalRequestBLL : IRentalRequestService
             room.Status = RoomStatus.Reserved;
             room.UpdatedAt = DateTime.Now;
             deposit = await CreateDepositAsync(item, soTienDatCoc!.Value, hanThanhToanCoc!.Value);
-            var appointments = await _db.ViewingAppointments.Where(a => a.Post.RoomId == room.Id &&
+            cancelledAppointments = await _db.ViewingAppointments.Include(a => a.Tenant).Where(a => a.Post.RoomId == room.Id &&
                 a.ScheduledAt > DateTime.Now && (a.Status == AppointmentStatus.Pending || a.Status == AppointmentStatus.Confirmed)).ToListAsync();
-            foreach (var appointment in appointments)
+            foreach (var appointment in cancelledAppointments)
             {
                 appointment.Status = AppointmentStatus.Cancelled;
                 appointment.LandlordResponse = "Phòng đã được giữ chỗ cho yêu cầu thuê.";
@@ -105,6 +106,9 @@ public class RentalRequestBLL : IRentalRequestService
         if (trangThai == RentalRequestStatus.Rejected && !string.IsNullOrWhiteSpace(ghiChu)) item.Note = ghiChu.Trim();
         await _db.SaveChangesAsync();
         await transaction.CommitAsync();
+        foreach (var appointment in cancelledAppointments)
+            await SendNotificationAsync(appointment.Tenant.AccountId, "Lịch xem phòng đã bị hủy",
+                $"Lịch xem phòng #{appointment.Id} bị hủy vì phòng đã được giữ chỗ.", "/tenant/appointments");
         await SendNotificationAsync(
             item.TenantAccountId,
             trangThai == RentalRequestStatus.Approved ? "Yêu cầu thuê đã được duyệt" : "Yêu cầu thuê bị từ chối",
@@ -349,12 +353,15 @@ public class RentalContractBLL : IRentalContractService
     public RentalContractBLL(
         ApplicationDbContext db,
         INotificationService notificationService,
-        ILogger<RentalContractBLL> logger)
+        ILogger<RentalContractBLL> logger, TimeProvider? clock = null)
     {
         _db = db;
         _notificationService = notificationService;
         _logger = logger;
+        _clock = clock ?? TimeProvider.System;
     }
+
+    private readonly TimeProvider _clock;
 
     public async Task<HopDongDto> TaoAsync(int chuTroId, TaoHopDongDto dto)
     {
@@ -387,8 +394,10 @@ public class RentalContractBLL : IRentalContractService
         if (confirmedDeposit == null)
             throw BusinessRuleException.Conflict("Khoản cọc phải được chủ trọ xác nhận trước khi tạo hợp đồng.");
 
-        if (dto.NgayKetThuc <= dto.NgayBatDau)
-            throw new BusinessRuleException("Ngày kết thúc hợp đồng phải sau ngày bắt đầu.");
+        var startDate = RoomRental.BackEnd.Helpers.RentalCalendar.SelectedDate(dto.NgayBatDau);
+        var endDate = RoomRental.BackEnd.Helpers.RentalCalendar.SelectedDate(dto.NgayKetThuc);
+        if (endDate < startDate)
+            throw new BusinessRuleException("Ngày kết thúc hợp đồng không được trước ngày bắt đầu.");
         if (dto.TienThueHangThang <= 0)
             throw new BusinessRuleException("Tiền thuê hàng tháng phải lớn hơn 0.");
 
@@ -401,7 +410,7 @@ public class RentalContractBLL : IRentalContractService
             .Include(c => c.Post)
             .AnyAsync(c => c.Post!.RoomId == roomId &&
                 RentalContractStatus.EffectiveStatuses.Contains(c.Status) &&
-                c.StartDate <= dto.NgayKetThuc && c.EndDate >= dto.NgayBatDau);
+                c.StartDate.Date <= endDate && c.EndDate.Date >= startDate);
         if (hasOverlappingContract)
             throw BusinessRuleException.Conflict("Phòng đã có hợp đồng trùng thời gian.");
 
@@ -411,8 +420,8 @@ public class RentalContractBLL : IRentalContractService
             PostId = request.PostId,
             TenantAccountId = request.TenantAccountId,
             LandlordAccountId = request.LandlordAccountId,
-            StartDate = dto.NgayBatDau,
-            EndDate = dto.NgayKetThuc,
+            StartDate = startDate,
+            EndDate = endDate,
             MonthlyRent = dto.TienThueHangThang,
             DepositAmount = confirmedDeposit.Amount,
             ElectricityPrice = request.Post.Room.ElectricityPrice ?? 0,
@@ -482,7 +491,8 @@ public class RentalContractBLL : IRentalContractService
             throw BusinessRuleException.Forbidden("Bạn không có quyền xác nhận hợp đồng này.");
         if (item.Status != RentalContractStatus.PendingSignature)
             throw BusinessRuleException.Conflict("Hợp đồng này không còn ở trạng thái chờ ký.");
-        if (item.EndDate <= DateTime.Now)
+        var today = RoomRental.BackEnd.Helpers.RentalCalendar.Today(_clock);
+        if (item.EndDate.Date < today)
             throw BusinessRuleException.Conflict("Hợp đồng đã quá ngày kết thúc, không thể ký.");
 
         if (taiKhoanId == item.TenantAccountId)
@@ -503,13 +513,13 @@ public class RentalContractBLL : IRentalContractService
                 .Include(c => c.Post)
                 .AnyAsync(c => c.Id != item.Id && c.Post!.RoomId == post.RoomId &&
                     RentalContractStatus.EffectiveStatuses.Contains(c.Status) &&
-                    c.StartDate <= item.EndDate && c.EndDate >= item.StartDate);
+                    c.StartDate.Date <= item.EndDate.Date && c.EndDate.Date >= item.StartDate.Date);
             if (hasOtherActiveContract)
                 throw BusinessRuleException.Conflict("Phòng đã có hợp đồng đang hoạt động trùng thời gian.");
             if (post.Room.Status != RoomStatus.Reserved)
                 throw BusinessRuleException.Conflict("Phòng không còn ở trạng thái sẵn sàng cho thuê.");
 
-            item.Status = item.StartDate > DateTime.Now ? RentalContractStatus.PendingStart : RentalContractStatus.Active;
+            item.Status = item.StartDate.Date > today ? RentalContractStatus.PendingStart : RentalContractStatus.Active;
             item.UpdatedAt = DateTime.Now;
             post.Room.Status = item.Status == RentalContractStatus.Active ? RoomStatus.Rented : RoomStatus.Reserved;
             post.Room.UpdatedAt = DateTime.Now;
@@ -582,13 +592,14 @@ public class RentalContractBLL : IRentalContractService
     {
         await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         await WorkflowLock.AcquireAsync(_db);
-        var now = DateTime.Now;
+        var now = _clock.GetUtcNow().UtcDateTime;
+        var today = RoomRental.BackEnd.Helpers.RentalCalendar.Today(_clock);
         var due = await _db.RentalContracts.Include(c => c.Post).ThenInclude(p => p!.Room)
-            .Where(c => (c.Status == RentalContractStatus.Active && c.EndDate <= now) ||
-                (c.Status == RentalContractStatus.PendingStart && (c.EndDate <= now || c.StartDate <= now))).ToListAsync();
+            .Where(c => (c.Status == RentalContractStatus.Active && c.EndDate.Date < today) ||
+                (c.Status == RentalContractStatus.PendingStart && (c.EndDate.Date < today || c.StartDate.Date <= today))).ToListAsync();
         foreach (var contract in due)
         {
-            contract.Status = contract.EndDate <= now ? RentalContractStatus.Expired : RentalContractStatus.Active;
+            contract.Status = contract.EndDate.Date < today ? RentalContractStatus.Expired : RentalContractStatus.Active;
             contract.UpdatedAt = now;
             if (contract.Status == RentalContractStatus.Active) contract.Post!.Room.Status = RoomStatus.Rented;
         }
@@ -800,6 +811,8 @@ public class RoomReviewBLL : IRoomReviewService
     public RoomReviewBLL(ApplicationDbContext db) => _db = db;
     public async Task<DanhGiaDto> TaoAsync(int nguoiThueId, TaoDanhGiaDto dto)
     {
+        if (dto.NhanXet?.Length > 2000)
+            throw new BusinessRuleException("Nhận xét không được vượt quá 2000 ký tự.");
         var tenant = await _db.Users.FirstOrDefaultAsync(x => x.Id == nguoiThueId)
             ?? throw BusinessRuleException.NotFound("Không tìm thấy người dùng.");
         if (tenant.RoleId != 1)
@@ -817,7 +830,14 @@ public class RoomReviewBLL : IRoomReviewService
         var item = new RoomReview { ContractId=contract.Id, PostId=contract.PostId, TenantAccountId=nguoiThueId, Rating=dto.SoSao, Comment=dto.NhanXet };
         _db.RoomReviews.Add(item); await _db.SaveChangesAsync(); return Map(item);
     }
-    public async Task<List<DanhGiaDto>> LayTheoBaiDangAsync(int baiDangId) => await _db.RoomReviews.Where(x => x.PostId == baiDangId).OrderByDescending(x => x.CreatedAt).Select(MapExpression()).ToListAsync();
+    public async Task<List<DanhGiaDto>> LayTheoBaiDangAsync(int baiDangId)
+    {
+        var roomId = await _db.Posts.Where(p => p.Id == baiDangId).Select(p => (int?)p.RoomId).FirstOrDefaultAsync()
+            ?? throw BusinessRuleException.NotFound("Không tìm thấy tin đăng.");
+        return await _db.RoomReviews
+            .Where(review => _db.Posts.Any(post => post.Id == review.PostId && post.RoomId == roomId))
+            .OrderByDescending(x => x.CreatedAt).Select(MapExpression()).ToListAsync();
+    }
     public async Task<List<DanhGiaDto>> LayCuaToiAsync(int nguoiThueId) => await _db.RoomReviews.Where(x => x.TenantAccountId == nguoiThueId).OrderByDescending(x => x.CreatedAt).Select(MapExpression()).ToListAsync();
     private static DanhGiaDto Map(RoomReview x) => new() { Id=x.Id, HopDongId=x.ContractId, BaiDangId=x.PostId, NguoiThueId=x.TenantAccountId, SoSao=x.Rating, NhanXet=x.Comment, NgayTao=x.CreatedAt };
     private static System.Linq.Expressions.Expression<Func<RoomReview, DanhGiaDto>> MapExpression() => x => new DanhGiaDto { Id=x.Id, HopDongId=x.ContractId, BaiDangId=x.PostId, NguoiThueId=x.TenantAccountId, SoSao=x.Rating, NhanXet=x.Comment, NgayTao=x.CreatedAt };

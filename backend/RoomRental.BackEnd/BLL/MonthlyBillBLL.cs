@@ -37,14 +37,23 @@ public class MonthlyBillBLL : IMonthlyBillService
 
         if (contract.LandlordAccountId != chuTroId)
             throw BusinessRuleException.Forbidden("Bạn không có quyền lập hóa đơn cho hợp đồng này.");
-        if (contract.Status != RentalContractStatus.Active)
-            throw BusinessRuleException.Conflict("Chỉ có thể lập hóa đơn cho hợp đồng đang hiệu lực.");
+        if (contract.Status is not (RentalContractStatus.Active or RentalContractStatus.Expired or RentalContractStatus.Terminated))
+            throw BusinessRuleException.Conflict("Chỉ có thể lập hóa đơn cho hợp đồng đã có hiệu lực.");
         if (await _db.MonthlyBills.AnyAsync(b => b.ContractId == dto.HopDongId && b.Month == dto.Thang && b.Year == dto.Nam))
             throw BusinessRuleException.Conflict($"Hóa đơn tháng {dto.Thang}/{dto.Nam} cho hợp đồng này đã tồn tại.");
 
         var periodStart = new DateTime(dto.Nam, dto.Thang, 1);
-        if (periodStart > contract.EndDate || periodStart.AddMonths(1) <= contract.StartDate)
-            throw new BusinessRuleException("Kỳ hóa đơn phải thuộc thời hạn hợp đồng.");
+        var lastRentalDay = contract.EndDate.Date;
+        if (contract.Status == RentalContractStatus.Terminated)
+        {
+            if (!contract.UpdatedAt.HasValue)
+                throw BusinessRuleException.Conflict("Hợp đồng cũ chưa có mốc chấm dứt để xác định kỳ hóa đơn cuối.");
+            // Terminal contracts cannot be edited; UpdatedAt is the existing UTC termination timestamp.
+            var terminatedOn = RoomRental.BackEnd.Helpers.RentalCalendar.UtcDateInVietnam(contract.UpdatedAt.Value);
+            if (terminatedOn < lastRentalDay) lastRentalDay = terminatedOn;
+        }
+        if (lastRentalDay < contract.StartDate.Date || periodStart > lastRentalDay || periodStart.AddMonths(1) <= contract.StartDate.Date)
+            throw new BusinessRuleException("Kỳ hóa đơn phải thuộc thời gian thuê thực tế của hợp đồng.");
         if (await _db.MonthlyBills.AnyAsync(b => b.ContractId == contract.Id && b.Status != MonthlyBillStatus.Cancelled &&
             b.Year * 12 + b.Month > dto.Nam * 12 + dto.Thang))
             throw BusinessRuleException.Conflict("Cần lập hóa đơn theo thứ tự thời gian.");

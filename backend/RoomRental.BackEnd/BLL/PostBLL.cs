@@ -463,12 +463,12 @@ public class PostBLL : IPostService
 
         if (post == null)
         {
-            throw new Exception("Không tìm thấy tin đăng");
+            throw BusinessRuleException.NotFound("Không tìm thấy tin đăng");
         }
 
         if (post.LandlordId != landlord.Id)
         {
-            throw new Exception("Bạn không có quyền chỉnh sửa tin đăng này");
+            throw BusinessRuleException.Forbidden("Bạn không có quyền chỉnh sửa tin đăng này");
         }
 
         // Room fields are edited through RoomBLL so every publication follows the same moderation policy.
@@ -510,12 +510,12 @@ public class PostBLL : IPostService
 
         if (post == null)
         {
-            throw new Exception("Không tìm thấy tin đăng");
+            throw BusinessRuleException.NotFound("Không tìm thấy tin đăng");
         }
 
         if (post.LandlordId != landlord.Id)
         {
-            throw new Exception("Bạn không có quyền xóa tin đăng này");
+            throw BusinessRuleException.Forbidden("Bạn không có quyền xóa tin đăng này");
         }
 
         // Đổi trạng thái sang Hidden thay vì xóa cứng khỏi Database
@@ -536,18 +536,18 @@ public class PostBLL : IPostService
 
         if (post == null)
         {
-            throw new Exception("Không tìm thấy tin đăng");
+            throw BusinessRuleException.NotFound("Không tìm thấy tin đăng");
         }
 
         if (post.LandlordId != landlord.Id)
         {
-            throw new Exception("Bạn không có quyền đổi trạng thái tin này");
+            throw BusinessRuleException.Forbidden("Bạn không có quyền đổi trạng thái tin này");
         }
 
         // Landlord có thể ẩn tin (Hidden) hoặc gửi duyệt lại (Pending)
         if (status != PostStatus.Hidden && status != PostStatus.Pending)
         {
-            throw new Exception("Chủ trọ chỉ có thể ẩn tin hoặc gửi yêu cầu duyệt lại");
+            throw new BusinessRuleException("Chủ trọ chỉ có thể ẩn tin hoặc gửi yêu cầu duyệt lại");
         }
 
         if (status == PostStatus.Pending)
@@ -574,7 +574,7 @@ public class PostBLL : IPostService
 
         if (user == null)
         {
-            throw new Exception("Người dùng không tồn tại");
+            throw BusinessRuleException.NotFound("Người dùng không tồn tại");
         }
 
         if (user.RoleId != 2)
@@ -584,7 +584,7 @@ public class PostBLL : IPostService
 
         if (user.IsBlocked)
         {
-            throw new Exception("Tài khoản của bạn đã bị khóa");
+            throw BusinessRuleException.Forbidden("Tài khoản của bạn đã bị khóa");
         }
 
         if (user.LandlordProfile != null)
