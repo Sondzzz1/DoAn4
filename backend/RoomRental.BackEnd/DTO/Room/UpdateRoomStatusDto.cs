@@ -1,28 +1,40 @@
+using RoomRental.BackEnd.BLL;
+using RoomRental.BackEnd.Models.Enums;
+
 namespace RoomRental.BackEnd.DTO.Room;
 
 public class UpdateRoomStatusDto
 {
     public string? Status { get; set; }
-    public RoomRental.BackEnd.Models.Enums.RoomStatus? DesiredStatus { get; set; }
+    public RoomStatus? DesiredStatus { get; set; }
     public string? TrangThai { get; set; }
 
-    public RoomRental.BackEnd.Models.Enums.RoomStatus GetResolvedStatus()
+    public RoomStatus GetResolvedStatus()
     {
-        if (DesiredStatus.HasValue) return DesiredStatus.Value;
-
-        var rawStatus = !string.IsNullOrWhiteSpace(Status) ? Status : TrangThai;
-        if (!string.IsNullOrWhiteSpace(rawStatus))
+        RoomStatus? resolved = null;
+        if (DesiredStatus.HasValue)
         {
-            var s = rawStatus.Trim().ToLowerInvariant();
-            return s switch
-            {
-                "available" or "controng" or "còn trống" or "0" => RoomRental.BackEnd.Models.Enums.RoomStatus.Available,
-                "rented" or "dathue" or "đã thuê" or "1" => RoomRental.BackEnd.Models.Enums.RoomStatus.Rented,
-                "maintenance" or "tamngung" or "tạm ngưng" or "temporarilyunavailable" or "2" => RoomRental.BackEnd.Models.Enums.RoomStatus.TemporarilyUnavailable,
-                _ => RoomRental.BackEnd.Models.Enums.RoomStatus.Available
-            };
+            if (!Enum.IsDefined(DesiredStatus.Value))
+                throw new BusinessRuleException("Trạng thái phòng không hợp lệ.");
+            resolved = DesiredStatus.Value;
         }
 
-        return RoomRental.BackEnd.Models.Enums.RoomStatus.Available;
+        foreach (var raw in new[] { Status, TrangThai })
+        {
+            if (raw == null) continue;
+            var parsed = raw.Trim().ToLowerInvariant() switch
+            {
+                "available" or "controng" or "còn trống" or "0" => RoomStatus.Available,
+                "rented" or "dathue" or "đã thuê" or "1" => RoomStatus.Rented,
+                "reserved" or "giucho" or "đang giữ chỗ" or "đã giữ chỗ" or "2" => RoomStatus.Reserved,
+                "maintenance" or "tamngung" or "tạm ngưng" or "temporarilyunavailable" or "3" => RoomStatus.TemporarilyUnavailable,
+                _ => throw new BusinessRuleException("Trạng thái phòng không hợp lệ.")
+            };
+            if (resolved.HasValue && resolved.Value != parsed)
+                throw new BusinessRuleException("Các trường trạng thái phòng không khớp nhau.");
+            resolved = parsed;
+        }
+
+        return resolved ?? throw new BusinessRuleException("Vui lòng cung cấp trạng thái phòng.");
     }
 }

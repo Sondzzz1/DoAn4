@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RoomRental.BackEnd.BLL;
+using RoomRental.BackEnd.DAL;
 using RoomRental.BackEnd.DTO.Room;
 using RoomRental.BackEnd.Models;
 using RoomRental.BackEnd.Models.Enums;
@@ -146,5 +147,48 @@ public class RoomStatusTests
         var rooms = new RoomBLL(db);
         await Assert.ThrowsAsync<BusinessRuleException>(() => rooms.UpdateRoomStatusAsync(1, 1, (RoomStatus)99));
         Assert.Equal(RoomStatus.Available, (await rooms.UpdateRoomStatusAsync(1, 1, RoomStatus.Available)).Status);
+    }
+}
+
+[Collection("SqlServerWorkflow")]
+public class RoomStatusSqlTests
+{
+    [SqlServerFact]
+    public async Task SqlServer_status_mapping_persists_and_stale_reservation_is_protected()
+    {
+        var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(Environment.GetEnvironmentVariable("ROOM_RENTAL_TEST_SQL"));
+        Assert.StartsWith("RoomRental_Verification_", builder.InitialCatalog);
+        builder.InitialCatalog += "_RoomStatus";
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(builder.ConnectionString).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var password = BCrypt.Net.BCrypt.HashPassword("QaOnly-Bl001-2026!");
+        User Account(string name, int role) => new() { UserName = name + "@bl001.test", Email = name + "@bl001.test", FullName = "QA " + name, PasswordHash = password, RoleId = role };
+        var owner = new LandlordProfile { Account = Account("owner", 2) };
+        var tenant = Account("tenant", 1);
+        var room = new Room { Landlord = owner, Category = new RoomCategory { Name = "Phong tro QA" }, RoomName = "QA BL001", Address = "Dia chi QA", Price = 3000000, Area = 25, MaxOccupants = 2 };
+        var post = new Post { Landlord = owner, Room = room, Title = "QA BL001 approved", Content = "QA", Status = PostStatus.Approved, DisplayPrice = room.Price };
+        db.AddRange(post, tenant, Account("admin", 0));
+        await db.SaveChangesAsync();
+        var service = new RoomBLL(db);
+        await service.UpdateRoomStatusAsync(owner.AccountId, room.Id, new UpdateRoomStatusDto { TrangThai = "3" }.GetResolvedStatus());
+        db.ChangeTracker.Clear();
+        Assert.Equal(RoomStatus.TemporarilyUnavailable, (await db.Rooms.AsNoTracking().SingleAsync()).Status);
+        await service.UpdateRoomStatusAsync(owner.AccountId, room.Id, new UpdateRoomStatusDto { TrangThai = "0" }.GetResolvedStatus());
+        var request = new RentalRequest { PostId = post.Id, TenantAccountId = tenant.Id, LandlordAccountId = owner.AccountId, Status = RentalRequestStatus.Approved };
+        db.RentalRequests.Add(request);
+        await db.SaveChangesAsync();
+        Assert.Equal(409, (await Assert.ThrowsAsync<BusinessRuleException>(() => service.UpdateRoomStatusAsync(owner.AccountId, room.Id, RoomStatus.TemporarilyUnavailable))).StatusCode);
+        Assert.Equal(409, (await Assert.ThrowsAsync<BusinessRuleException>(() => service.DeleteRoomAsync(owner.AccountId, room.Id))).StatusCode);
+        request.Status = RentalRequestStatus.Expired;
+        db.Deposits.Add(new Deposit { RentalRequestId = request.Id, TenantAccountId = tenant.Id, LandlordAccountId = owner.AccountId, Amount = 1000000, Status = DepositStatus.Paid });
+        await db.SaveChangesAsync();
+        await Assert.ThrowsAsync<BusinessRuleException>(() => service.UpdateRoomStatusAsync(owner.AccountId, room.Id, RoomStatus.TemporarilyUnavailable));
+        Assert.Equal(RoomStatus.Available, (await db.Rooms.AsNoTracking().SingleAsync()).Status);
+
+        // Keep isolated review fixtures in each state; never modify the user's database.
+        foreach (var state in Enum.GetValues<RoomStatus>())
+            db.Rooms.Add(new Room { LandlordId = owner.Id, CategoryId = room.CategoryId, RoomName = "QA status " + state, Address = "Dia chi QA", Price = 3000000, Area = 25, MaxOccupants = 2, Status = state });
+        await db.SaveChangesAsync();
     }
 }

@@ -264,7 +264,7 @@ public class RoomBLL : IRoomService
     }
 
     /// <summary>
-    /// Cập nhật trạng thái phòng (Mục 16: Còn trống ↔ Đã thuê / Tạm ngưng)
+    /// Chủ trọ chỉ đổi giữa Còn trống và Tạm ngưng; nghiệp vụ thuê quản lý các trạng thái khác.
     /// </summary>
     public async Task<RoomDto> UpdateRoomStatusAsync(int landlordAccountId, int roomId, RoomStatus status)
     {
@@ -283,22 +283,13 @@ public class RoomBLL : IRoomService
             throw BusinessRuleException.Forbidden("Bạn không có quyền thay đổi trạng thái phòng này");
         }
 
-        var hasActiveContract = await _context.RentalContracts
-            .Include(c => c.Post)
-            .AnyAsync(c => c.Post!.RoomId == roomId && RentalContractStatus.EffectiveStatuses.Contains(c.Status));
-
-        if (hasActiveContract)
-            throw BusinessRuleException.Conflict("Phòng đang có hợp đồng hiệu lực nên không thể đổi trạng thái.");
-
-        if (room.Status == RoomStatus.Reserved)
-            throw BusinessRuleException.Conflict("Phòng đang được hệ thống giữ chỗ cho yêu cầu thuê đã duyệt.");
-
         if (status == RoomStatus.Rented || status == RoomStatus.Reserved)
-            throw new BusinessRuleException("Trạng thái đã thuê được hệ thống cập nhật từ hợp đồng, không thể đặt thủ công.");
+            throw new BusinessRuleException("Trạng thái giữ chỗ/đã thuê được hệ thống cập nhật từ nghiệp vụ thuê, không thể đặt thủ công.");
 
         if (status != RoomStatus.Available && status != RoomStatus.TemporarilyUnavailable)
             throw new BusinessRuleException("Trạng thái phòng không hợp lệ.");
 
+        await EnsureManualStatusChangeAllowedAsync(room);
         room.Status = status;
         room.UpdatedAt = DateTime.Now;
 
@@ -331,14 +322,7 @@ public class RoomBLL : IRoomService
             throw BusinessRuleException.Forbidden("Bạn không có quyền xóa phòng này");
         }
 
-        var hasActiveContract = await _context.RentalContracts
-            .Include(c => c.Post)
-            .AnyAsync(c => c.Post!.RoomId == roomId && RentalContractStatus.EffectiveStatuses.Contains(c.Status));
-        if (hasActiveContract)
-            throw BusinessRuleException.Conflict("Phòng đang có hợp đồng hiệu lực nên không thể tạm ngưng.");
-
-        if (room.Status == RoomStatus.Reserved)
-            throw BusinessRuleException.Conflict("Phòng đang được hệ thống giữ chỗ cho yêu cầu thuê đã duyệt.");
+        await EnsureManualStatusChangeAllowedAsync(room);
 
         // Đánh dấu tạm ngưng / ẩn
         room.Status = RoomStatus.TemporarilyUnavailable;
@@ -346,6 +330,23 @@ public class RoomBLL : IRoomService
 
         await _context.SaveChangesAsync();
         if (transaction != null) await transaction.CommitAsync();
+    }
+
+    private async Task EnsureManualStatusChangeAllowedAsync(Room room)
+    {
+        if (room.Status is not (RoomStatus.Available or RoomStatus.TemporarilyUnavailable))
+            throw BusinessRuleException.Conflict("Phòng đang giữ chỗ/đã thuê hoặc có trạng thái không hợp lệ, không thể đổi thủ công.");
+
+        if (await _context.RentalContracts.AnyAsync(c => c.Post!.RoomId == room.Id &&
+            RentalContractStatus.EffectiveStatuses.Contains(c.Status)))
+            throw BusinessRuleException.Conflict("Phòng đang có hợp đồng hiệu lực nên không thể đổi trạng thái.");
+
+        // Do not trust a stale room status to override an existing reservation or paid deposit.
+        if (await _context.RentalRequests.AnyAsync(r => r.Post.RoomId == room.Id &&
+            (r.Status == RentalRequestStatus.Approved ||
+                (r.Status != RentalRequestStatus.ConvertedToContract && _context.Deposits.Any(d =>
+                    d.RentalRequestId == r.Id && (d.Status == DepositStatus.Paid || d.Status == DepositStatus.Confirmed))))))
+            throw BusinessRuleException.Conflict("Phòng còn quyền giữ chỗ hoặc khoản cọc đã thanh toán chưa được xử lý, không thể đổi trạng thái thủ công.");
     }
 
     private static List<string> NormalizeImageUrls(IEnumerable<string> urls)
