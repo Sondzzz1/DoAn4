@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { roommateService, type RoommateContract } from '../../services/roommateService';
 import '../public/Roommates.css';
 import Modal from '../../components/common/Modal';
+import PaymentSafetyPanel from '../../components/payment/PaymentSafetyPanel';
 import {
   FiFileText,
   FiDollarSign,
@@ -513,6 +514,7 @@ const TenantRentalsPage: React.FC = () => {
       ) : activeTab === 'requests' ? (
         /* TAB: REQUESTS & DEPOSITS */
         <div className="space-y-6">
+          <PaymentSafetyPanel role="tenant" deposits={deposits} contracts={contracts} onChanged={loadData} />
           {deposits.length > 0 && (
             <div>
               <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">

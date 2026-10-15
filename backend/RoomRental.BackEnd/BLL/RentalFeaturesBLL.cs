@@ -453,7 +453,6 @@ public class RentalContractBLL : IRentalContractService
 
     public async Task<List<HopDongDto>> LayCuaToiAsync(int taiKhoanId)
     {
-        await ExpireEndedContractsAsync();
         var query = _db.RentalContracts.AsQueryable();
         if (taiKhoanId != 0)
         {
@@ -471,7 +470,6 @@ public class RentalContractBLL : IRentalContractService
 
     public async Task<HopDongDto> LayChiTietAsync(int taiKhoanId, int id)
     {
-        await ExpireEndedContractsAsync();
         var contract = await _db.RentalContracts.FirstOrDefaultAsync(x => x.Id == id)
             ?? throw BusinessRuleException.NotFound("Không tìm thấy hợp đồng.");
 

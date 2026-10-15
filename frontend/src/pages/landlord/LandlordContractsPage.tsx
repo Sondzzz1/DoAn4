@@ -35,6 +35,7 @@ import StatusBadge, { StatusTone } from '../../components/common/StatusBadge';
 import Modal from '../../components/landlord/LandlordModal';
 import useLandlordAction from '../../components/landlord/useLandlordAction';
 import PageState from '../../components/common/PageState';
+import PaymentSafetyPanel from '../../components/payment/PaymentSafetyPanel';
 import { CONTRACT_STATUS, DEPOSIT_STATUS, MONTHLY_BILL_STATUS, RENTAL_REQUEST_STATUS } from '../../utils/constants';
 import { getApiErrorMessage } from '../../utils/apiError';
 
@@ -798,6 +799,7 @@ const LandlordContractsPage: React.FC = () => {
       {/* Tab 3: RENTAL REQUESTS */}
       {activeTab === 'requests' && (
         <div className="space-y-4">
+          <PaymentSafetyPanel role="landlord" onChanged={loadData} />
           {deposits.length > 0 && <section className="mb-6" id="landlord-deposits">
             <h3 className="mb-3 text-base font-bold text-slate-900">Tiền cọc cần theo dõi</h3>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -805,7 +807,7 @@ const LandlordContractsPage: React.FC = () => {
                 const request = requests.find(r => r.id === dep.yeuCauThueId);
                 if (!matchesQuery(dep.id, request?.tieuDeBaiDang, request?.tenNguoiThue)) return null;
                 return <div key={dep.id} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                  <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-bold text-slate-900">{request?.tieuDeBaiDang || `Khoản cọc #${dep.id}`}</p><p className="mt-1 text-xl font-bold text-blue-600">{formatPrice(dep.soTien)}</p></div><StatusBadge label={dep.trangThai === DEPOSIT_STATUS.PENDING ? 'Chờ thanh toán' : dep.trangThai === DEPOSIT_STATUS.PAID ? 'Đã thanh toán' : dep.trangThai === DEPOSIT_STATUS.CONFIRMED ? 'Đã xác nhận' : dep.trangThai === DEPOSIT_STATUS.EXPIRED ? 'Đã hết hạn' : 'Đã đóng'} tone={dep.trangThai === DEPOSIT_STATUS.CONFIRMED ? 'success' : dep.trangThai === DEPOSIT_STATUS.PAID ? 'info' : dep.trangThai === DEPOSIT_STATUS.EXPIRED ? 'danger' : 'pending'} /></div>
+                  <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-bold text-slate-900">{request?.tieuDeBaiDang || `Khoản cọc #${dep.id}`}</p><p className="mt-1 text-xl font-bold text-blue-600">{formatPrice(dep.soTien)}</p></div><StatusBadge label={dep.trangThai === DEPOSIT_STATUS.PENDING ? 'Chờ thanh toán' : dep.trangThai === DEPOSIT_STATUS.PAID ? 'Đã thanh toán' : dep.trangThai === DEPOSIT_STATUS.CONFIRMED ? 'Đã xác nhận' : dep.trangThai === DEPOSIT_STATUS.REFUND_REQUESTED ? 'Đang yêu cầu hoàn' : dep.trangThai === DEPOSIT_STATUS.REFUNDED ? 'Đã hoàn tiền' : dep.trangThai === DEPOSIT_STATUS.EXPIRED ? 'Đã hết hạn' : 'Đã hủy'} tone={dep.trangThai === DEPOSIT_STATUS.CONFIRMED ? 'success' : dep.trangThai === DEPOSIT_STATUS.PAID ? 'info' : dep.trangThai === DEPOSIT_STATUS.EXPIRED ? 'danger' : 'pending'} /></div>
                   {dep.hanThanhToan && dep.trangThai === DEPOSIT_STATUS.PENDING && <p className="mt-2 text-xs text-amber-700">Hạn thanh toán: {new Date(dep.hanThanhToan).toLocaleString('vi-VN')}</p>}
                   {dep.ngayThanhToan && <p className="mt-2 text-xs text-slate-500">Thanh toán: {new Date(dep.ngayThanhToan).toLocaleString('vi-VN')}</p>}
                   {dep.trangThai === DEPOSIT_STATUS.PAID && <button onClick={() => openAction({ title: 'Xác nhận đã nhận cọc', message: `Xác nhận bạn đã nhận đúng khoản tiền cọc ${formatPrice(dep.soTien)}?`, run: () => handleConfirmDeposit(dep.id) })} className="mt-3 rounded-md bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700">Xác nhận đã nhận cọc</button>}

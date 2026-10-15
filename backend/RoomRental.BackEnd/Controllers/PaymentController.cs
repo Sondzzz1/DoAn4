@@ -57,12 +57,12 @@ public class PaymentController : ControllerBase
     {
         try
         {
-            var result = await _paymentService.ProcessPaymentReturnAsync(Request.Query);
+            var result = await _paymentService.ProcessPaymentReturnAsync(Request.Query, 1);
             var frontendReturnUrl = _config["VnPay:FrontendReturnUrl"] ?? "http://localhost:5174/payment/result";
+            var success = result.Success ? "true" : "false";
+            var redirectUrl = $"{frontendReturnUrl}?success={success}&orderId={Uri.EscapeDataString(result.OrderId)}&transactionId={Uri.EscapeDataString(result.TransactionId)}&amount={result.Amount.ToString(CultureInfo.InvariantCulture)}&responseCode={Uri.EscapeDataString(result.ResponseCode)}&message={Uri.EscapeDataString(result.Message)}&depositId={result.DepositId}&monthlyBillId={result.MonthlyBillId}&processedAt={Uri.EscapeDataString(result.ProcessedAt?.ToString("O") ?? string.Empty)}&targetType={Uri.EscapeDataString(result.TargetType)}";
 
-            var redirectUrl = $"{frontendReturnUrl}?success={result.Success}&orderId={Uri.EscapeDataString(result.OrderId)}&transactionId={Uri.EscapeDataString(result.TransactionId)}&amount={result.Amount.ToString(CultureInfo.InvariantCulture)}&responseCode={Uri.EscapeDataString(result.ResponseCode)}&message={Uri.EscapeDataString(result.Message)}&depositId={result.DepositId}&monthlyBillId={result.MonthlyBillId}&processedAt={Uri.EscapeDataString(result.ProcessedAt?.ToString("O") ?? string.Empty)}&targetType={Uri.EscapeDataString(result.TargetType)}";
-
-            return Redirect(redirectUrl);
+            return Redirect(redirectUrl + $"&requiresReview={(result.RequiresReview ? "true" : "false")}&paymentEventId={result.PaymentEventId}&eventState={result.EventState}");
         }
         catch (Exception ex)
         {
@@ -83,16 +83,21 @@ public class PaymentController : ControllerBase
         try
         {
             var result = await _paymentService.ProcessPaymentReturnAsync(Request.Query);
-            if (result.Success)
+            var (code, message) = result.CallbackOutcome switch
             {
-                return Ok(new { RspCode = "00", Message = "Confirm Success" });
-            }
-            return Ok(new { RspCode = "01", Message = "Order not found or invalid signature" });
+                PaymentCallbackOutcome.Recorded => ("00", "Confirm Success"),
+                PaymentCallbackOutcome.AlreadyRecorded => ("02", "Order already confirmed"),
+                PaymentCallbackOutcome.OrderNotFound => ("01", "Order not found"),
+                PaymentCallbackOutcome.InvalidAmount => ("04", "Invalid amount"),
+                PaymentCallbackOutcome.InvalidSignature => ("97", "Invalid signature"),
+                _ => ("99", "Unable to process callback")
+            };
+            return Ok(new VnPayIpnResponseDto { RspCode = code, Message = message });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi xử lý VNPay IPN");
-            return Ok(new { RspCode = "99", Message = "Unknown error" });
+            return Ok(new VnPayIpnResponseDto());
         }
     }
 

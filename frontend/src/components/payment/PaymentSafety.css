@@ -1,0 +1,24 @@
+.payment-safety { min-width: 0; padding: 20px 0; border-top: 1px solid #e2e8f0; color: #182334; }
+.ps-heading,.ps-item-title,.ps-actions,.ps-pagination { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ps-heading { justify-content: space-between; margin-bottom: 14px; }
+.ps-heading h2 { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 700; }
+.payment-safety button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; min-height: 36px; border: 1px solid #cbd5e1; border-radius: 6px; background: white; font-size: 13px; cursor: pointer; }
+.payment-safety button:disabled { opacity: .45; cursor: not-allowed; }
+.payment-safety button:hover:not(:disabled) { background: #eff6ff; }
+.ps-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.ps-tabs [aria-selected=true] { background: #122235; color: white; border-color: #122235; }
+.ps-list { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,320px),1fr)); gap: 12px; }
+.ps-item { min-width: 0; padding: 16px; border: 1px solid #e2e8f0; border-radius: 6px; background: white; overflow-wrap: anywhere; }
+.ps-item h3 { min-width: 0; font-size: 14px; font-weight: 700; }
+.ps-item strong { display: block; margin: 10px 0; color: #087c66; }
+.ps-item p,.ps-form p { font-size: 13px; line-height: 1.6; margin: 8px 0; overflow-wrap: anywhere; }
+.ps-item small,.ps-empty { color: #64748b; font-size: 12px; }
+.ps-badge { padding: 3px 7px; background: #edf2f7; color: #334155; border-radius: 4px; font-size: 11px; }
+.ps-badge.done { background: #dcfce7; color: #166534; }.ps-badge.warning { background: #fff3cd; color: #854d0e; }
+.ps-eligible { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.ps-actions { margin-top: 14px; }.ps-pagination { justify-content: flex-end; margin-top: 12px; }
+.ps-error { padding: 10px; border-radius: 4px; background: #fff1f2; color: #be123c; font-size: 13px; overflow-wrap: anywhere; }
+.ps-form label { display: grid; gap: 8px; font-size: 13px; font-weight: 600; }
+.ps-form input,.ps-form textarea { width: 100%; min-width: 0; border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px; font-size: 14px; font-weight: 400; }
+.ps-form .ps-actions { justify-content: flex-end; }.ps-form button { padding: 9px 14px; border: 1px solid #cbd5e1; border-radius: 5px; display: inline-flex; align-items: center; gap: 6px; }
+.ps-form button[type=submit] { background: #122235; color: white; }.ps-form button:disabled { opacity: .5; }

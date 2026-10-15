@@ -1,5 +1,8 @@
 using System.Data;
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using RoomRental.BackEnd.BLL.Interfaces;
@@ -34,6 +37,7 @@ public class PaymentBLL : IPaymentService
 
     public async Task<PaymentResponseDto> CreatePaymentUrlAsync(int userId, CreatePaymentRequestDto dto, string clientIp)
     {
+        await PaymentSafetySchema.EnsureAsync(_context);
         var vnpaySettings = GetVnPaySettings();
         var hasDeposit = dto.DepositId is > 0;
         var hasBill = dto.MonthlyBillId is > 0;
@@ -59,6 +63,9 @@ public class PaymentBLL : IPaymentService
                 throw BusinessRuleException.Conflict("Chỉ khoản cọc đang chờ thanh toán mới có thể thanh toán.");
             if (deposit.DueAt is not null && deposit.DueAt <= DateTime.Now)
                 throw BusinessRuleException.Conflict("Khoản đặt cọc đã hết hạn thanh toán.");
+            if (await _context.PaymentCallbackEvents.AnyAsync(e => e.PaymentTransaction!.DepositId == deposit.Id && e.ProcessingState == PaymentEventState.RequiresReview))
+                throw BusinessRuleException.Conflict("Khoản cọc có giao dịch cần đối soát; chưa được tạo lượt thanh toán mới.");
+            await ValidateTargetForSuccessAsync(new PaymentTransaction { TargetType = DepositTarget, Deposit = deposit, Amount = deposit.Amount });
             if (await _context.PaymentTransactions.AnyAsync(p => p.DepositId == deposit.Id &&
                 (p.Status == PaymentTransactionStatus.Pending || p.Status == PaymentTransactionStatus.Succeeded)))
                 throw BusinessRuleException.Conflict("Khoản cọc đã có giao dịch đang xử lý hoặc đã thành công.");
@@ -76,6 +83,8 @@ public class PaymentBLL : IPaymentService
                 throw BusinessRuleException.Forbidden("Bạn không có quyền thanh toán hóa đơn này.");
             if (bill.Status is not (MonthlyBillStatus.Unpaid or MonthlyBillStatus.Overdue))
                 throw BusinessRuleException.Conflict("Hóa đơn không ở trạng thái có thể thanh toán.");
+            if (await _context.PaymentCallbackEvents.AnyAsync(e => e.PaymentTransaction!.MonthlyBillId == bill.Id && e.ProcessingState == PaymentEventState.RequiresReview))
+                throw BusinessRuleException.Conflict("Hóa đơn có giao dịch cần đối soát; chưa được tạo lượt thanh toán mới.");
             if (await _context.PaymentTransactions.AnyAsync(p => p.MonthlyBillId == bill.Id &&
                 (p.Status == PaymentTransactionStatus.Pending || p.Status == PaymentTransactionStatus.Succeeded)))
                 throw BusinessRuleException.Conflict("Hóa đơn đã có giao dịch đang xử lý hoặc đã thanh toán.");
@@ -122,8 +131,10 @@ public class PaymentBLL : IPaymentService
         return new PaymentResponseDto { PaymentUrl = paymentUrl, OrderId = orderId, Amount = amount };
     }
 
-    public async Task<PaymentResultDto> ProcessPaymentReturnAsync(IQueryCollection query)
+    public async Task<PaymentResultDto> ProcessPaymentReturnAsync(IQueryCollection query, byte source = PaymentEventSource.Ipn)
     {
+        if (query.Count == 0)
+            return Failure("Thiếu dữ liệu phản hồi VNPay.", "", "", "");
         var vnpay = new VnPayHelper();
         foreach (var (key, value) in query)
             if (key.StartsWith("vnp_", StringComparison.Ordinal)) vnpay.AddResponseData(key, value.ToString());
@@ -134,69 +145,94 @@ public class PaymentBLL : IPaymentService
         var transactionStatus = vnpay.GetResponseData("vnp_TransactionStatus");
         var hashSecret = GetVnPaySettings().HashSecret;
         if (!vnpay.ValidateSignature(query["vnp_SecureHash"].ToString(), hashSecret))
-            return Failure("Chữ ký VNPay không hợp lệ.", orderId, transactionCode, responseCode);
+            return Failure("Chữ ký VNPay không hợp lệ.", orderId, transactionCode, responseCode, callbackOutcome: PaymentCallbackOutcome.InvalidSignature);
 
+        if (source > PaymentEventSource.Return || query.Any(p => p.Key.StartsWith("vnp_", StringComparison.Ordinal) && p.Value.Count != 1) ||
+            orderId.Length is < 1 or > 100 || transactionCode.Length > 100 || !IsProviderStatus(responseCode) || !IsProviderStatus(transactionStatus))
+            return Failure("Dữ liệu phản hồi VNPay không hợp lệ.", orderId, transactionCode, responseCode);
+        if (!string.Equals(vnpay.GetResponseData("vnp_TmnCode"), GetVnPaySettings().TmnCode, StringComparison.Ordinal))
+            return Failure("Merchant VNPay không khớp.", orderId, transactionCode, responseCode, callbackOutcome: PaymentCallbackOutcome.InvalidSignature);
+        if (!long.TryParse(vnpay.GetResponseData("vnp_Amount"), NumberStyles.None, CultureInfo.InvariantCulture, out var rawAmount) || rawAmount < 0 || rawAmount > 999999999999999999)
+            return Failure("Số tiền VNPay không hợp lệ.", orderId, transactionCode, responseCode, callbackOutcome: PaymentCallbackOutcome.InvalidAmount);
+
+        await PaymentSafetySchema.EnsureAsync(_context);
         await using var dbTransaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         await WorkflowLock.AcquireAsync(_context);
         await ExpireAttemptsAsync();
         var payment = await PaymentQuery().FirstOrDefaultAsync(p => p.OrderId == orderId);
-        if (payment == null)
-            return Failure("Không tìm thấy giao dịch thanh toán tương ứng.", orderId, transactionCode, responseCode);
-        if (!long.TryParse(vnpay.GetResponseData("vnp_Amount"), out var rawAmount) || rawAmount != (long)(payment.Amount * 100))
-            return Failure("Số tiền VNPay trả về không khớp với giao dịch.", orderId, transactionCode, responseCode, payment);
-        if (payment.Status == PaymentTransactionStatus.Succeeded)
+        var canonical = JsonSerializer.Serialize(new { source, fields = query.Where(p => p.Key.StartsWith("vnp_", StringComparison.Ordinal) && p.Key is not ("vnp_SecureHash" or "vnp_SecureHashType"))
+            .OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => new[] { p.Key, p.Value.ToString() }).ToArray() });
+        var deduplicationKey = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
+        var existing = await _context.PaymentCallbackEvents.FirstOrDefaultAsync(e => e.DeduplicationKey == deduplicationKey);
+        if (existing != null)
         {
             await dbTransaction.CommitAsync();
-            return Success(payment, "Giao dịch đã được xử lý thành công trước đó.");
+            return EventResult(existing, payment, true);
         }
-        if (payment.Status != PaymentTransactionStatus.Pending)
+        var storedTransactionCode = string.IsNullOrWhiteSpace(transactionCode) || transactionCode == "0" ? null : transactionCode;
+        DateTime? paidAtUtc = DateTime.TryParseExact(vnpay.GetResponseData("vnp_PayDate"), "yyyyMMddHHmmss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var paidAt)
+            ? new DateTimeOffset(paidAt, TimeSpan.FromHours(7)).UtcDateTime : null;
+        var receipt = new PaymentCallbackEvent { PaymentTransactionId = payment?.Id, ProviderOrderId = orderId, ProviderTransactionCode = storedTransactionCode,
+            DeduplicationKey = deduplicationKey, Source = source, ReportedAmount = rawAmount / 100m, ResponseCode = responseCode, ProviderStatus = transactionStatus,
+            ProviderPaidAtUtc = paidAtUtc, ProcessingState = PaymentEventState.RequiresReview };
+        _context.PaymentCallbackEvents.Add(receipt);
+        var duplicate = false;
+        var applied = false;
+        var resolved = storedTransactionCode == null ? null : await _context.PaymentCallbackEvents.AsNoTracking().FirstOrDefaultAsync(e =>
+            e.ProviderOrderId == orderId && e.ProviderTransactionCode == storedTransactionCode && e.ReportedAmount == receipt.ReportedAmount &&
+            e.ResponseCode == responseCode && e.ProviderStatus == transactionStatus && e.ProcessingState == PaymentEventState.Resolved);
+        if (resolved != null)
         {
-            await dbTransaction.CommitAsync();
-            return Failure("Lượt thanh toán đã kết thúc. Vui lòng kiểm tra và tạo lượt mới.", orderId, transactionCode, responseCode, payment);
+            receipt.ProcessingState = PaymentEventState.Resolved; receipt.Reason = resolved.Reason;
+            receipt.ResolvedByAccountId = resolved.ResolvedByAccountId; receipt.ResolvedAtUtc = resolved.ResolvedAtUtc; receipt.ResolutionNote = resolved.ResolutionNote;
+            duplicate = true;
         }
-
-        if (responseCode != "00" || (!string.IsNullOrWhiteSpace(transactionStatus) && transactionStatus != "00"))
+        else if (payment == null) receipt.Reason = "Không tìm thấy order; cần đối soát, không cấp quyền thuê.";
+        else if (receipt.ReportedAmount != payment.Amount) receipt.Reason = "Số tiền provider báo khác số tiền kỳ vọng; không sửa số tiền gốc.";
+        else if ((responseCode == "00") != (transactionStatus == "00")) receipt.Reason = "Hai mã kết quả provider không nhất quán.";
+        else if (payment.Status == PaymentTransactionStatus.Succeeded)
         {
-            payment.Status = PaymentTransactionStatus.Failed;
-            payment.ResponseCode = responseCode;
-            payment.TransactionCode = string.IsNullOrWhiteSpace(transactionCode) ? null : transactionCode;
-            payment.ProcessedAt = DateTime.Now;
-            RestoreBillAfterFailedPayment(payment);
-            await _context.SaveChangesAsync();
-            await dbTransaction.CommitAsync();
-            return Failure($"Giao dịch chưa thành công (mã: {responseCode}).", orderId, transactionCode, responseCode, payment);
+            if (payment.TransactionCode == storedTransactionCode && responseCode == "00") { receipt.ProcessingState = PaymentEventState.Applied; duplicate = true; }
+            else receipt.Reason = "Callback khác giao dịch thành công đã ghi nhận; giữ nguyên lịch sử.";
         }
-
-        if (string.IsNullOrWhiteSpace(transactionCode))
-            return Failure("VNPay không trả về mã giao dịch hợp lệ.", orderId, transactionCode, responseCode, payment);
-        if (await _context.PaymentTransactions.AnyAsync(p => p.Id != payment.Id && p.TransactionCode == transactionCode))
-            return Failure("Mã giao dịch VNPay đã được xử lý.", orderId, transactionCode, responseCode, payment);
-
-        ValidateTargetForSuccess(payment);
-        payment.Status = PaymentTransactionStatus.Succeeded;
-        payment.TransactionCode = transactionCode;
-        payment.ResponseCode = responseCode;
-        payment.ProcessedAt = DateTime.Now;
-
-        if (payment.Deposit != null)
+        else if (payment.Status == PaymentTransactionStatus.Failed && responseCode != "00" &&
+            payment.ResponseCode == responseCode && (payment.TransactionCode == storedTransactionCode ||
+                (payment.TransactionCode == "0" && storedTransactionCode == null)))
         {
-            payment.Deposit.Status = DepositStatus.Paid;
-            payment.Deposit.PaidAt = DateTime.Now;
+            receipt.ProcessingState = PaymentEventState.Applied; duplicate = true;
         }
+        else if (payment.Status != PaymentTransactionStatus.Pending) receipt.Reason = "Callback đến khi lượt thanh toán đã kết thúc; chưa áp dụng tiền vào quyền thuê/hóa đơn.";
+        else if (storedTransactionCode != null && await _context.PaymentTransactions.AnyAsync(p => p.Id != payment.Id && p.TransactionCode == storedTransactionCode))
+            receipt.Reason = "Mã giao dịch provider đã thuộc order khác.";
+        else if (responseCode != "00")
+        {
+            payment.Status = PaymentTransactionStatus.Failed; payment.ResponseCode = responseCode;
+            payment.TransactionCode = storedTransactionCode; payment.ProcessedAt = DateTime.Now;
+            RestoreBillAfterFailedPayment(payment); receipt.ProcessingState = PaymentEventState.Applied;
+        }
+        else if (storedTransactionCode == null) receipt.Reason = "Provider báo thành công nhưng thiếu mã giao dịch thực.";
         else
         {
-            payment.MonthlyBill!.Status = MonthlyBillStatus.Paid;
-            payment.MonthlyBill.PaidAt = DateTime.Now;
-            payment.MonthlyBill.PaymentMethod = "VNPay";
-            payment.MonthlyBill.UpdatedAt = DateTime.Now;
+            try { await ValidateTargetForSuccessAsync(payment); }
+            catch (BusinessRuleException e) { receipt.Reason = e.Message; }
+            if (receipt.Reason == null)
+            {
+                payment.Status = PaymentTransactionStatus.Succeeded; payment.TransactionCode = storedTransactionCode;
+                payment.ResponseCode = responseCode; payment.ProcessedAt = DateTime.Now;
+                if (payment.Deposit != null) { payment.Deposit.Status = DepositStatus.Paid; payment.Deposit.PaidAt = DateTime.Now; }
+                else { payment.MonthlyBill!.Status = MonthlyBillStatus.Paid; payment.MonthlyBill.PaidAt = DateTime.Now; payment.MonthlyBill.PaymentMethod = "VNPay"; }
+                receipt.ProcessingState = PaymentEventState.Applied; applied = true;
+            }
         }
-
         await _context.SaveChangesAsync();
         await dbTransaction.CommitAsync();
-        await SendSuccessNotificationsAsync(payment);
-        return Success(payment, payment.TargetType == DepositTarget
-            ? "Giao dịch thanh toán đặt cọc thành công."
-            : "Giao dịch thanh toán hóa đơn thành công.");
+        if (applied) await SendSuccessNotificationsAsync(payment!);
+        if (receipt.ProcessingState == PaymentEventState.RequiresReview)
+        {
+            _logger.LogWarning("Payment event {Id} requires reconciliation for order {OrderId}", receipt.Id, receipt.ProviderOrderId);
+            await NotifyReviewAsync(receipt, payment);
+        }
+        return EventResult(receipt, payment, duplicate);
     }
 
     public async Task ReconcilePendingPaymentsAsync(CancellationToken cancellationToken = default)
@@ -241,7 +277,7 @@ public class PaymentBLL : IPaymentService
 
     private sealed record VnPaySettings(string TmnCode, string HashSecret, string BaseUrl, string ReturnUrl);
 
-    private static void ValidateTargetForSuccess(PaymentTransaction payment)
+    private async Task ValidateTargetForSuccessAsync(PaymentTransaction payment)
     {
         if (payment.TargetType == DepositTarget && payment.Deposit != null)
         {
@@ -251,6 +287,11 @@ public class PaymentBLL : IPaymentService
                 throw BusinessRuleException.Conflict("Khoản cọc đã quá hạn thanh toán.");
             if (payment.Deposit.Status != DepositStatus.Pending)
                 throw BusinessRuleException.Conflict("Khoản cọc không còn ở trạng thái chờ thanh toán.");
+            var request = await _context.RentalRequests.Include(r => r.Post).ThenInclude(p => p.Room).SingleAsync(r => r.Id == payment.Deposit.RentalRequestId);
+            if (request.Status != RentalRequestStatus.Approved || request.Post.Room.Status != RoomStatus.Reserved ||
+                await _context.RentalRequests.AnyAsync(r => r.Id != request.Id && r.Post.RoomId == request.Post.RoomId && r.Status == RentalRequestStatus.Approved) ||
+                await _context.RentalContracts.AnyAsync(c => c.Post!.RoomId == request.Post.RoomId && RentalContractStatus.EffectiveStatuses.Contains(c.Status)))
+                throw BusinessRuleException.Conflict("Quyền giữ chỗ đã thay đổi; không tự cấp lại quyền thuê từ callback.");
             return;
         }
 
@@ -299,8 +340,46 @@ public class PaymentBLL : IPaymentService
         }
     }
 
-    private static PaymentResultDto Success(PaymentTransaction payment, string message) => new()
+    private static bool IsProviderStatus(string value) => value.Length == 2 && value.All(c => c is >= '0' and <= '9');
+
+    private async Task NotifyReviewAsync(PaymentCallbackEvent receipt, PaymentTransaction? payment)
     {
+        try
+        {
+            if (await _context.PaymentCallbackEvents.AnyAsync(e => e.Id != receipt.Id && e.ProviderOrderId == receipt.ProviderOrderId &&
+                e.ProviderTransactionCode == receipt.ProviderTransactionCode && e.ReportedAmount == receipt.ReportedAmount && e.ProcessingState == PaymentEventState.RequiresReview)) return;
+            var ids = await _context.Users.Where(u => u.RoleId == 0 && u.IsActive).Select(u => u.Id).ToListAsync();
+            foreach (var id in ids) await _notificationService.CreateNotificationAsync(id, "Giao dịch cần đối soát", $"Order {receipt.ProviderOrderId} đã lưu sự kiện #{receipt.Id} cần kiểm tra.", 1, "/admin/payments");
+            var tenant = payment?.Deposit?.TenantAccountId ?? payment?.MonthlyBill?.Contract.TenantAccountId;
+            if (tenant.HasValue) await _notificationService.CreateNotificationAsync(tenant.Value, "Giao dịch cần đối soát", "Phản hồi thanh toán đã được lưu để kiểm tra. Không thanh toán lại trước khi có kết quả đối soát.", 1, "/tenant/rentals");
+        }
+        catch (Exception ex) { _logger.LogWarning(ex, "Không gửi được thông báo đối soát cho sự kiện {Id}", receipt.Id); }
+    }
+
+    private static PaymentResultDto EventResult(PaymentCallbackEvent e, PaymentTransaction? payment, bool duplicate)
+    {
+        var outcome = duplicate ? PaymentCallbackOutcome.AlreadyRecorded : PaymentCallbackOutcome.Recorded;
+        if (payment == null) outcome = PaymentCallbackOutcome.OrderNotFound;
+        else if (e.ReportedAmount != payment.Amount) outcome = PaymentCallbackOutcome.InvalidAmount;
+        else if ((e.ResponseCode == "00") != (e.ProviderStatus == "00") || (e.ResponseCode == "00" && e.ProviderTransactionCode == null)) outcome = PaymentCallbackOutcome.NotProcessed;
+        var success = e.ProcessingState == PaymentEventState.Applied && e.ResponseCode == "00" && e.ProviderStatus == "00";
+        var result = success && payment != null ? Success(payment, "Giao dịch đã được ghi nhận thành công.", outcome)
+            : Failure(e.ProcessingState == PaymentEventState.RequiresReview
+                ? "Đã lưu phản hồi VNPay để đối soát. " + e.Reason + " Chưa áp dụng tiền vào quyền thuê/hóa đơn."
+                : e.ProcessingState == PaymentEventState.Resolved ? "Đã đối soát ngoài hệ thống. " + e.ResolutionNote
+                : $"Giao dịch không thành công (mã {e.ResponseCode}) đã được ghi nhận.",
+                e.ProviderOrderId, e.ProviderTransactionCode ?? "", e.ResponseCode, payment, outcome);
+        result.Amount = e.ReportedAmount;
+        result.RequiresReview = e.ProcessingState == PaymentEventState.RequiresReview;
+        result.EventState = e.ProcessingState;
+        result.PaymentEventId = e.Id;
+        return result;
+    }
+
+    private static PaymentResultDto Success(PaymentTransaction payment, string message,
+        PaymentCallbackOutcome callbackOutcome = PaymentCallbackOutcome.Recorded) => new()
+    {
+        CallbackOutcome = callbackOutcome,
         Success = true, Message = message, OrderId = payment.OrderId,
         TransactionId = payment.TransactionCode ?? string.Empty, Amount = payment.Amount,
         ResponseCode = payment.ResponseCode ?? "00", DepositId = payment.DepositId,
@@ -310,8 +389,9 @@ public class PaymentBLL : IPaymentService
 
     private static PaymentResultDto Failure(
         string message, string orderId, string transactionCode, string responseCode,
-        PaymentTransaction? payment = null) => new()
+        PaymentTransaction? payment = null, PaymentCallbackOutcome callbackOutcome = PaymentCallbackOutcome.NotProcessed) => new()
     {
+        CallbackOutcome = callbackOutcome,
         Success = false, Message = message, OrderId = orderId, TransactionId = transactionCode,
         Amount = payment?.Amount ?? 0, ResponseCode = responseCode,
         DepositId = payment?.DepositId, MonthlyBillId = payment?.MonthlyBillId,

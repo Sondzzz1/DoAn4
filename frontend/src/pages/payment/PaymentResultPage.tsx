@@ -7,6 +7,8 @@ const PaymentResultPage: React.FC = () => {
   const [searchParams] = useSearchParams();
 
   const success = searchParams.get('success') === 'true';
+  const requiresReview = searchParams.get('requiresReview') === 'true';
+  const resolved = searchParams.get('eventState') === '3';
   const orderId = searchParams.get('orderId') || '';
   const transactionId = searchParams.get('transactionId') || '';
   const amount = Number(searchParams.get('amount')) || 0;
@@ -17,7 +19,9 @@ const PaymentResultPage: React.FC = () => {
   return (
     <div className="max-w-xl mx-auto px-4 py-16">
       <div className="bg-white rounded-lg border border-slate-200 p-8 md:p-10 shadow-lg text-center">
-        {success ? (
+        {requiresReview || resolved ? (
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-amber-50 text-4xl text-amber-600"><FiFileText /></div>
+        ) : success ? (
           <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl shadow-inner">
             <FiCheckCircle />
           </div>
@@ -28,7 +32,7 @@ const PaymentResultPage: React.FC = () => {
         )}
 
         <h1 className="text-2xl font-black text-slate-900 mb-2">
-          {success ? 'Thanh toán thành công' : 'Thanh toán chưa thành công'}
+          {requiresReview ? 'Giao dịch cần đối soát' : resolved ? 'Đã đối soát giao dịch' : success ? 'Thanh toán thành công' : 'Thanh toán chưa thành công'}
         </h1>
 
         <p className="text-sm text-slate-600 mb-6">

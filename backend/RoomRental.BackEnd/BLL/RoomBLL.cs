@@ -345,7 +345,7 @@ public class RoomBLL : IRoomService
         if (await _context.RentalRequests.AnyAsync(r => r.Post.RoomId == room.Id &&
             (r.Status == RentalRequestStatus.Approved ||
                 (r.Status != RentalRequestStatus.ConvertedToContract && _context.Deposits.Any(d =>
-                    d.RentalRequestId == r.Id && (d.Status == DepositStatus.Paid || d.Status == DepositStatus.Confirmed))))))
+                    d.RentalRequestId == r.Id && (d.Status == DepositStatus.Paid || d.Status == DepositStatus.Confirmed || d.Status == DepositStatus.RefundRequested))))))
             throw BusinessRuleException.Conflict("Phòng còn quyền giữ chỗ hoặc khoản cọc đã thanh toán chưa được xử lý, không thể đổi trạng thái thủ công.");
     }
 

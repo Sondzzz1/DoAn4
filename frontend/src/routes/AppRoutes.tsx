@@ -7,6 +7,7 @@ import PublicLayout from '../layouts/PublicLayout';
 import AdminDashboardLayout from '../layouts/AdminDashboardLayout';
 
 import PageState from '../components/common/PageState';
+import PaymentSafetyPanel from '../components/payment/PaymentSafetyPanel';
 
 const HomePage = lazy(() => import('../pages/public/HomePage'));
 const RoomListPage = lazy(() => import('../pages/public/RoomListPage'));
@@ -236,6 +237,7 @@ const AppRoutes: React.FC = () => {
             </ProtectedRoute>
           } 
         />
+        <Route path="/admin/payments" element={<ProtectedRoute allowedRoles={['Admin']}><PaymentSafetyPanel role="admin" /></ProtectedRoute>} />
       </Route>
     </Routes>
     </Suspense>

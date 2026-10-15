@@ -1,4 +1,24 @@
+using System.Text.Json.Serialization;
+
 namespace RoomRental.BackEnd.DTO.Payment;
+
+public enum PaymentCallbackOutcome
+{
+    NotProcessed,
+    Recorded,
+    AlreadyRecorded,
+    OrderNotFound,
+    InvalidAmount,
+    InvalidSignature
+}
+
+public sealed class VnPayIpnResponseDto
+{
+    [JsonPropertyName("RspCode")]
+    public string RspCode { get; init; } = "99";
+    [JsonPropertyName("Message")]
+    public string Message { get; init; } = "Unknown error";
+}
 
 public class CreatePaymentRequestDto
 {
@@ -16,7 +36,14 @@ public class PaymentResponseDto
 
 public class PaymentResultDto
 {
+    // An IPN acknowledgement is distinct from whether the customer's payment succeeded.
+    [JsonIgnore]
+    public PaymentCallbackOutcome CallbackOutcome { get; set; }
+
     public bool Success { get; set; }
+    public bool RequiresReview { get; set; }
+    public long? PaymentEventId { get; set; }
+    public byte? EventState { get; set; }
     public string Message { get; set; } = string.Empty;
     public string OrderId { get; set; } = string.Empty;
     public string TransactionId { get; set; } = string.Empty;

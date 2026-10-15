@@ -43,6 +43,7 @@ const landlordMenu = [
 
 const adminMenu = [
   { label: 'Tổng quan', icon: FiGrid, href: ROUTES.ADMIN_DASHBOARD },
+  { label: 'Đối soát thanh toán', icon: FiDollarSign, href: '/admin/payments' },
   { label: 'Người dùng', icon: FiUsers, href: ROUTES.ADMIN_USERS },
   { label: 'Phòng trọ', icon: FiHome, href: '/admin/rooms' },
   { label: 'Tin đăng', icon: FiFileText, href: ROUTES.ADMIN_POSTS },

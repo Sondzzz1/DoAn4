@@ -151,6 +151,7 @@ public class WorkflowRegressionTests
         Assert.Equal(PaymentTransactionStatus.Expired, db.PaymentTransactions.Single(p => p.Id == 1).Status);
         Assert.Equal(DepositStatus.Pending, db.Deposits.Single().Status);
         var signer = new VnPayHelper();
+        signer.AddRequestData("vnp_TmnCode", "TEST");
         signer.AddRequestData("vnp_TxnRef", attempt.OrderId); signer.AddRequestData("vnp_Amount", "100000000");
         signer.AddRequestData("vnp_ResponseCode", "00"); signer.AddRequestData("vnp_TransactionStatus", "00"); signer.AddRequestData("vnp_TransactionNo", "txn-test");
         var query = new QueryCollection(QueryHelpers.ParseQuery(new Uri(signer.CreateRequestUrl("https://example.test/return", "test-only-secret")).Query));
