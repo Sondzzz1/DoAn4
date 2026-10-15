@@ -4,6 +4,7 @@ import { roommateService, type RoommateContract } from '../../services/roommateS
 import '../public/Roommates.css';
 import Modal from '../../components/common/Modal';
 import PaymentSafetyPanel from '../../components/payment/PaymentSafetyPanel';
+import ContractClosurePanel from '../../components/rental/ContractClosurePanel';
 import {
   FiFileText,
   FiDollarSign,
@@ -437,6 +438,7 @@ const TenantRentalsPage: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
+                    <ContractClosurePanel contractId={item.id} onChanged={loadData} />
                     {/* PDF Download Button */}
                     <button
                       onClick={() => exportService.downloadContractPdf(item.id)}

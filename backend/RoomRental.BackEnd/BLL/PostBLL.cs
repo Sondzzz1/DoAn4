@@ -51,7 +51,11 @@ public class PostBLL : IPostService
             .AsNoTracking();
 
         // Core search only includes rooms that can currently be rented.
-        query = query.Where(p => p.Status == PostStatus.Approved && p.Room.Status == RoomStatus.Available);
+        await ContractClosurePolicy.EnsureSchemaAsync(_context);
+        var blockedRooms = ContractClosurePolicy.BlockedRoomIds(_context);
+        query = query.Where(p => p.Status == PostStatus.Approved && p.Room.Status == RoomStatus.Available && !blockedRooms.Contains(p.RoomId) &&
+            !_context.RentalContracts.Any(c => c.Post!.RoomId == p.RoomId && RentalContractStatus.EffectiveStatuses.Contains(c.Status)) &&
+            !_context.RentalRequests.Any(r => r.Post.RoomId == p.RoomId && r.Status == RentalRequestStatus.Approved));
 
         // Lọc theo Landlord
         if (q.LandlordId.HasValue)
@@ -278,6 +282,7 @@ public class PostBLL : IPostService
 
     private async Task<PostDto> GetPostByIdInternalAsync(int postId, bool incrementView, bool requirePublicVisibility)
     {
+        await ContractClosurePolicy.EnsureSchemaAsync(_context);
         var post = await _context.Posts
             .Include(p => p.Landlord)
                 .ThenInclude(l => l.Account)
@@ -328,7 +333,7 @@ public class PostBLL : IPostService
             Bedrooms = post.Room.Bedrooms,
             Bathrooms = post.Room.Bathrooms,
             Floor = post.Room.Floor,
-            RoomStatus = post.Room.Status,
+            RoomStatus = post.Room.Status == RoomStatus.Available && await ContractClosurePolicy.BlockedRoomIds(_context).ContainsAsync(post.RoomId) ? RoomStatus.TemporarilyUnavailable : post.Room.Status,
 
             Province = post.Room.Province ?? string.Empty,
             District = post.Room.District ?? string.Empty,

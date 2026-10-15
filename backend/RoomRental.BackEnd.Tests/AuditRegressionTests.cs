@@ -57,6 +57,12 @@ public class AuditRegressionTests
             UpdatedAt = new DateTime(2026, 10, 31, 16, 59, 59, DateTimeKind.Utc), MonthlyRent = 2400000 };
         db.RentalContracts.Add(contract);
         await db.SaveChangesAsync();
+        if (status == RentalContractStatus.Terminated)
+        {
+            db.ContractClosures.Add(new ContractClosure { ContractId = contract.Id, RoomId = 1, EndKind = 1,
+                EffectiveEndAtUtc = new DateTime(2026, 10, 31, 16, 59, 59, DateTimeKind.Utc), LastRentalDate = new DateTime(2026, 10, 31) });
+            await db.SaveChangesAsync();
+        }
         var service = new MonthlyBillBLL(db, null!, NullLogger<MonthlyBillBLL>.Instance);
         var dto = new TaoHoaDonDto { HopDongId = 1, Thang = 10, Nam = 2026, SoDienMoi = 10, SoNuocMoi = 1 };
         Assert.Equal(403, (await Assert.ThrowsAsync<BusinessRuleException>(() => service.TaoAsync(10, dto))).StatusCode);
@@ -107,7 +113,7 @@ public class AuditRegressionTests
         var service = new RentalContractBLL(db, null!, NullLogger<RentalContractBLL>.Instance, new FixedClock(DateTimeOffset.Parse(utcNow)));
         await service.ReconcileContractLifecycleAsync(72);
         Assert.Equal(expected, db.RentalContracts.Single().Status);
-        Assert.Equal(expected == RentalContractStatus.Active ? RoomStatus.Rented : RoomStatus.Available, db.Rooms.Single(r => r.Id == 1).Status);
+        Assert.Equal(RoomStatus.Rented, db.Rooms.Single(r => r.Id == 1).Status);
     }
 
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider
@@ -136,6 +142,8 @@ public class AuditRegressionTests
         await using var db = PostBLLTests.CreateContext();
         await WorkflowRegressionTests.SeedWorkflowAsync(db);
         db.Rooms.Single(r => r.Id == 1).Status = RoomStatus.Available;
+        db.RentalRequests.Single().Status = RentalRequestStatus.Cancelled;
+        db.Deposits.Single().Status = DepositStatus.Refunded;
         await db.SaveChangesAsync();
         var notifications = new TestNotifications();
         var service = new ViewingAppointmentBLL(db, notifications);

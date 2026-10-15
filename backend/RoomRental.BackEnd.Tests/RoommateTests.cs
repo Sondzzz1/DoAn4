@@ -82,12 +82,13 @@ public class RoommateTests
         var contract = (await db.RentalContracts.FindAsync(1))!;
         Assert.Equal(new decimal[] { 3000000, 1000000, 3500, 20000, 150000 }, new[] { contract.MonthlyRent, contract.DepositAmount, contract.ElectricityPrice, contract.WaterPrice, contract.ServiceFee });
         Assert.Empty(await db.Deposits.ToListAsync()); Assert.Empty(await db.MonthlyBills.ToListAsync()); Assert.Empty(await db.PaymentTransactions.ToListAsync());
-        await Contracts(db).ChamDutAsync(1, 1);
-        Assert.Equal(0, (await db.Rooms.FindAsync(1))!.CurrentOccupants); Assert.Equal(RoomStatus.Available, (await db.Rooms.FindAsync(1))!.Status);
-        Assert.All(await db.ContractOccupants.ToListAsync(), x => { Assert.Equal(1, x.Status); Assert.NotNull(x.LeftAt); });
+        await ContractClosureTests.End(db, new ContractClosureTests.Clock());
+        Assert.Equal(2, (await db.Rooms.FindAsync(1))!.CurrentOccupants); Assert.Equal(RoomStatus.Rented, (await db.Rooms.FindAsync(1))!.Status);
+        Assert.Equal(ContractOccupantStatus.Active, (await db.ContractOccupants.SingleAsync(x => x.TenantAccountId == 4)).Status);
+        Assert.Equal(ContractOccupantStatus.Left, (await db.ContractOccupants.SingleAsync(x => x.TenantAccountId == 3)).Status);
         Assert.All(await db.RoommatePosts.ToListAsync(), x => Assert.Equal(4, x.Status));
         Assert.Equal(4, (await db.RoommateRequests.SingleAsync(r => r.ApplicantTenantAccountId == 5)).Status);
-        await service.ReconcileLifecycleAsync(); await service.ReconcileLifecycleAsync(); Assert.Equal(0, (await db.Rooms.FindAsync(1))!.CurrentOccupants);
+        await service.ReconcileLifecycleAsync(); await service.ReconcileLifecycleAsync(); Assert.Equal(2, (await db.Rooms.FindAsync(1))!.CurrentOccupants);
     }
     [Theory]
     [InlineData(0)] [InlineData(2)] [InlineData(3)] [InlineData(4)] [InlineData(5)]
@@ -136,8 +137,8 @@ public class RoommateTests
         await Error(409, () => Service(db).ApplyAsync(4, p, new())); await Error(409, () => Service(db).DecideAsync(1, r, true, new() { Approve = true }));
         Assert.Empty((await Service(db).SearchAsync(null, 1, 12)).Items);
         await Contracts(db).ReconcileContractLifecycleAsync(72);
-        Assert.Equal(5, (await db.RoommatePosts.FindAsync(p))!.Status); Assert.Equal(4, (await db.RoommateRequests.FindAsync(r))!.Status); Assert.Equal(0, (await db.Rooms.FindAsync(1))!.CurrentOccupants);
-        Assert.Equal(ContractOccupantStatus.Left, (await db.ContractOccupants.SingleAsync()).Status);
+        Assert.Equal(5, (await db.RoommatePosts.FindAsync(p))!.Status); Assert.Equal(4, (await db.RoommateRequests.FindAsync(r))!.Status); Assert.Equal(2, (await db.Rooms.FindAsync(1))!.CurrentOccupants);
+        Assert.Equal(ContractOccupantStatus.Active, (await db.ContractOccupants.SingleAsync()).Status);
     }
     [Fact]
     public async Task Pending_start_counts_zero_then_activation_and_retries_count_one()
@@ -213,9 +214,9 @@ public class RoommateSqlServerTests
         c.EndDate = DateTime.Today.AddDays(-1); await db.SaveChangesAsync();
         await lifecycle.ReconcileContractLifecycleAsync(72); await service.ReconcileLifecycleAsync();
         await lifecycle.ReconcileContractLifecycleAsync(72); await service.ReconcileLifecycleAsync();
-        Assert.Equal(0, room.CurrentOccupants); Assert.Equal(RoomStatus.Available, room.Status);
+        Assert.Equal(2, room.CurrentOccupants); Assert.Equal(RoomStatus.Rented, room.Status);
         Assert.Equal(RoommatePostStatus.Expired, (await db.RoommatePosts.FindAsync(p))!.Status);
-        Assert.All(await db.ContractOccupants.ToListAsync(), o => { Assert.Equal(ContractOccupantStatus.Left, o.Status); Assert.NotNull(o.LeftAt); });
+        Assert.All(await db.ContractOccupants.ToListAsync(), o => { Assert.Equal(ContractOccupantStatus.Active, o.Status); Assert.Null(o.LeftAt); });
         Assert.Equal(RoommateRequestStatus.Cancelled, (await db.RoommateRequests.SingleAsync(x => x.ApplicantTenantAccountId == 4)).Status);
     }
     [SqlServerFact]
@@ -248,7 +249,7 @@ public class RoommateSqlServerTests
         db.RoommateRequests.Add(new RoommateRequest { RoommatePostId = pendingPost.Id, ApplicantTenantAccountId = 7 });
         await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync()); db.ChangeTracker.Clear();
         await RoommateTests.Service(db).ReconcileLifecycleAsync(); await RoommateTests.Service(db).ReconcileLifecycleAsync(); Assert.Equal(3, (await db.Rooms.FindAsync(1))!.CurrentOccupants);
-        await RoommateTests.Contracts(db).ChamDutAsync(1, 1); Assert.Equal(0, (await db.Rooms.FindAsync(1))!.CurrentOccupants);
-        Assert.All(await db.ContractOccupants.ToListAsync(), o => Assert.Equal(1, o.Status));
+        await ContractClosureTests.End(db, new ContractClosureTests.Clock()); Assert.Equal(3, (await db.Rooms.FindAsync(1))!.CurrentOccupants);
+        Assert.All(await db.ContractOccupants.ToListAsync(), o => Assert.Equal(0, o.Status));
     }
 }

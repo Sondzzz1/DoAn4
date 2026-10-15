@@ -49,6 +49,7 @@ public class DepositRefundBLL(ApplicationDbContext db, INotificationService noti
     public async Task<DepositRefundDto> ActAsync(int accountId, int id, string action, RefundActionDto dto)
     {
         await PaymentSafetySchema.EnsureAsync(db);
+        if (action == "confirm") await ContractClosurePolicy.EnsureSchemaAsync(db);
         await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
         await WorkflowLock.AcquireAsync(db);
         var user = await ActorAsync(accountId);
@@ -96,8 +97,9 @@ public class DepositRefundBLL(ApplicationDbContext db, INotificationService noti
                     await db.RentalContracts.AnyAsync(c => c.Post!.RoomId == roomId && RentalContractStatus.EffectiveStatuses.Contains(c.Status)) ||
                     await db.Deposits.AnyAsync(d => d.Id != item.DepositId &&
                         (d.Status == DepositStatus.Paid || d.Status == DepositStatus.Confirmed || d.Status == DepositStatus.RefundRequested) &&
+                        !db.ContractSettlements.Any(s => s.DepositId == d.Id && s.Status == SettlementState.Completed) &&
                         db.RentalRequests.Any(r => r.Id == d.RentalRequestId && r.Post.RoomId == roomId && r.Status != RentalRequestStatus.ConvertedToContract));
-                if (!hasRight && request.Post.Room.Status == RoomStatus.Reserved) request.Post.Room.Status = RoomStatus.Available;
+                if (!hasRight && request.Post.Room.Status == RoomStatus.Reserved && !await ContractClosurePolicy.BlockedRoomIds(db).ContainsAsync(roomId)) request.Post.Room.Status = RoomStatus.Available;
                 break;
             default: throw BusinessRuleException.Conflict("Trạng thái yêu cầu hoàn cọc không cho phép thao tác này.");
         }

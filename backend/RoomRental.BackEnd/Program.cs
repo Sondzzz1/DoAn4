@@ -49,6 +49,7 @@ builder.Services.AddScoped<IChatService, ChatBLL>();
 builder.Services.AddScoped<INotificationService, NotificationBLL>();
 builder.Services.AddScoped<IPaymentService, PaymentBLL>();
 builder.Services.AddScoped<DepositRefundBLL>();
+builder.Services.AddScoped<ContractClosureBLL>();
 builder.Services.AddScoped<PaymentEventBLL>();
 builder.Services.AddScoped<IMonthlyBillService, MonthlyBillBLL>();
 builder.Services.AddScoped<IExportService, ExportBLL>();

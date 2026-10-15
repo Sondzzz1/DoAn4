@@ -36,6 +36,7 @@ public class RentalRequestBLL : IRentalRequestService
             ?? throw BusinessRuleException.NotFound("Không tìm thấy bài đăng");
         if (post.Status != PostStatus.Approved) throw BusinessRuleException.Conflict("Bài đăng chưa được duyệt hoặc không còn khả dụng.");
         if (post.Room.Status != RoomStatus.Available) throw BusinessRuleException.Conflict("Phòng hiện không còn trống.");
+        await ContractClosurePolicy.EnsureRoomCanBeGrantedAsync(_db, post.RoomId);
         if (post.Landlord.AccountId == nguoiThueId) throw BusinessRuleException.Forbidden("Chủ trọ không thể gửi yêu cầu thuê phòng của mình.");
         if (await _db.RentalRequests.AnyAsync(x => x.PostId == dto.BaiDangId && x.TenantAccountId == nguoiThueId && x.Status == RentalRequestStatus.Pending))
             throw BusinessRuleException.Conflict("Bạn đã gửi yêu cầu thuê phòng này.");
@@ -81,6 +82,7 @@ public class RentalRequestBLL : IRentalRequestService
             var room = item.Post.Room;
             if (room.Status != RoomStatus.Available)
                 throw BusinessRuleException.Conflict("Phòng đã được giữ chỗ hoặc không còn trống.");
+            await ContractClosurePolicy.EnsureRoomCanBeGrantedAsync(_db, room.Id);
 
             var hasOtherApprovedRequest = await _db.RentalRequests
                 .Include(x => x.Post)
@@ -158,6 +160,7 @@ public class RentalRequestBLL : IRentalRequestService
 
     public async Task<YeuCauThueDto> HuyAsync(int nguoiThueId, int id)
     {
+        await ContractClosurePolicy.EnsureSchemaAsync(_db);
         await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         await WorkflowLock.AcquireAsync(_db);
         var item = await _db.RentalRequests
@@ -188,7 +191,7 @@ public class RentalRequestBLL : IRentalRequestService
                 .AnyAsync(x => x.Id != item.Id &&
                     x.Status == RentalRequestStatus.Approved &&
                     x.Post.RoomId == room.Id);
-            if (!hasOtherApprovedRequest && room.Status == RoomStatus.Reserved)
+            if (!hasOtherApprovedRequest && room.Status == RoomStatus.Reserved && !await ContractClosurePolicy.BlockedRoomIds(_db).ContainsAsync(room.Id))
             {
                 room.Status = RoomStatus.Available;
                 room.UpdatedAt = DateTime.Now;
@@ -284,6 +287,7 @@ public class DepositBLL : IDepositService
 
     public async Task ReconcileExpiredDepositsAsync(CancellationToken cancellationToken = default)
     {
+        await ContractClosurePolicy.EnsureSchemaAsync(_db);
         var now = DateTime.Now;
         await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
         await WorkflowLock.AcquireAsync(_db, cancellationToken);
@@ -316,7 +320,7 @@ public class DepositBLL : IDepositService
                 .AnyAsync(x => !requestIds.Contains(x.Id) && x.Status == RentalRequestStatus.Approved && x.Post.RoomId == request.Post.RoomId, cancellationToken);
             var hasContract = await _db.RentalContracts.AnyAsync(c => c.Post!.RoomId == request.Post.RoomId &&
                 RentalContractStatus.EffectiveStatuses.Contains(c.Status), cancellationToken);
-            if (!hasContract && !hasOtherApprovedRequest && request.Post.Room.Status == RoomStatus.Reserved)
+            if (!hasContract && !hasOtherApprovedRequest && request.Post.Room.Status == RoomStatus.Reserved && !await ContractClosurePolicy.BlockedRoomIds(_db).ContainsAsync(request.Post.RoomId, cancellationToken))
             {
                 request.Post.Room.Status = RoomStatus.Available;
                 request.Post.Room.UpdatedAt = now;
@@ -365,6 +369,7 @@ public class RentalContractBLL : IRentalContractService
 
     public async Task<HopDongDto> TaoAsync(int chuTroId, TaoHopDongDto dto)
     {
+        await ContractClosurePolicy.EnsureSchemaAsync(_db);
         await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         await WorkflowLock.AcquireAsync(_db);
         var request = await _db.RentalRequests
@@ -377,6 +382,7 @@ public class RentalContractBLL : IRentalContractService
         if (request.Status != RentalRequestStatus.Approved)
             throw BusinessRuleException.Conflict("Yêu cầu thuê chưa được duyệt hoặc đã được chuyển thành hợp đồng.");
         var room = request.Post.Room;
+        await ContractClosurePolicy.EnsureRoomCanBeGrantedAsync(_db, room.Id, request.Id);
         if (room.Status != RoomStatus.Reserved)
             throw BusinessRuleException.Conflict("Phòng hiện không còn trong trạng thái giữ chỗ.");
         var hasOtherApprovedRequest = await _db.RentalRequests
@@ -393,6 +399,8 @@ public class RentalContractBLL : IRentalContractService
             d.RentalRequestId == request.Id && d.Status == DepositStatus.Confirmed);
         if (confirmedDeposit == null)
             throw BusinessRuleException.Conflict("Khoản cọc phải được chủ trọ xác nhận trước khi tạo hợp đồng.");
+        if (await _db.ContractSettlements.AnyAsync(s => s.DepositId == confirmedDeposit.Id && s.Status != SettlementState.Superseded))
+            throw BusinessRuleException.Conflict("Khoản cọc đã được đưa vào hồ sơ tất toán.");
 
         var startDate = RoomRental.BackEnd.Helpers.RentalCalendar.SelectedDate(dto.NgayBatDau);
         var endDate = RoomRental.BackEnd.Helpers.RentalCalendar.SelectedDate(dto.NgayKetThuc);
@@ -429,7 +437,7 @@ public class RentalContractBLL : IRentalContractService
             ServiceFee = request.Post.Room.ServiceFee ?? 0,
             Terms = string.IsNullOrWhiteSpace(dto.DieuKhoan) ? null : dto.DieuKhoan.Trim(),
             Status = RentalContractStatus.PendingSignature,
-            CreatedAt = DateTime.Now
+            CreatedAt = _clock.GetUtcNow().UtcDateTime
         };
 
         _db.RentalContracts.Add(item);
@@ -439,6 +447,9 @@ public class RentalContractBLL : IRentalContractService
             room.Status = RoomStatus.Reserved;
             room.UpdatedAt = DateTime.Now;
         }
+        await _db.SaveChangesAsync();
+        var closure = await ContractClosurePolicy.GetOrCreateAsync(_db, item);
+        ContractClosurePolicy.Event(_db, closure.Id, "contract-created", chuTroId > 0 ? chuTroId : null, to: "0");
         await _db.SaveChangesAsync();
         await transaction.CommitAsync();
 
@@ -481,6 +492,7 @@ public class RentalContractBLL : IRentalContractService
 
     public async Task<HopDongDto> XacNhanAsync(int taiKhoanId, int id)
     {
+        await ContractClosurePolicy.EnsureSchemaAsync(_db);
         await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         await WorkflowLock.AcquireAsync(_db);
         var item = await _db.RentalContracts.FirstOrDefaultAsync(x => x.Id == id)
@@ -492,6 +504,9 @@ public class RentalContractBLL : IRentalContractService
         var today = RoomRental.BackEnd.Helpers.RentalCalendar.Today(_clock);
         if (item.EndDate.Date < today)
             throw BusinessRuleException.Conflict("Hợp đồng đã quá ngày kết thúc, không thể ký.");
+        if (await _db.ContractSettlements.AnyAsync(s => s.Status != SettlementState.Superseded &&
+            _db.Deposits.Any(d => d.Id == s.DepositId && d.RentalRequestId == item.RentalRequestId)))
+            throw BusinessRuleException.Conflict("Cọc đang/đã tất toán, không được ký hợp đồng để dùng lại cọc.");
 
         if (taiKhoanId == item.TenantAccountId)
         {
@@ -507,6 +522,7 @@ public class RentalContractBLL : IRentalContractService
         if (item.TenantConfirmed && item.LandlordConfirmed)
         {
             var post = await _db.Posts.Include(p => p.Room).FirstAsync(p => p.Id == item.PostId);
+            await ContractClosurePolicy.EnsureRoomCanBeGrantedAsync(_db, post.RoomId, item.RentalRequestId, item.Id);
             var hasOtherActiveContract = await _db.RentalContracts
                 .Include(c => c.Post)
                 .AnyAsync(c => c.Id != item.Id && c.Post!.RoomId == post.RoomId &&
@@ -523,6 +539,9 @@ public class RentalContractBLL : IRentalContractService
             post.Room.UpdatedAt = DateTime.Now;
         }
 
+        await _db.Entry(item).Reference(c => c.Post).LoadAsync();
+        var signedClosure = await ContractClosurePolicy.GetOrCreateAsync(_db, item);
+        ContractClosurePolicy.Event(_db, signedClosure.Id, "contract-signed", taiKhoanId > 0 ? taiKhoanId : null, "0", item.Status.ToString());
         await _db.SaveChangesAsync();
         var occupancyRoomId = await _db.Posts.Where(p => p.Id == item.PostId).Select(p => p.RoomId).FirstAsync();
         await ContractOccupancyPolicy.RecalculateCurrentOccupantsAsync(_db, occupancyRoomId);
@@ -538,50 +557,8 @@ public class RentalContractBLL : IRentalContractService
         return await MapToDtoAsync(item);
     }
 
-    public async Task<HopDongDto> ChamDutAsync(int taiKhoanId, int id, string? lyDo = null)
-    {
-        await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
-        await WorkflowLock.AcquireAsync(_db);
-        var item = await _db.RentalContracts.FirstOrDefaultAsync(x => x.Id == id)
-            ?? throw BusinessRuleException.NotFound("Không tìm thấy hợp đồng.");
-        if (taiKhoanId != 0 && item.LandlordAccountId != taiKhoanId)
-            throw BusinessRuleException.Forbidden("Bạn không có quyền chấm dứt hợp đồng này.");
-        if (item.Status is not (RentalContractStatus.Active or RentalContractStatus.PendingStart))
-            throw BusinessRuleException.Conflict("Chỉ hợp đồng đã ký mới có thể chấm dứt.");
-
-        item.Status = RentalContractStatus.Terminated;
-        item.UpdatedAt = DateTime.Now;
-        await ContractOccupancyPolicy.EndAsync(_db, item.Id, false);
-
-        var post = await _db.Posts.Include(p => p.Room).FirstOrDefaultAsync(p => p.Id == item.PostId);
-        if (post?.Room != null)
-        {
-            var hasOtherActiveContract = await _db.RentalContracts
-                .Include(c => c.Post)
-                .AnyAsync(c => c.Id != item.Id && c.Post!.RoomId == post.RoomId && RentalContractStatus.EffectiveStatuses.Contains(c.Status));
-            var hasReservation = await _db.RentalRequests.AnyAsync(r => r.Id != item.RentalRequestId &&
-                r.Post.RoomId == post.RoomId && r.Status == RentalRequestStatus.Approved);
-            if (!hasOtherActiveContract && !hasReservation)
-            {
-                post.Room.Status = RoomStatus.Available;
-                post.Room.UpdatedAt = DateTime.Now;
-            }
-        }
-
-        await _db.SaveChangesAsync();
-        if (post != null)
-        {
-            await ContractOccupancyPolicy.RecalculateCurrentOccupantsAsync(_db, post.RoomId);
-            await _db.SaveChangesAsync();
-        }
-        await transaction.CommitAsync();
-        await SendNotificationAsync(
-            item.TenantAccountId,
-            "Hợp đồng đã chấm dứt",
-            string.IsNullOrWhiteSpace(lyDo) ? "Chủ trọ đã chấm dứt hợp đồng thuê." : $"Chủ trọ đã chấm dứt hợp đồng: {lyDo.Trim()}",
-            "/tenant/rentals");
-        return await MapToDtoAsync(item);
-    }
+    public Task<HopDongDto> ChamDutAsync(int taiKhoanId, int id, string? lyDo = null) =>
+        throw BusinessRuleException.Conflict("Không còn hỗ trợ chấm dứt đơn phương/mở phòng ngay. Hãy gửi đề nghị kết thúc và thực hiện bàn giao, tất toán trong hồ sơ hợp đồng.");
 
     private async Task SendNotificationAsync(int accountId, string title, string content, string link)
     {
@@ -595,42 +572,21 @@ public class RentalContractBLL : IRentalContractService
         }
     }
 
-    private async Task ExpireEndedContractsAsync()
+    private async Task ExpireEndedContractsAsync(CancellationToken cancellationToken)
     {
-        await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
-        await WorkflowLock.AcquireAsync(_db);
-        var now = _clock.GetUtcNow().UtcDateTime;
-        var today = RoomRental.BackEnd.Helpers.RentalCalendar.Today(_clock);
-        var due = await _db.RentalContracts.Include(c => c.Post).ThenInclude(p => p!.Room)
-            .Where(c => (c.Status == RentalContractStatus.Active && c.EndDate.Date < today) ||
-                (c.Status == RentalContractStatus.PendingStart && (c.EndDate.Date < today || c.StartDate.Date <= today))).ToListAsync();
-        foreach (var contract in due)
+        foreach (var contract in await ContractClosurePolicy.ReconcileAsync(_db, _clock, cancellationToken))
         {
-            contract.Status = contract.EndDate.Date < today ? RentalContractStatus.Expired : RentalContractStatus.Active;
-            contract.UpdatedAt = now;
-            if (contract.Status == RentalContractStatus.Active) contract.Post!.Room.Status = RoomStatus.Rented;
-            else await ContractOccupancyPolicy.EndAsync(_db, contract.Id, true);
+            await SendNotificationAsync(contract.TenantAccountId, "Hợp đồng đã hết hiệu lực", "Cần thực hiện bàn giao và tất toán. Phòng chưa được tự giải phóng.", "/tenant/rentals");
+            await SendNotificationAsync(contract.LandlordAccountId, "Hợp đồng đã hết hiệu lực", "Cần xác nhận bàn giao, chốt công nợ và tất toán trước khi cho thuê lại.", "/landlord/contracts?tab=contracts");
         }
-        await _db.SaveChangesAsync();
-        foreach (var roomId in due.Select(c => c.Post!.RoomId).Distinct())
-            await ContractOccupancyPolicy.RecalculateCurrentOccupantsAsync(_db, roomId);
-        foreach (var room in due.Where(c => c.Status == RentalContractStatus.Expired).Select(c => c.Post!.Room).DistinctBy(r => r.Id))
-        {
-            var hasEffective = await _db.RentalContracts.AnyAsync(c => RentalContractStatus.EffectiveStatuses.Contains(c.Status) && c.Post!.RoomId == room.Id);
-            var hasReservation = await _db.RentalRequests.AnyAsync(r => r.Status == RentalRequestStatus.Approved && r.Post.RoomId == room.Id);
-            if (!hasEffective && !hasReservation && room.Status is RoomStatus.Rented or RoomStatus.Reserved)
-                room.Status = RoomStatus.Available;
-        }
-        await _db.SaveChangesAsync();
-        await transaction.CommitAsync();
     }
 
     public async Task ReconcileContractLifecycleAsync(int pendingSignatureExpiryHours, CancellationToken cancellationToken = default)
     {
-        await ExpireEndedContractsAsync();
+        await ExpireEndedContractsAsync(cancellationToken);
 
         var expiryHours = Math.Clamp(pendingSignatureExpiryHours, 1, 24 * 30);
-        var expiryCutoff = DateTime.Now.AddHours(-expiryHours);
+        var expiryCutoff = _clock.GetUtcNow().UtcDateTime.AddHours(-expiryHours);
         await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
         await WorkflowLock.AcquireAsync(_db, cancellationToken);
         var staleContracts = await _db.RentalContracts
@@ -658,12 +614,13 @@ public class RentalContractBLL : IRentalContractService
 
         foreach (var contract in staleContracts)
         {
+            await _db.Entry(contract).Reference(c => c.Post).LoadAsync(cancellationToken);
+            var closure = await ContractClosurePolicy.GetOrCreateAsync(_db, contract);
             contract.Status = RentalContractStatus.Cancelled;
             contract.UpdatedAt = DateTime.Now;
+            closure.EndKind = 2; closure.EffectiveEndAtUtc = _clock.GetUtcNow().UtcDateTime; closure.LastRentalDate = contract.StartDate.Date.AddDays(-1);
+            ContractClosurePolicy.Event(_db, closure.Id, "unsigned-cancelled", null, to: "Cancelled", key: $"unsigned-cancelled:{contract.Id}");
             await ContractOccupancyPolicy.EndAsync(_db, contract.Id, false);
-            if (!requestIdsWithOtherEffectiveContracts.Contains(contract.RentalRequestId) &&
-                requests.TryGetValue(contract.RentalRequestId, out var request))
-                request.Status = RentalRequestStatus.Approved;
         }
 
         await _db.SaveChangesAsync(cancellationToken);
@@ -683,7 +640,7 @@ public class RentalContractBLL : IRentalContractService
             await SendNotificationAsync(
                 contract.LandlordAccountId,
                 "Hợp đồng chờ ký đã hết hạn",
-                "Hợp đồng chưa đủ chữ ký đã được hủy. Yêu cầu thuê đã quay lại trạng thái được duyệt để bạn xử lý tiếp.",
+                "Hợp đồng chưa đủ chữ ký đã được hủy. Cần xác nhận chưa nhận phòng và tất toán cọc trước khi giải phóng phòng.",
                 "/landlord/contracts");
         }
     }

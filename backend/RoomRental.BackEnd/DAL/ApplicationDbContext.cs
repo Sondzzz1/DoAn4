@@ -43,6 +43,11 @@ public class ApplicationDbContext : DbContext
     public DbSet<RoommatePost> RoommatePosts { get; set; } = null!;
     public DbSet<RoommateRequest> RoommateRequests { get; set; } = null!;
     public DbSet<ContractOccupant> ContractOccupants { get; set; } = null!;
+    public DbSet<ContractClosure> ContractClosures { get; set; } = null!;
+    public DbSet<ContractEndRequest> ContractEndRequests { get; set; } = null!;
+    public DbSet<ContractSettlement> ContractSettlements { get; set; } = null!;
+    public DbSet<ContractSettlementLine> ContractSettlementLines { get; set; } = null!;
+    public DbSet<ContractClosureEvent> ContractClosureEvents { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

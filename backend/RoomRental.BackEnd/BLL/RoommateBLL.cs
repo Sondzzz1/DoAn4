@@ -36,10 +36,17 @@ public class RoommateBLL : IRoommateService
     }
     private static void EnsureActive(RentalContract c)
     { if (!IsActive(c)) throw BusinessRuleException.Conflict("Cần hợp đồng đang hiệu lực và phòng đang được thuê."); }
+    private async Task EnsureRecruitingAsync(RentalContract c)
+    {
+        EnsureActive(c);
+        await ContractClosurePolicy.EnsureSchemaAsync(_db);
+        if (await _db.ContractClosures.AnyAsync(h => h.ContractId == c.Id && h.HandoverRevision > 0))
+            throw BusinessRuleException.Conflict("Hợp đồng đang xử lý trả phòng, không được nhận thêm người ở ghép.");
+    }
     private async Task<int> RemainingAsync(RoommatePost p) => Math.Max(0, p.RequestedSlots - await _db.RoommateRequests.CountAsync(r => r.RoommatePostId == p.Id && r.Status == RoommateRequestStatus.Approved));
     private async Task EnsureOpenAsync(RoommatePost p)
     {
-        EnsureActive(p.Contract);
+        await EnsureRecruitingAsync(p.Contract);
         if (p.Status != RoommatePostStatus.Open || await RemainingAsync(p) < 1 ||
             await ContractOccupancyPolicy.CountAsync(_db, p.Contract.Post!.RoomId) >= p.Contract.Post.Room.MaxOccupants)
             throw BusinessRuleException.Conflict("Tin không còn nhận yêu cầu hoặc phòng đã đủ người.");
@@ -65,9 +72,10 @@ public class RoommateBLL : IRoommateService
 
     public async Task<RoommateSearchResult> SearchAsync(string? keyword, int pageNumber, int pageSize)
     {
+        await ContractClosurePolicy.EnsureSchemaAsync(_db);
         pageNumber = Math.Clamp(pageNumber, 1, 1000000); pageSize = Math.Clamp(pageSize, 1, 50);
         var today = RentalCalendar.Today(TimeProvider.System);
-        var q = Posts().AsNoTracking().Where(p => p.Status == RoommatePostStatus.Open &&
+        var q = Posts().AsNoTracking().Where(p => p.Status == RoommatePostStatus.Open && !_db.ContractClosures.Any(h => h.ContractId == p.ContractId && h.HandoverRevision > 0) &&
             p.Contract.Status == RentalContractStatus.Active && p.Contract.StartDate.Date <= today && p.Contract.EndDate.Date >= today &&
             p.Contract.Post!.Room.Status == RoomStatus.Rented &&
             _db.RentalContracts.Count(c => c.Post!.RoomId == p.Contract.Post.RoomId && c.Status == RentalContractStatus.Active) +
@@ -99,7 +107,7 @@ public class RoommateBLL : IRoommateService
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable); await WorkflowLock.AcquireAsync(_db);
         var c = await ContractEntityAsync(dto.ContractId);
         if (c.TenantAccountId != accountId) throw BusinessRuleException.Forbidden("Bạn không phải người thuê chính của hợp đồng.");
-        EnsureActive(c);
+        await EnsureRecruitingAsync(c);
         var count = await ContractOccupancyPolicy.RecalculateCurrentOccupantsAsync(_db, c.Post!.RoomId);
         if (dto.RequestedSlots > c.Post.Room.MaxOccupants - count) throw BusinessRuleException.Conflict("Số người cần tìm vượt số chỗ còn lại.");
         if (await _db.RoommatePosts.AnyAsync(p => p.ContractId == c.Id && (p.Status == RoommatePostStatus.PendingLandlordApproval || p.Status == RoommatePostStatus.Open)))
@@ -115,7 +123,7 @@ public class RoommateBLL : IRoommateService
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable); await WorkflowLock.AcquireAsync(_db);
         var p = await PostAsync(id);
         if (p.CreatorTenantAccountId != accountId) throw BusinessRuleException.Forbidden("Không có quyền sửa tin này.");
-        EnsureActive(p.Contract);
+        await EnsureRecruitingAsync(p.Contract);
         if (dto.ContractId != p.ContractId || p.Status is not (RoommatePostStatus.PendingLandlordApproval or RoommatePostStatus.Open or RoommatePostStatus.Rejected))
             throw BusinessRuleException.Conflict("Không thể đổi hợp đồng hoặc sửa tin đã kết thúc.");
         var approved = await _db.RoommateRequests.CountAsync(r => r.RoommatePostId == id && r.Status == RoommateRequestStatus.Approved);
@@ -137,7 +145,7 @@ public class RoommateBLL : IRoommateService
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable); await WorkflowLock.AcquireAsync(_db);
         var p = await PostAsync(id);
         if (p.Contract.LandlordAccountId != accountId) throw BusinessRuleException.Forbidden("Tin không thuộc hợp đồng của bạn.");
-        EnsureActive(p.Contract);
+        await EnsureRecruitingAsync(p.Contract);
         if (p.Status != RoommatePostStatus.PendingLandlordApproval) throw BusinessRuleException.Conflict("Tin không đang chờ duyệt.");
         if (!dto.Approve && (string.IsNullOrWhiteSpace(dto.Reason) || dto.Reason.Length > 500)) throw new BusinessRuleException("Cần lý do từ chối không quá 500 ký tự.");
         var count = await ContractOccupancyPolicy.RecalculateCurrentOccupantsAsync(_db, p.Contract.Post!.RoomId);
@@ -243,7 +251,7 @@ public class RoommateBLL : IRoommateService
         if (c.TenantAccountId != accountId && c.LandlordAccountId != accountId) throw BusinessRuleException.Forbidden("Không có quyền xem người cư trú của hợp đồng.");
         var count = await ContractOccupancyPolicy.CountAsync(_db, c.Post!.RoomId);
         return new RoommateContractDto { ContractId = c.Id, RoomName = c.Post.Room.RoomName, ContractStatus = c.Status, MaxOccupants = c.Post.Room.MaxOccupants, CurrentOccupants = count, AvailableSlots = Math.Max(0, c.Post.Room.MaxOccupants - count),
-            CanCreatePost = IsActive(c) && count < c.Post.Room.MaxOccupants && !await _db.RoommatePosts.AnyAsync(p => p.ContractId == c.Id && (p.Status == RoommatePostStatus.Open || p.Status == RoommatePostStatus.PendingLandlordApproval)),
+            CanCreatePost = IsActive(c) && !await _db.ContractClosures.AnyAsync(h => h.ContractId == c.Id && h.HandoverRevision > 0) && count < c.Post.Room.MaxOccupants && !await _db.RoommatePosts.AnyAsync(p => p.ContractId == c.Id && (p.Status == RoommatePostStatus.Open || p.Status == RoommatePostStatus.PendingLandlordApproval)),
             Occupants = await _db.ContractOccupants.Where(o => o.ContractId == c.Id).OrderByDescending(o => o.JoinedAt).Select(o => new ContractOccupantDto { Id = o.Id, TenantAccountId = o.TenantAccountId, TenantName = o.Tenant.FullName, Status = o.Status, JoinedAt = o.JoinedAt, LeftAt = o.LeftAt }).ToListAsync() };
     }
     public async Task<RoommateContractDto> LeaveAsync(int accountId, int occupantId)
@@ -261,18 +269,16 @@ public class RoommateBLL : IRoommateService
     }
     public async Task ReconcileLifecycleAsync(CancellationToken cancellationToken = default)
     {
+        await ContractClosurePolicy.EnsureSchemaAsync(_db);
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken); await WorkflowLock.AcquireAsync(_db, cancellationToken);
         var ended = await _db.RentalContracts.Where(c => c.Status == RentalContractStatus.Expired || c.Status == RentalContractStatus.Terminated || c.Status == RentalContractStatus.Cancelled).Select(c => new { c.Id, c.Status }).ToListAsync(cancellationToken);
-        var departed = new List<int>();
         foreach (var c in ended)
         {
-            departed.AddRange(await _db.ContractOccupants.Where(o => o.ContractId == c.Id && o.Status == ContractOccupantStatus.Active).Select(o => o.TenantAccountId).ToListAsync(cancellationToken));
             await ContractOccupancyPolicy.EndAsync(_db, c.Id, c.Status == RentalContractStatus.Expired);
         }
         await SaveAsync();
         foreach (var id in await _db.Rooms.Select(r => r.Id).ToListAsync(cancellationToken)) await ContractOccupancyPolicy.RecalculateCurrentOccupantsAsync(_db, id);
         await SaveAsync(); await tx.CommitAsync(cancellationToken);
-        foreach (var id in departed.Distinct()) await NotifyAsync(id, "Hợp đồng phòng ở ghép đã kết thúc", "Vui lòng liên hệ người thuê chính hoặc chủ trọ.");
     }
     private IQueryable<RoommateRequestDto> RequestDtos() => _db.RoommateRequests.Select(r => new RoommateRequestDto { Id = r.Id, RoommatePostId = r.RoommatePostId, ApplicantTenantAccountId = r.ApplicantTenantAccountId, ApplicantName = r.Applicant.FullName, ApplicantAvatar = r.Applicant.AvatarUrl, Message = r.Message, Status = r.Status, PostTitle = r.Post.Title, CreatorTenantAccountId = r.Post.CreatorTenantAccountId, CreatorName = r.Post.Creator.FullName, CreatedAt = r.CreatedAt });
     private Task<RoommateRequestDto> RequestDtoAsync(int id) => RequestDtos().FirstAsync(r => r.Id == id);

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RoomRental.BackEnd.DAL;
+using RoomRental.BackEnd.Models;
 using RoomRental.BackEnd.Models.Enums;
 
 namespace RoomRental.BackEnd.BLL;
@@ -19,7 +20,12 @@ internal static class ContractOccupancyPolicy
 
     public static async Task<int> CountAsync(ApplicationDbContext db, int roomId)
     {
-        var contracts = db.RentalContracts.Where(c => c.Post!.RoomId == roomId && c.Status == RentalContractStatus.Active);
+        await ContractClosurePolicy.EnsureSchemaAsync(db);
+        var contracts = db.RentalContracts.Where(c => c.Post!.RoomId == roomId &&
+            !db.ContractClosures.Any(h => h.ContractId == c.Id && h.HandoverStatus == HandoverState.Confirmed) &&
+            (c.Status == RentalContractStatus.Active ||
+                ((c.Status == RentalContractStatus.Terminated || c.Status == RentalContractStatus.Expired) &&
+                db.ContractClosureEvents.Any(e => e.EventType == "contract-ended" && e.FromState == "1" && db.ContractClosures.Any(h => h.Id == e.ClosureId && h.ContractId == c.Id)))));
         return await contracts.CountAsync() + await db.ContractOccupants.CountAsync(o =>
             o.Status == ContractOccupantStatus.Active && contracts.Any(c => c.Id == o.ContractId));
     }
@@ -37,10 +43,5 @@ internal static class ContractOccupancyPolicy
         foreach (var request in await db.RoommateRequests.Where(r => r.Post.ContractId == contractId &&
             (r.Status == RoommateRequestStatus.Pending || r.Status == RoommateRequestStatus.AcceptedByPrimaryTenant)).ToListAsync())
             request.Status = RoommateRequestStatus.Cancelled;
-        foreach (var occupant in await db.ContractOccupants.Where(o => o.ContractId == contractId && o.Status == ContractOccupantStatus.Active).ToListAsync())
-        {
-            occupant.Status = ContractOccupantStatus.Left;
-            occupant.LeftAt = now < occupant.JoinedAt ? occupant.JoinedAt : now;
-        }
     }
 }

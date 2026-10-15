@@ -136,7 +136,7 @@ public class RoomStatusTests
     }
 
     [Fact]
-    public async Task Historical_converted_deposit_does_not_block_reletting_and_invalid_target_does_not_persist()
+    public async Task Historical_terminal_contract_requires_verified_closure_and_invalid_target_does_not_persist()
     {
         await using var db = PostBLLTests.CreateContext();
         await WorkflowRegressionTests.SeedWorkflowAsync(db);
@@ -146,7 +146,8 @@ public class RoomStatusTests
         await db.SaveChangesAsync();
         var rooms = new RoomBLL(db);
         await Assert.ThrowsAsync<BusinessRuleException>(() => rooms.UpdateRoomStatusAsync(1, 1, (RoomStatus)99));
-        Assert.Equal(RoomStatus.Available, (await rooms.UpdateRoomStatusAsync(1, 1, RoomStatus.Available)).Status);
+        Assert.Equal(409, (await Assert.ThrowsAsync<BusinessRuleException>(() => rooms.UpdateRoomStatusAsync(1, 1, RoomStatus.Available))).StatusCode);
+        Assert.Equal(RoomStatus.TemporarilyUnavailable, db.Rooms.Single(r => r.Id == 1).Status);
     }
 }
 

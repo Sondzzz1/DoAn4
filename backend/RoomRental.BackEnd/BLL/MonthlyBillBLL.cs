@@ -44,13 +44,13 @@ public class MonthlyBillBLL : IMonthlyBillService
 
         var periodStart = new DateTime(dto.Nam, dto.Thang, 1);
         var lastRentalDay = contract.EndDate.Date;
+        await ContractClosurePolicy.EnsureSchemaAsync(_db);
+        var closure = await _db.ContractClosures.FirstOrDefaultAsync(h => h.ContractId == contract.Id);
+        if (closure?.LastRentalDate != null) lastRentalDay = closure.LastRentalDate.Value;
         if (contract.Status == RentalContractStatus.Terminated)
         {
-            if (!contract.UpdatedAt.HasValue)
+            if (closure?.LastRentalDate == null)
                 throw BusinessRuleException.Conflict("Hợp đồng cũ chưa có mốc chấm dứt để xác định kỳ hóa đơn cuối.");
-            // Terminal contracts cannot be edited; UpdatedAt is the existing UTC termination timestamp.
-            var terminatedOn = RoomRental.BackEnd.Helpers.RentalCalendar.UtcDateInVietnam(contract.UpdatedAt.Value);
-            if (terminatedOn < lastRentalDay) lastRentalDay = terminatedOn;
         }
         if (lastRentalDay < contract.StartDate.Date || periodStart > lastRentalDay || periodStart.AddMonths(1) <= contract.StartDate.Date)
             throw new BusinessRuleException("Kỳ hóa đơn phải thuộc thời gian thuê thực tế của hợp đồng.");
@@ -61,6 +61,8 @@ public class MonthlyBillBLL : IMonthlyBillService
         var oldElectricity = previous?.NewElectricity ?? dto.SoDienCu;
         var oldWater = previous?.NewWater ?? dto.SoNuocCu;
         ValidateReadings(oldElectricity, dto.SoDienMoi, oldWater, dto.SoNuocMoi);
+        await ValidateClosureMetersAsync(contract.Id, dto.SoDienMoi, dto.SoNuocMoi);
+        await ContractClosurePolicy.BillChangingAsync(_db, contract.Id, chuTroId);
 
         var bill = new MonthlyBill
         {
@@ -164,6 +166,8 @@ public class MonthlyBillBLL : IMonthlyBillService
         var oldElectricity = previous?.NewElectricity ?? bill.OldElectricity;
         var oldWater = previous?.NewWater ?? bill.OldWater;
         ValidateReadings(oldElectricity, dto.SoDienMoi, oldWater, dto.SoNuocMoi);
+        await ValidateClosureMetersAsync(bill.ContractId, dto.SoDienMoi, dto.SoNuocMoi);
+        await ContractClosurePolicy.BillChangingAsync(_db, bill.ContractId, chuTroId);
         if ((dto.SoDienMoi != bill.NewElectricity || dto.SoNuocMoi != bill.NewWater) &&
             await _db.MonthlyBills.AnyAsync(b => b.ContractId == bill.ContractId && b.Status != MonthlyBillStatus.Cancelled &&
                 b.Year * 12 + b.Month > bill.Year * 12 + bill.Month))
@@ -200,6 +204,7 @@ public class MonthlyBillBLL : IMonthlyBillService
         if (bill.Status == MonthlyBillStatus.PendingPayment)
             throw BusinessRuleException.Conflict("Hóa đơn đang được thanh toán trực tuyến, không thể xác nhận thủ công.");
 
+        await ContractClosurePolicy.BillChangingAsync(_db, bill.ContractId, taiKhoanId);
         bill.Status = MonthlyBillStatus.Paid;
         bill.PaidAt = DateTime.Now;
         bill.PaymentMethod = dto?.PhuongThucThanhToan?.Trim() ?? "Chủ trọ xác nhận";
@@ -244,6 +249,7 @@ public class MonthlyBillBLL : IMonthlyBillService
         if (await _db.MonthlyBills.AnyAsync(b => b.ContractId == bill.ContractId && b.Status != MonthlyBillStatus.Cancelled &&
             b.Year * 12 + b.Month > bill.Year * 12 + bill.Month))
             throw BusinessRuleException.Conflict("Không thể hủy hóa đơn đã có kỳ sau sử dụng chỉ số điện nước.");
+        await ContractClosurePolicy.BillChangingAsync(_db, bill.ContractId, chuTroId);
         bill.Status = MonthlyBillStatus.Cancelled;
         bill.UpdatedAt = DateTime.Now;
         await _db.SaveChangesAsync();
@@ -253,10 +259,11 @@ public class MonthlyBillBLL : IMonthlyBillService
 
     public async Task ReconcileOverdueAsync()
     {
+        await ContractClosurePolicy.EnsureSchemaAsync(_db);
         await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
         await WorkflowLock.AcquireAsync(_db);
         var overdue = await _db.MonthlyBills
-            .Where(b => b.Status == MonthlyBillStatus.Unpaid && b.DueDate < DateTime.Now)
+            .Where(b => b.Status == MonthlyBillStatus.Unpaid && b.DueDate < DateTime.Now && !_db.ContractClosures.Any(h => h.ContractId == b.ContractId && h.BillingFinalizedAtUtc != null))
             .ToListAsync();
         if (overdue.Count == 0) return;
         foreach (var bill in overdue) bill.Status = MonthlyBillStatus.Overdue;
@@ -268,6 +275,13 @@ public class MonthlyBillBLL : IMonthlyBillService
         _db.MonthlyBills.Where(b => b.ContractId == contractId && b.Status != MonthlyBillStatus.Cancelled &&
             b.Year * 12 + b.Month < year * 12 + month)
         .OrderByDescending(b => b.Year).ThenByDescending(b => b.Month).FirstOrDefaultAsync();
+
+    private async Task ValidateClosureMetersAsync(int contractId, decimal electricity, decimal water)
+    {
+        var h = await _db.ContractClosures.FirstOrDefaultAsync(x => x.ContractId == contractId);
+        if (h?.HandoverStatus == HandoverState.Confirmed && (h.HandoverKind == HandoverKind.NeverTaken || electricity > h.ClosingElectricity || water > h.ClosingWater))
+            throw BusinessRuleException.Conflict("Chỉ số hóa đơn vượt biên bản trả phòng hoặc hợp đồng chưa nhận phòng.");
+    }
 
     private static decimal CalculateTotal(MonthlyBill bill) =>
         bill.RoomPrice +

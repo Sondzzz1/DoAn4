@@ -90,6 +90,7 @@ public class PaymentBLL : IPaymentService
                 throw BusinessRuleException.Conflict("Hóa đơn đã có giao dịch đang xử lý hoặc đã thanh toán.");
 
             amount = bill.TotalAmount;
+            await ContractClosurePolicy.BillChangingAsync(_context, bill.ContractId, userId);
             targetType = MonthlyBillTarget;
             orderInfo = dto.OrderInfo ?? $"Thanh toan hoa don thang {bill.Month}/{bill.Year} ID {bill.Id}";
             bill.Status = MonthlyBillStatus.PendingPayment;
@@ -288,6 +289,7 @@ public class PaymentBLL : IPaymentService
             if (payment.Deposit.Status != DepositStatus.Pending)
                 throw BusinessRuleException.Conflict("Khoản cọc không còn ở trạng thái chờ thanh toán.");
             var request = await _context.RentalRequests.Include(r => r.Post).ThenInclude(p => p.Room).SingleAsync(r => r.Id == payment.Deposit.RentalRequestId);
+            await ContractClosurePolicy.EnsureRoomCanBeGrantedAsync(_context, request.Post.RoomId, request.Id);
             if (request.Status != RentalRequestStatus.Approved || request.Post.Room.Status != RoomStatus.Reserved ||
                 await _context.RentalRequests.AnyAsync(r => r.Id != request.Id && r.Post.RoomId == request.Post.RoomId && r.Status == RentalRequestStatus.Approved) ||
                 await _context.RentalContracts.AnyAsync(c => c.Post!.RoomId == request.Post.RoomId && RentalContractStatus.EffectiveStatuses.Contains(c.Status)))
@@ -301,6 +303,7 @@ public class PaymentBLL : IPaymentService
                 throw BusinessRuleException.Conflict("Số tiền hóa đơn đã thay đổi, giao dịch bị từ chối.");
             if (payment.MonthlyBill.Status != MonthlyBillStatus.PendingPayment)
                 throw BusinessRuleException.Conflict("Hóa đơn không còn ở trạng thái chờ thanh toán.");
+            await ContractClosurePolicy.BillChangingAsync(_context, payment.MonthlyBill.ContractId, null);
             return;
         }
 

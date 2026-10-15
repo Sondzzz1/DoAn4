@@ -1,5 +1,7 @@
 # Giai đoạn 3A: Hợp đồng, trả phòng và tất toán sau hợp đồng
 
+> Cập nhật: người dùng đã duyệt 5 bảng và quy trình. Kết quả triển khai/QA mới nhất ở [BL_PHASE3A_COMPLETION_2026-10-15.md](BL_PHASE3A_COMPLETION_2026-10-15.md). Nội dung bên dưới giữ lại như báo cáo phân tích/xin duyệt tại thời điểm trước triển khai, không phải trạng thái OPEN hiện hành của các lỗi đã sửa.
+
 Ngày 15/10/2026. **Đã kiểm tra tương thích và sửa phần GET ghi dữ liệu. Chưa triển khai toàn bộ Giai đoạn 3A.** Schema, state machine và API lớn dưới đây là **đề xuất chờ duyệt**, không phải chức năng đã có.
 
 Không commit/push. Không chạy migration trên RoomRentalDB. Không gọi cổng thanh toán/ngân hàng hoặc API hoàn tiền. Dừng tại điểm xin duyệt của Giai đoạn 3A, không chuyển Giai đoạn 3B/4.

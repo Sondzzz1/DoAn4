@@ -14,7 +14,6 @@ import {
   FiUsers,
   FiHome,
   FiCheck,
-  FiAlertCircle,
   FiSearch,
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
@@ -36,6 +35,7 @@ import Modal from '../../components/landlord/LandlordModal';
 import useLandlordAction from '../../components/landlord/useLandlordAction';
 import PageState from '../../components/common/PageState';
 import PaymentSafetyPanel from '../../components/payment/PaymentSafetyPanel';
+import ContractClosurePanel from '../../components/rental/ContractClosurePanel';
 import { CONTRACT_STATUS, DEPOSIT_STATUS, MONTHLY_BILL_STATUS, RENTAL_REQUEST_STATUS } from '../../utils/constants';
 import { getApiErrorMessage } from '../../utils/apiError';
 
@@ -415,19 +415,6 @@ const LandlordContractsPage: React.FC = () => {
     }
   };
 
-  // Handle Terminate Contract
-  const handleTerminateContract = async (contractId: number, reason: string) => {
-
-    try {
-      await rentalService.terminateContract(contractId, reason || undefined);
-      toast.success('Đã chấm dứt hợp đồng thành công! Trạng thái phòng đã được chuyển về Còn trống.');
-      await loadData();
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Không thể chấm dứt hợp đồng.'));
-      return false;
-    }
-  };
-
   const handleConfirmContract = async (contractId: number) => {
     try { await rentalService.confirmContract(contractId); toast.success('Đã xác nhận hợp đồng.'); await loadData(); }
     catch (error) { toast.error(getApiErrorMessage(error, 'Không thể xác nhận hợp đồng.')); return false; }
@@ -758,6 +745,7 @@ const LandlordContractsPage: React.FC = () => {
                   </div>
 
                   <div className="contract-card-actions mt-4 flex items-center gap-2 flex-wrap">
+                    <ContractClosurePanel contractId={con.id} onChanged={loadData} />
                     {con.trangThai === CONTRACT_STATUS.PENDING_SIGNATURE && !con.chuTroDaXacNhan && <button type="button" onClick={() => openAction({ title: 'Ký hợp đồng', message: `Xác nhận ký hợp đồng #${con.id}?`, run: () => handleConfirmContract(con.id) })} className="btn-primary"><FiCheck /> Ký hợp đồng</button>}
                     <button
                       type="button"
@@ -778,14 +766,6 @@ const LandlordContractsPage: React.FC = () => {
                         >
                           <FiZap /> Lập Hóa Đơn
                         </button>
-                        {con.trangThai === CONTRACT_STATUS.ACTIVE && <button
-                          type="button"
-                          onClick={() => openAction({ title: 'Chấm dứt hợp đồng', message: 'Xác nhận chấm dứt hợp đồng và trả phòng về còn trống?', reasonLabel: 'Lý do chấm dứt (không bắt buộc)', run: reason => handleTerminateContract(con.id, reason) })}
-                          className="btn-danger"
-                          title="Chấm dứt hợp đồng và trả phòng về còn trống"
-                        >
-                          <FiAlertCircle /> Chấm Dứt HĐ
-                        </button>}
                       </>
                     )}
                   </div>

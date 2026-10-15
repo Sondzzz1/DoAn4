@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { FiCheck, FiCreditCard, FiFileText, FiRefreshCw, FiX, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import Modal from '../common/Modal';
+import { AdminContractClosureLookup } from '../rental/ContractClosurePanel';
 import { paymentSafetyService, type RefundItem, type PaymentEventItem } from '../../services/paymentSafetyService';
 import type { DepositDto, ContractDto } from '../../services/rentalService';
 import { getApiErrorMessage } from '../../utils/apiError';
@@ -85,5 +86,6 @@ export default function PaymentSafetyPanel({ role, deposits = [], contracts = []
         <div className="ps-actions"><button type="button" onClick={() => setAction(null)} disabled={busy}>Hủy</button><button type="submit" disabled={busy}><FiCheck />{busy ? 'Đang xử lý...' : 'Xác nhận'}</button></div>
       </form>
     </Modal>
+    {role === 'admin' && <AdminContractClosureLookup />}
   </section>;
 }

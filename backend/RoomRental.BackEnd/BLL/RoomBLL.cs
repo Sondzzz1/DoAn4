@@ -334,6 +334,7 @@ public class RoomBLL : IRoomService
 
     private async Task EnsureManualStatusChangeAllowedAsync(Room room)
     {
+        await ContractClosurePolicy.EnsureRoomCanBeGrantedAsync(_context, room.Id);
         if (room.Status is not (RoomStatus.Available or RoomStatus.TemporarilyUnavailable))
             throw BusinessRuleException.Conflict("Phòng đang giữ chỗ/đã thuê hoặc có trạng thái không hợp lệ, không thể đổi thủ công.");
 
@@ -345,7 +346,8 @@ public class RoomBLL : IRoomService
         if (await _context.RentalRequests.AnyAsync(r => r.Post.RoomId == room.Id &&
             (r.Status == RentalRequestStatus.Approved ||
                 (r.Status != RentalRequestStatus.ConvertedToContract && _context.Deposits.Any(d =>
-                    d.RentalRequestId == r.Id && (d.Status == DepositStatus.Paid || d.Status == DepositStatus.Confirmed || d.Status == DepositStatus.RefundRequested))))))
+                    d.RentalRequestId == r.Id && (d.Status == DepositStatus.Paid || d.Status == DepositStatus.Confirmed || d.Status == DepositStatus.RefundRequested) &&
+                    !_context.ContractSettlements.Any(s => s.DepositId == d.Id && s.Status == SettlementState.Completed))))))
             throw BusinessRuleException.Conflict("Phòng còn quyền giữ chỗ hoặc khoản cọc đã thanh toán chưa được xử lý, không thể đổi trạng thái thủ công.");
     }
 

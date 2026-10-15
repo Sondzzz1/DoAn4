@@ -44,6 +44,7 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
 
         if (post.Room.Status != RoomStatus.Available)
             throw BusinessRuleException.Conflict("Phòng hiện không còn trống để đặt lịch xem.");
+        await ContractClosurePolicy.EnsureRoomCanBeGrantedAsync(_context, post.RoomId);
 
         if (tenant.AccountId == post.Landlord.AccountId)
             throw BusinessRuleException.Forbidden("Chủ trọ không thể tự đặt lịch xem phòng của mình.");
@@ -202,6 +203,7 @@ public class ViewingAppointmentBLL : IViewingAppointmentService
             appointment.ScheduledAt <= DateTime.Now)
             throw BusinessRuleException.Conflict("Tin phải được duyệt, phòng còn trống và lịch hẹn chưa diễn ra.");
         appointment.Status = AppointmentStatus.Confirmed;
+        await ContractClosurePolicy.EnsureRoomCanBeGrantedAsync(_context, appointment.Post.RoomId);
         appointment.UpdatedAt = DateTime.Now;
 
         await _context.SaveChangesAsync();
