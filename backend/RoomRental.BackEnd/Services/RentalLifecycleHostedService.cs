@@ -35,6 +35,7 @@ public sealed class RentalLifecycleHostedService : BackgroundService
                     var pendingSignatureExpiryHours = _configuration.GetValue<int?>("RentalLifecycle:PendingSignatureExpiryHours") ?? 72;
                     await depositService.ReconcileExpiredDepositsAsync(stoppingToken);
                     await contractService.ReconcileContractLifecycleAsync(pendingSignatureExpiryHours, stoppingToken);
+                    await scope.ServiceProvider.GetRequiredService<IRoommateService>().ReconcileLifecycleAsync(stoppingToken);
                     await scope.ServiceProvider.GetRequiredService<IPaymentService>().ReconcilePendingPaymentsAsync(stoppingToken);
                     await scope.ServiceProvider.GetRequiredService<IMonthlyBillService>().ReconcileOverdueAsync();
                 }

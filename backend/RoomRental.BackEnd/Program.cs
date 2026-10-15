@@ -42,6 +42,7 @@ builder.Services.AddScoped<IDepositService, DepositBLL>();
 builder.Services.AddScoped<IRentalContractService, RentalContractBLL>();
 builder.Services.AddScoped<IIncidentService, IncidentBLL>();
 builder.Services.AddScoped<IRoomReviewService, RoomReviewBLL>();
+builder.Services.AddScoped<IRoommateService, RoommateBLL>();
 
 // Đăng ký Nhóm tính năng mới: Chat, Thông báo, Thanh toán VNPay, Quản lý hóa đơn & Xuất báo cáo
 builder.Services.AddScoped<IChatService, ChatBLL>();

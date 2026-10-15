@@ -38,6 +38,7 @@ const landlordMenu = [
   { label: 'Quản lý cọc', icon: FiDollarSign, href: '/landlord/contracts?tab=requests&section=deposits' },
   { label: 'Hợp đồng', icon: FiShield, href: '/landlord/contracts?tab=contracts' },
   { label: 'Hóa đơn', icon: FiFileText, href: '/landlord/contracts?tab=bills' },
+  { label: 'Tin và yêu cầu ở ghép', icon: FiUsers, href: '/landlord/roommates' },
 ];
 
 const adminMenu = [

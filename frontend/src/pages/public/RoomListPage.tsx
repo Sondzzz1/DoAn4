@@ -20,6 +20,7 @@ const fields = [
 ] as const;
 const numeric = ['minPrice', 'maxPrice', 'minArea', 'maxArea', 'maxOccupants', 'categoryId', 'latitude', 'longitude', 'radiusInKm', 'pageNumber', 'pageSize'];
 const empty: PostSearchResult = { items: [], totalCount: 0, pageNumber: 1, pageSize: 12, totalPages: 0 };
+const categoryByType: Record<string, string> = { apartment: 'Căn hộ', share: 'Ở ghép', house: 'Nhà nguyên căn' };
 function parseQuery(url: string): PostSearchParams {
   const values = new URLSearchParams(url);
   const params: Record<string, string | number | number[]> = {};
@@ -51,6 +52,19 @@ export default function RoomListPage() {
       setLoading(true);
       setError('');
       try {
+        const values = new URLSearchParams(url);
+        const categoryName = categoryByType[values.get('type') || ''];
+        if (categoryName) {
+          if (!values.has('categoryId')) {
+            const response = await categoryService.getActiveCategories();
+            const category = response.data.find(c => c.name === categoryName);
+            if (!category) throw new Error('Không tìm thấy danh mục tương ứng.');
+            values.set('categoryId', String(category.id));
+          }
+          values.delete('type');
+          if (active) setSearchParams(values, { replace: true });
+          return;
+        }
         const response = await postService.searchPage(parseQuery(url));
         if (active) setResult(response.data);
       } catch (e) {
@@ -58,7 +72,7 @@ export default function RoomListPage() {
       } finally { if (active) setLoading(false); }
     });
     return () => { active = false; };
-  }, [url]);
+  }, [url, setSearchParams]);
   useEffect(() => {
     let active = true;
     void categoryService.getActiveCategories().then(r => { if (active) setCategories(r.data || []); }).catch(() => {});

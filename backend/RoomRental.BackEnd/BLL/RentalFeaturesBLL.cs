@@ -526,6 +526,9 @@ public class RentalContractBLL : IRentalContractService
         }
 
         await _db.SaveChangesAsync();
+        var occupancyRoomId = await _db.Posts.Where(p => p.Id == item.PostId).Select(p => p.RoomId).FirstAsync();
+        await ContractOccupancyPolicy.RecalculateCurrentOccupantsAsync(_db, occupancyRoomId);
+        await _db.SaveChangesAsync();
         await transaction.CommitAsync();
         var recipientId = taiKhoanId == item.TenantAccountId ? item.LandlordAccountId : item.TenantAccountId;
         var content = item.Status == RentalContractStatus.Active
@@ -550,6 +553,7 @@ public class RentalContractBLL : IRentalContractService
 
         item.Status = RentalContractStatus.Terminated;
         item.UpdatedAt = DateTime.Now;
+        await ContractOccupancyPolicy.EndAsync(_db, item.Id, false);
 
         var post = await _db.Posts.Include(p => p.Room).FirstOrDefaultAsync(p => p.Id == item.PostId);
         if (post?.Room != null)
@@ -567,6 +571,11 @@ public class RentalContractBLL : IRentalContractService
         }
 
         await _db.SaveChangesAsync();
+        if (post != null)
+        {
+            await ContractOccupancyPolicy.RecalculateCurrentOccupantsAsync(_db, post.RoomId);
+            await _db.SaveChangesAsync();
+        }
         await transaction.CommitAsync();
         await SendNotificationAsync(
             item.TenantAccountId,
@@ -602,8 +611,11 @@ public class RentalContractBLL : IRentalContractService
             contract.Status = contract.EndDate.Date < today ? RentalContractStatus.Expired : RentalContractStatus.Active;
             contract.UpdatedAt = now;
             if (contract.Status == RentalContractStatus.Active) contract.Post!.Room.Status = RoomStatus.Rented;
+            else await ContractOccupancyPolicy.EndAsync(_db, contract.Id, true);
         }
         await _db.SaveChangesAsync();
+        foreach (var roomId in due.Select(c => c.Post!.RoomId).Distinct())
+            await ContractOccupancyPolicy.RecalculateCurrentOccupantsAsync(_db, roomId);
         foreach (var room in due.Where(c => c.Status == RentalContractStatus.Expired).Select(c => c.Post!.Room).DistinctBy(r => r.Id))
         {
             var hasEffective = await _db.RentalContracts.AnyAsync(c => RentalContractStatus.EffectiveStatuses.Contains(c.Status) && c.Post!.RoomId == room.Id);
@@ -650,11 +662,16 @@ public class RentalContractBLL : IRentalContractService
         {
             contract.Status = RentalContractStatus.Cancelled;
             contract.UpdatedAt = DateTime.Now;
+            await ContractOccupancyPolicy.EndAsync(_db, contract.Id, false);
             if (!requestIdsWithOtherEffectiveContracts.Contains(contract.RentalRequestId) &&
                 requests.TryGetValue(contract.RentalRequestId, out var request))
                 request.Status = RentalRequestStatus.Approved;
         }
 
+        await _db.SaveChangesAsync(cancellationToken);
+        var stalePostIds = staleContracts.Select(c => c.PostId).ToList();
+        foreach (var roomId in await _db.Posts.Where(p => stalePostIds.Contains(p.Id)).Select(p => p.RoomId).Distinct().ToListAsync(cancellationToken))
+            await ContractOccupancyPolicy.RecalculateCurrentOccupantsAsync(_db, roomId);
         await _db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 

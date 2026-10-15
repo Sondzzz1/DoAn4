@@ -52,6 +52,7 @@ const Header: React.FC = () => {
           <Link to="/rooms?type=house">Nhà nguyên căn</Link>
           <Link to="/rooms?type=apartment">Căn hộ</Link>
           <Link to="/rooms?type=share">Ở ghép</Link>
+          <Link to="/roommates">Tìm bạn ở ghép</Link>
           <Link to="/blog">Blog</Link>
         </nav>
 
@@ -102,6 +103,7 @@ const Header: React.FC = () => {
                         <FiFileText />
                         Thuê phòng & Hợp đồng
                       </Link>
+                      <Link to="/tenant/roommates" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0084ff]"><FiUser />Ở ghép của tôi</Link>
                     </>
                   )}
 
@@ -172,6 +174,8 @@ const Header: React.FC = () => {
             <Link to="/rooms?type=house" onClick={closeMobileMenu}>Nhà nguyên căn</Link>
             <Link to="/rooms?type=apartment" onClick={closeMobileMenu}>Căn hộ</Link>
             <Link to="/rooms?type=share" onClick={closeMobileMenu}>Ở ghép</Link>
+            <Link to="/roommates" onClick={closeMobileMenu}>Tìm bạn ở ghép</Link>
+            {isTenant && <Link to="/tenant/roommates" onClick={closeMobileMenu}>Ở ghép của tôi</Link>}
             <Link to="/blog" onClick={closeMobileMenu}>Blog</Link>
           </nav>
 

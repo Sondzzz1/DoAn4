@@ -236,6 +236,10 @@ public class ChatBLL : IChatService
         if (!postId.HasValue && await _context.ChatMessages.AnyAsync(m =>
             (m.SenderId == senderId && m.ReceiverId == receiverId) ||
             (m.SenderId == receiverId && m.ReceiverId == senderId))) return true;
+        if (await _context.RoommateRequests.AnyAsync(r =>
+            (r.Status == RoommateRequestStatus.Pending || r.Status == RoommateRequestStatus.AcceptedByPrimaryTenant || r.Status == RoommateRequestStatus.Approved) &&
+            ((r.ApplicantTenantAccountId == senderId && r.Post.CreatorTenantAccountId == receiverId) ||
+             (r.ApplicantTenantAccountId == receiverId && r.Post.CreatorTenantAccountId == senderId)))) return true;
         return await _context.RentalRequests.AnyAsync(r =>
                    (r.TenantAccountId == senderId && r.LandlordAccountId == receiverId) ||
                    (r.TenantAccountId == receiverId && r.LandlordAccountId == senderId)) ||

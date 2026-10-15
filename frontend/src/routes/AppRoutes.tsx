@@ -27,6 +27,9 @@ const LandlordContractsPage = lazy(() => import('../pages/landlord/LandlordContr
 const LandlordPostsPage = lazy(() => import('../pages/landlord/LandlordPostsPage'));
 const CreatePostPage = lazy(() => import('../pages/landlord/CreatePostPage'));
 const PaymentResultPage = lazy(() => import('../pages/payment/PaymentResultPage'));
+const RoommatesPage = lazy(() => import('../pages/public/RoommatesPage'));
+const RoommateDetailPage = lazy(() => import('../pages/public/RoommateDetailPage'));
+const RoommateWorkspacePage = lazy(() => import('../pages/tenant/RoommateWorkspacePage'));
 
 // Protected Route
 import ProtectedRoute from './ProtectedRoute';
@@ -52,6 +55,9 @@ const AppRoutes: React.FC = () => {
         <Route path="/" element={<HomePage />} />
         <Route path="/rooms" element={<RoomListPage />} />
         <Route path="/rooms/:id" element={<RoomDetailPage />} />
+        <Route path="/roommates" element={<RoommatesPage />} />
+        <Route path="/roommates/:id" element={<RoommateDetailPage />} />
+        <Route path="/tenant/roommates" element={<ProtectedRoute allowedRoles={['Tenant']}><RoommateWorkspacePage /></ProtectedRoute>} />
         <Route path="/blog" element={<BlogPage />} />
         <Route path="/blog/:id" element={<BlogDetailPage />} />
         <Route path="/payment/result" element={<PaymentResultPage />} />
@@ -106,6 +112,7 @@ const AppRoutes: React.FC = () => {
 
       {/* Dashboard Routes - Shared Sidebar Layout */}
       <Route element={<AdminDashboardLayout />}>
+        <Route path="/landlord/roommates" element={<ProtectedRoute allowedRoles={['Landlord']}><RoommateWorkspacePage landlord /></ProtectedRoute>} />
         {/* Landlord Routes */}
         <Route
           path="/landlord/dashboard"

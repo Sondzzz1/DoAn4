@@ -315,6 +315,7 @@ const LandlordRoomManagementPage: React.FC = () => {
               </select>
             </label>
             <Input label="Tên phòng" required value={form.tenPhong} onChange={(e) => setForm({ ...form, tenPhong: e.target.value })} />
+            {categories.find(c => c.id === form.danhMucId)?.name === 'Ở ghép' && <p className="text-sm text-slate-600">Phòng ở ghép trong hệ thống vẫn được cho thuê nguyên phòng cho một nhóm. Chức năng tìm thêm người ở ghép được sử dụng sau khi phòng đã có hợp đồng.</p>}
             <label className="block text-sm font-medium text-slate-700">Mô tả
               <textarea value={form.moTa} onChange={(e) => setForm({ ...form, moTa: e.target.value })} className="mt-1 w-full border rounded-lg px-3 py-2.5" rows={3} />
             </label>

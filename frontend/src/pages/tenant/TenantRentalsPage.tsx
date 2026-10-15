@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { roommateService, type RoommateContract } from '../../services/roommateService';
+import '../public/Roommates.css';
 import Modal from '../../components/common/Modal';
 import {
   FiFileText,
@@ -58,6 +61,7 @@ const TenantRentalsPage: React.FC = () => {
   const [requests, setRequests] = useState<RentalRequestDto[]>([]);
   const [deposits, setDeposits] = useState<DepositDto[]>([]);
   const [contracts, setContracts] = useState<ContractDto[]>([]);
+  const [roommateContracts, setRoommateContracts] = useState<RoommateContract[]>([]);
   const [bills, setBills] = useState<MonthlyBillDto[]>([]);
   const [incidents, setIncidents] = useState<IncidentDto[]>([]);
   const [reviews, setReviews] = useState<ReviewDto[]>([]);
@@ -95,6 +99,7 @@ const TenantRentalsPage: React.FC = () => {
       setBills(billsRes.data || []);
       setIncidents(incRes.data || []);
       setReviews(revRes.data || []);
+      await roommateService.contracts().then(setRoommateContracts).catch(() => setRoommateContracts([]));
     } catch (error) {
       setLoadError(getApiErrorMessage(error, 'Không thể tải dữ liệu thuê phòng.'));
     } finally {
@@ -454,6 +459,8 @@ const TenantRentalsPage: React.FC = () => {
 
                     {item.trangThai === CONTRACT_STATUS.ACTIVE && (
                       <>
+                        {roommateContracts.some(c => c.contractId === item.id && c.canCreatePost) && <Link className="rm-button" to={`/tenant/roommates?contractId=${item.id}&create=1`}>Tìm người ở ghép</Link>}
+                        <Link className="rm-button" to={`/tenant/roommates?contractId=${item.id}`}>Người ở cùng</Link>
                         <button
                           onClick={() => {
                             setSelectedContractId(item.id);

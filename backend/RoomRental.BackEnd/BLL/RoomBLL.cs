@@ -252,6 +252,8 @@ public class RoomBLL : IRoomService
         await ValidateRoomAsync(room);
         if (!publicSnapshot.SequenceEqual(RoomPublicationPolicy.Capture(room)))
         {
+            if (room.MaxOccupants < await ContractOccupancyPolicy.CountAsync(_context, room.Id))
+                throw BusinessRuleException.Conflict("Sức chứa không được nhỏ hơn số người đang cư trú.");
             await RoomPublicationPolicy.InvalidatePendingRequestsAsync(_context, room.Id);
             await RoomPublicationPolicy.ReapproveAsync(_context, room);
         }
