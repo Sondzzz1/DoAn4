@@ -65,6 +65,10 @@ public class RoommateTests
         var p = await service.CreateAsync(2, Draft()); Assert.Equal(0, p.Status); Assert.Equal(1, p.CurrentOccupants);
         Assert.Empty((await service.SearchAsync(null, 1, 12)).Items);
         await service.ModerateAsync(1, p.Id, new() { Approve = true });
+        var published = Assert.Single((await service.SearchAsync(null, 1, 12)).Items);
+        Assert.Equal(p.Id, published.Id);
+        Assert.Equal(RoomStatus.Rented, (await db.Rooms.FindAsync(1))!.Status);
+        Assert.Empty((await new PostBLL(db).SearchPageAsync(new())).Items);
         var publicPost = await service.PublicDetailAsync(p.Id); Assert.Null(publicPost.ContractId); Assert.Equal(2, publicPost.AvailableSlots);
         var b = await AcceptedAsync(db, p.Id, 3); await service.DecideAsync(1, b, true, new() { Approve = true });
         Assert.Equal(2, (await db.Rooms.FindAsync(1))!.CurrentOccupants);
