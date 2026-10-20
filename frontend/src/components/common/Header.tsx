@@ -51,8 +51,8 @@ const Header: React.FC = () => {
           <Link to="/rooms">Phòng trọ</Link>
           <Link to="/rooms?type=house">Nhà nguyên căn</Link>
           <Link to="/rooms?type=apartment">Căn hộ</Link>
-          <Link to="/rooms?type=share">Ở ghép</Link>
-          <Link to="/roommates">Tìm bạn ở ghép</Link>
+          <Link to="/rooms?type=share">Phòng cho nhóm</Link>
+          <Link to="/roommates">Ở ghép</Link>
           <Link to="/blog">Blog</Link>
         </nav>
 
@@ -173,8 +173,8 @@ const Header: React.FC = () => {
             <Link to="/rooms" onClick={closeMobileMenu}>Phòng trọ</Link>
             <Link to="/rooms?type=house" onClick={closeMobileMenu}>Nhà nguyên căn</Link>
             <Link to="/rooms?type=apartment" onClick={closeMobileMenu}>Căn hộ</Link>
-            <Link to="/rooms?type=share" onClick={closeMobileMenu}>Ở ghép</Link>
-            <Link to="/roommates" onClick={closeMobileMenu}>Tìm bạn ở ghép</Link>
+            <Link to="/rooms?type=share" onClick={closeMobileMenu}>Phòng cho nhóm</Link>
+            <Link to="/roommates" onClick={closeMobileMenu}>Ở ghép</Link>
             {isTenant && <Link to="/tenant/roommates" onClick={closeMobileMenu}>Ở ghép của tôi</Link>}
             <Link to="/blog" onClick={closeMobileMenu}>Blog</Link>
           </nav>

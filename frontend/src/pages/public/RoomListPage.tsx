@@ -111,7 +111,7 @@ export default function RoomListPage() {
     </div>
     <label htmlFor={prefix + 'categoryId'}><span>Loại phòng</span>
       <select id={prefix + 'categoryId'} value={draft.categoryId || ''} onChange={e => setDraft(previous => ({ ...previous, categoryId: e.target.value }))}>
-        <option value="">Tất cả</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        <option value="">Tất cả</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name === 'Ở ghép' ? 'Phòng cho nhóm' : c.name}</option>)}
       </select>
     </label>
     <fieldset><legend>Tiện ích</legend>{amenities.filter(a => a.isActive !== false).map(a => <label key={a.id} className="search-amenity">

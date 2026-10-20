@@ -172,7 +172,7 @@ const HomePage: React.FC = () => {
               <div className="hero-filter">
                 <select aria-label="Loại phòng" value={filters.categoryId} onChange={event => updateFilter('categoryId', event.target.value)}>
                   <option value="">Loại phòng</option>
-                  {categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
+                  {categories.map(category => <option key={category.id} value={category.id}>{category.name === 'Ở ghép' ? 'Phòng cho nhóm' : category.name}</option>)}
                 </select>
                 <FiChevronDown className="hero-filter-icon" />
               </div>
@@ -189,7 +189,7 @@ const HomePage: React.FC = () => {
         <div className="home-discovery-inner">
           <div className="section-heading"><div><p className="home-eyebrow">KHU VỰC</p><h2 className="section-title">Bạn muốn sống ở đâu?</h2></div><Link to="/rooms" className="section-more">Toàn quốc <FiChevronRight /></Link></div>
           <div className="home-area-grid">{PROVINCES.map((province, i) => <Link key={province} to={`/rooms?province=${encodeURIComponent(province)}`} className={`home-area-link area-${i}`}><span className="home-area-icon"><FiMapPin /></span><div><strong>{province}</strong><span>Xem phòng cho thuê</span></div><FiArrowUpRight /></Link>)}</div>
-          {categories.length > 0 && <nav className="home-category-links" aria-label="Loại phòng">{categories.map(category => <Link key={category.id} to={`/rooms?categoryId=${category.id}`}><FiHome />{category.name}<FiChevronRight /></Link>)}</nav>}
+          {categories.length > 0 && <nav className="home-category-links" aria-label="Loại phòng">{categories.map(category => <Link key={category.id} to={`/rooms?categoryId=${category.id}`}><FiHome />{category.name === 'Ở ghép' ? 'Phòng cho nhóm' : category.name}<FiChevronRight /></Link>)}</nav>}
         </div>
       </section>
 
