@@ -14,6 +14,7 @@ import LandlordModal from '../../components/landlord/LandlordModal';
 import useLandlordAction from '../../components/landlord/useLandlordAction';
 import RoomImageEditor from '../../components/landlord/RoomImageEditor';
 import { normalizeRoomImageUrls } from '../../utils/roomImageUrls';
+import { completeRoomAddress, mergeLocatedAddress } from '../../utils/roomAddress';
 
 const roomStatusLabel = (status: number) => ({ 0: 'Còn trống', 1: 'Đã thuê', 2: 'Đã giữ chỗ', 3: 'Tạm ngưng' }[status] || 'Không rõ');
 
@@ -63,16 +64,24 @@ const LandlordRoomManagementPage: React.FC = () => {
     addressEdited.current = true;
     setForm(previous => ({ ...previous, [field]: value, latitude: undefined, longitude: undefined }));
   };
-  const searchCompletedAddress = () => {
-    if (!addressEdited.current || !form.diaChi.trim()) return;
+  const searchAddress = () => {
+    if (!form.diaChi.trim()) return;
     addressEdited.current = false;
-    const query = buildLocationQuery(form.diaChi, form.phuong, form.quan, form.thanhPho);
+    const fields = completeRoomAddress(form);
+    setForm(previous => ({ ...previous, ...completeRoomAddress(previous) }));
+    const query = buildLocationQuery(fields.diaChi, fields.phuong, fields.quan, fields.thanhPho);
     setLocationSearch(previous => ({ query, revision: (previous?.revision || 0) + 1 }));
   };
-  const handleLocationChange = useCallback((lat: number, lng: number, location?: LocationResult) => {
+  const searchCompletedAddress = (event: React.FocusEvent<HTMLDivElement>) => {
+    if (!(event.target instanceof HTMLInputElement)) return;
+    if (event.target.id === 'room-address') setForm(previous => ({ ...previous, ...completeRoomAddress(previous) }));
+    if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return;
+    if (addressEdited.current) searchAddress();
+  };
+  const handleLocationChange = useCallback((lat: number, lng: number, location?: LocationResult, source: 'search' | 'reverse' = 'search') => {
+    addressEdited.current = false;
     setForm(previous => ({ ...previous, latitude: lat, longitude: lng,
-      ...(location ? { diaChi: location.address || location.displayName, thanhPho: location.province || '',
-        quan: location.district || '', phuong: location.ward || '' } : {}),
+      ...(location ? mergeLocatedAddress(previous, location, source) : {}),
     }));
   }, []);
 
@@ -306,7 +315,7 @@ const LandlordRoomManagementPage: React.FC = () => {
           )}
         </div>
 
-        <LandlordModal isOpen={formOpen} onClose={() => { if (!saving && !locationBusy) setFormOpen(false); }} title={editingId ? 'Cập nhật phòng' : 'Thêm phòng mới'} size="xl">
+        <LandlordModal isOpen={formOpen} onClose={() => { if (!saving) setFormOpen(false); }} title={editingId ? 'Cập nhật phòng' : 'Thêm phòng mới'} size="xl">
         <div id="room-form">
           <form onSubmit={handleSubmit} className="space-y-3">
             <label className="block text-sm font-medium">Loại phòng
@@ -329,15 +338,22 @@ const LandlordRoomManagementPage: React.FC = () => {
                 <Input key={field} label={label} type="number" min={min} step={field === 'dienTich' ? '0.1' : '1'} required value={form[field]} onChange={(e) => setForm({ ...form, [field]: Number(e.target.value) })} />
               ))}
             </div>
-            <Input id="room-address" label="Địa chỉ" required value={form.diaChi} onChange={(e) => changeAddress('diaChi', e.target.value)} onBlur={searchCompletedAddress} />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Input label="Phường / xã" value={form.phuong} onChange={(e) => changeAddress('phuong', e.target.value)} onBlur={searchCompletedAddress} />
-              <Input label="Quận / huyện" value={form.quan} onChange={(e) => changeAddress('quan', e.target.value)} onBlur={searchCompletedAddress} />
+            <div className="space-y-3" onBlur={searchCompletedAddress} onKeyDown={event => {
+              if (event.key === 'Enter' && event.target instanceof HTMLInputElement) {
+                event.preventDefault();
+                searchAddress();
+              }
+            }}>
+              <Input id="room-address" label="Địa chỉ" required value={form.diaChi} onChange={(e) => changeAddress('diaChi', e.target.value)} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input label="Phường / xã" value={form.phuong} onChange={(e) => changeAddress('phuong', e.target.value)} />
+                <Input label="Quận / huyện" value={form.quan} onChange={(e) => changeAddress('quan', e.target.value)} />
+              </div>
+              <Input label="Tỉnh / thành phố" value={form.thanhPho} onChange={(e) => changeAddress('thanhPho', e.target.value)} />
+              <LeafletMapPicker key={mapSession} latitude={form.latitude} longitude={form.longitude}
+                address={form.diaChi} ward={form.phuong} district={form.quan} province={form.thanhPho}
+                searchRequest={locationSearch} onSearchRequest={searchAddress} onLocationChange={handleLocationChange} onBusyChange={setLocationBusy} />
             </div>
-            <Input label="Tỉnh / thành phố" value={form.thanhPho} onChange={(e) => changeAddress('thanhPho', e.target.value)} onBlur={searchCompletedAddress} />
-            <LeafletMapPicker key={mapSession} latitude={form.latitude} longitude={form.longitude}
-              address={form.diaChi} ward={form.phuong} district={form.quan} province={form.thanhPho}
-              searchRequest={locationSearch} onLocationChange={handleLocationChange} onBusyChange={setLocationBusy} />
             <fieldset><legend className="text-sm font-medium">Tiện ích</legend>
               <div className="grid grid-cols-2 gap-2 mt-2">{amenities.filter(a => a.isActive !== false).map(a => <label key={a.id} className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={form.tienIchIds.includes(a.id)} onChange={e => setForm({ ...form, tienIchIds: e.target.checked ? [...form.tienIchIds, a.id] : form.tienIchIds.filter(v => v !== a.id) })} />{a.name}
@@ -348,7 +364,7 @@ const LandlordRoomManagementPage: React.FC = () => {
             {formError && <p role="alert" className="text-sm text-red-600">{formError}</p>}
 
             <div className="flex gap-3 pt-2">
-              <button type="button" disabled={saving || locationBusy} onClick={() => setFormOpen(false)} className="landlord-button">Hủy</button>
+              <button type="button" disabled={saving} onClick={() => setFormOpen(false)} className="landlord-button">Hủy</button>
               <button type="submit" disabled={saving || locationBusy} className="flex-1 bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-60">
                 {saving ? 'Đang lưu...' : editingId ? 'Lưu thay đổi' : 'Thêm phòng'}
               </button>
