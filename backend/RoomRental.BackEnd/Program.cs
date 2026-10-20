@@ -65,7 +65,14 @@ builder.Services.AddHttpClient("Geocoding", client =>
     var baseUrl = builder.Configuration["Geocoding:BaseUrl"] ?? "https://nominatim.openstreetmap.org/";
     client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
     client.DefaultRequestHeaders.UserAgent.ParseAdd("RoomRentalSystem/1.0");
-    client.Timeout = TimeSpan.FromSeconds(10);
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
+builder.Services.AddHttpClient("GeocodingFallback", client =>
+{
+    var baseUrl = builder.Configuration["Geocoding:FallbackBaseUrl"] ?? "https://photon.komoot.io/";
+    client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("RoomRentalSystem/1.0");
+    client.Timeout = TimeSpan.FromSeconds(12);
 });
 builder.Services.AddSingleton<NominatimGeocodingService>();
 
