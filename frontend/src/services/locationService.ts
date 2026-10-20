@@ -9,11 +9,12 @@ export interface LocationResult {
   province: string;
   district: string;
   ward: string;
+  street?: string;
+  houseNumber?: string;
+  matchType?: 'address' | 'street' | 'place' | 'area';
 }
 
-export function buildLocationQuery(address = '', ward = '', district = '', province = '') {
-  return [...new Set([address, ward, district, province, 'Việt Nam'].map(part => part.trim()).filter(Boolean))].join(', ');
-}
+export { buildLocationQuery } from '../utils/roomAddress';
 
 export const locationService = {
   async search(query: string, signal: AbortSignal) {
