@@ -7,6 +7,7 @@ import { roomService } from '../../services/roomService';
 import { RoomItem } from '../../types/room.types';
 import { getApiErrorMessage } from '../../utils/apiError';
 import Input from '../../components/common/Input';
+import CurrencyInput from '../../components/common/CurrencyInput';
 import PageState from '../../components/common/PageState';
 import LeafletMapPicker from '../../components/map/LeafletMapPicker';
 import { buildLocationQuery, type LocationResult } from '../../services/locationService';
@@ -18,19 +19,31 @@ import { completeRoomAddress, mergeLocatedAddress } from '../../utils/roomAddres
 
 const roomStatusLabel = (status: number) => ({ 0: 'Còn trống', 1: 'Đã thuê', 2: 'Đã giữ chỗ', 3: 'Tạm ngưng' }[status] || 'Không rõ');
 
+const numberFields = [
+  { field: 'gia', label: 'Giá thuê (VNĐ/tháng)', min: 1, currency: true },
+  { field: 'dienTich', label: 'Diện tích (m²)', min: 0.1, currency: false },
+  { field: 'soNguoiToiDa', label: 'Số người tối đa', min: 1, currency: false },
+  { field: 'tang', label: 'Tầng', min: 0, currency: false },
+  { field: 'soPhongNgu', label: 'Số phòng ngủ', min: 0, currency: false },
+  { field: 'soPhongTam', label: 'Số phòng tắm', min: 0, currency: false },
+  { field: 'tienDien', label: 'Giá điện (đ/kWh)', min: 0, currency: true },
+  { field: 'tienNuoc', label: 'Giá nước (đ/m³)', min: 0, currency: true },
+  { field: 'phiDichVu', label: 'Phí dịch vụ (đ/tháng)', min: 0, currency: true },
+] as const;
+
 const emptyForm = {
   tenPhong: '',
   danhMucId: 1,
-  tienDien: 0,
-  tienNuoc: 0,
-  phiDichVu: 0,
+  tienDien: '0',
+  tienNuoc: '0',
+  phiDichVu: '0',
   moTa: '',
-  gia: 0,
-  dienTich: 0,
-  soNguoiToiDa: 2,
-  soPhongNgu: 1,
-  soPhongTam: 1,
-  tang: 1,
+  gia: '0',
+  dienTich: '0',
+  soNguoiToiDa: '2',
+  soPhongNgu: '1',
+  soPhongTam: '1',
+  tang: '1',
   diaChi: '',
   phuong: '',
   quan: '',
@@ -134,8 +147,22 @@ const LandlordRoomManagementPage: React.FC = () => {
       return;
     }
 
-    if (form.gia <= 0 || form.dienTich <= 0 || form.soNguoiToiDa < 1) {
-      setFormError('Giá thuê, diện tích và số người tối đa phải lớn hơn 0.');
+    const numbers = {
+      gia: Number(form.gia),
+      dienTich: Number(form.dienTich),
+      soNguoiToiDa: Number(form.soNguoiToiDa),
+      tang: Number(form.tang),
+      soPhongNgu: Number(form.soPhongNgu),
+      soPhongTam: Number(form.soPhongTam),
+      tienDien: Number(form.tienDien),
+      tienNuoc: Number(form.tienNuoc),
+      phiDichVu: Number(form.phiDichVu),
+    };
+    const invalidField = numberFields.find(({ field, min }) =>
+      !form[field].trim() || !Number.isFinite(numbers[field]) || numbers[field] < min ||
+      (field !== 'dienTich' && !Number.isSafeInteger(numbers[field])));
+    if (invalidField) {
+      setFormError(`Vui lòng nhập ${invalidField.label.toLowerCase()} hợp lệ (tối thiểu ${invalidField.min.toLocaleString('vi-VN')}).`);
       return;
     }
     let imageUrls: string[];
@@ -148,10 +175,10 @@ const LandlordRoomManagementPage: React.FC = () => {
     setFormError('');
     try {
       if (editingId) {
-        await roomService.updateRoom(editingId, { ...form, imageUrls });
+        await roomService.updateRoom(editingId, { ...form, ...numbers, imageUrls });
         toast.success('Cập nhật phòng thành công');
       } else {
-        await roomService.createRoom({ ...form, imageUrls });
+        await roomService.createRoom({ ...form, ...numbers, imageUrls });
         toast.success('Thêm phòng thành công');
       }
       clearForm();
@@ -174,16 +201,16 @@ const LandlordRoomManagementPage: React.FC = () => {
     setForm({
       tenPhong: room.roomName,
       danhMucId: room.categoryId,
-      tienDien: room.electricityPrice ?? 0,
-      tienNuoc: room.waterPrice ?? 0,
-      phiDichVu: room.serviceFee ?? 0,
+      tienDien: String(room.electricityPrice ?? 0),
+      tienNuoc: String(room.waterPrice ?? 0),
+      phiDichVu: String(room.serviceFee ?? 0),
       moTa: room.description || '',
-      gia: room.price,
-      dienTich: room.area,
-      soNguoiToiDa: room.maxOccupants,
-      soPhongNgu: room.bedrooms ?? 1,
-      soPhongTam: room.bathrooms ?? 1,
-      tang: room.floor ?? 1,
+      gia: String(room.price),
+      dienTich: String(room.area),
+      soNguoiToiDa: String(room.maxOccupants),
+      soPhongNgu: String(room.bedrooms ?? 1),
+      soPhongTam: String(room.bathrooms ?? 1),
+      tang: String(room.floor ?? 1),
       diaChi: room.address,
       phuong: room.ward || '',
       quan: room.district || '',
@@ -286,7 +313,7 @@ const LandlordRoomManagementPage: React.FC = () => {
                         <div className="flex flex-wrap gap-2 mt-2 text-xs">
                           <span className="bg-slate-100 px-2 py-1 rounded-full">{room.area} m²</span>
                           <span className="bg-slate-100 px-2 py-1 rounded-full">{room.maxOccupants} người</span>
-                          <span className="bg-slate-100 px-2 py-1 rounded-full">{room.price.toLocaleString()} đ/tháng</span>
+                          <span className="bg-slate-100 px-2 py-1 rounded-full">{room.price.toLocaleString('vi-VN')} đ/tháng</span>
                         </div>
                       </div>
                     </div>
@@ -329,13 +356,13 @@ const LandlordRoomManagementPage: React.FC = () => {
               <textarea value={form.moTa} onChange={(e) => setForm({ ...form, moTa: e.target.value })} className="mt-1 w-full border rounded-lg px-3 py-2.5" rows={3} />
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {([
-                ['gia', 'Giá thuê (VNĐ/tháng)', 1], ['dienTich', 'Diện tích (m²)', 0.1],
-                ['soNguoiToiDa', 'Số người tối đa', 1], ['tang', 'Tầng', 0],
-                ['soPhongNgu', 'Số phòng ngủ', 0], ['soPhongTam', 'Số phòng tắm', 0],
-                ['tienDien', 'Giá điện (đ/kWh)', 0], ['tienNuoc', 'Giá nước (đ/m³)', 0], ['phiDichVu', 'Phí dịch vụ (đ/tháng)', 0],
-              ] as const).map(([field, label, min]) => (
-                <Input key={field} label={label} type="number" min={min} step={field === 'dienTich' ? '0.1' : '1'} required value={form[field]} onChange={(e) => setForm({ ...form, [field]: Number(e.target.value) })} />
+              {numberFields.map(({ field, label, min, currency }) => currency ? (
+                <CurrencyInput key={field} label={label} required value={form[field]}
+                  onValueChange={value => setForm(previous => ({ ...previous, [field]: value }))} />
+              ) : (
+                <Input key={field} label={label} type="number" inputMode={field === 'dienTich' ? 'decimal' : 'numeric'}
+                  min={min} step={field === 'dienTich' ? '0.1' : '1'} required value={form[field]}
+                  onChange={event => setForm(previous => ({ ...previous, [field]: event.target.value }))} />
               ))}
             </div>
             <div className="space-y-3" onBlur={searchCompletedAddress} onKeyDown={event => {

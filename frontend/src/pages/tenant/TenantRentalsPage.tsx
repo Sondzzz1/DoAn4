@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { roommateService, type RoommateContract } from '../../services/roommateService';
 import '../public/Roommates.css';
 import Modal from '../../components/common/Modal';
@@ -58,8 +58,19 @@ const billStatus = (status: number): { label: string; tone: StatusTone } => ({
   4: { label: 'Quá hạn', tone: 'danger' },
 }[status] as { label: string; tone: StatusTone } || { label: 'Không xác định', tone: 'neutral' });
 
+type RentalTab = 'requests' | 'contracts' | 'bills' | 'incidents' | 'reviews';
+const canReviewContract = (contract: ContractDto) =>
+  contract.trangThai === CONTRACT_STATUS.ACTIVE || contract.trangThai === CONTRACT_STATUS.EXPIRED || contract.trangThai === CONTRACT_STATUS.TERMINATED;
+
 const TenantRentalsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'requests' | 'contracts' | 'bills' | 'incidents' | 'reviews'>('bills');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get('tab');
+  const activeTab: RentalTab = tab === 'requests' || tab === 'contracts' || tab === 'incidents' || tab === 'reviews' ? tab : 'bills';
+  const setActiveTab = (nextTab: RentalTab) => setSearchParams(previous => {
+    const next = new URLSearchParams(previous);
+    next.set('tab', nextTab);
+    return next;
+  });
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
@@ -90,6 +101,17 @@ const TenantRentalsPage: React.FC = () => {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
+  const reviewedContractIds = new Set(reviews.map(review => review.hopDongId));
+  const reviewableContracts = contracts.filter(contract => canReviewContract(contract) && !reviewedContractIds.has(contract.id));
+  const reviewContract = contracts.find(contract => contract.id === reviewContractId);
+
+  const openReview = (contractId: number) => {
+    if (!reviewableContracts.some(contract => contract.id === contractId)) return;
+    setReviewContractId(contractId);
+    setReviewRating(5);
+    setReviewComment('');
+    setReviewModalOpen(true);
+  };
 
   async function loadData() {
     setLoading(true);
@@ -177,19 +199,21 @@ const TenantRentalsPage: React.FC = () => {
   const handleCreateReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submittingReview) return;
-    if (!reviewContractId) return;
+    if (!reviewContractId || !reviewableContracts.some(contract => contract.id === reviewContractId)) return;
 
     setSubmittingReview(true);
     try {
-      await rentalService.createReview({
+      const response = await rentalService.createReview({
         hopDongId: reviewContractId,
         soSao: reviewRating,
         nhanXet: reviewComment.trim() || undefined,
       });
+      if (response.data) setReviews(previous => [response.data, ...previous.filter(review => review.id !== response.data.id)]);
       toast.success('Đánh giá phòng thành công! Cảm ơn bạn đã phản hồi.');
       setReviewModalOpen(false);
       setReviewComment('');
       setReviewRating(5);
+      setActiveTab('reviews');
       await loadData();
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Không thể gửi đánh giá.'));
@@ -221,7 +245,7 @@ const TenantRentalsPage: React.FC = () => {
         </div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Hợp Đồng & Hóa Đơn Thuê Phòng</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Xem và thanh toán hóa đơn điện nước hàng tháng, quản lý hợp đồng thuê, đặt cọc và phản ánh sự cố.
+          Xem và thanh toán hóa đơn hàng tháng, quản lý hợp đồng, đặt cọc, phản ánh sự cố và đánh giá phòng/căn hộ đã thuê.
         </p>
       </div>
 
@@ -295,7 +319,7 @@ const TenantRentalsPage: React.FC = () => {
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          Đánh giá ({reviews.length})
+          <FiStar /> Đánh giá ({reviews.length})
         </button>
       </div>
 
@@ -478,17 +502,16 @@ const TenantRentalsPage: React.FC = () => {
                         >
                           <FiAlertTriangle /> Báo sự cố
                         </button>
-                        <button
-                          onClick={() => {
-                            setReviewContractId(item.id);
-                            setReviewModalOpen(true);
-                          }}
-                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-[#0084ff] text-xs font-bold rounded-xl border border-blue-200 cursor-pointer transition-all"
-                        >
-                          <FiStar /> Đánh giá phòng
-                        </button>
                       </>
                     )}
+                    {canReviewContract(item) && (reviewedContractIds.has(item.id) ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-700"><FiCheckCircle /> Đã đánh giá</span>
+                    ) : (
+                      <button type="button" onClick={() => openReview(item.id)}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-[#0084ff] text-xs font-bold rounded-xl border border-blue-200 cursor-pointer transition-all">
+                        <FiStar /> Đánh giá phòng
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -631,16 +654,40 @@ const TenantRentalsPage: React.FC = () => {
         )
       ) : (
         /* TAB: REVIEWS */
-        reviews.length === 0 ? (
-          <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center text-slate-500 shadow-sm">
-            Bạn chưa viết đánh giá phòng trọ nào.
-          </div>
-        ) : (
-          <div className="space-y-4">
+        <div className="space-y-6">
+          <section aria-labelledby="reviewable-rooms-title" className="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm">
+            <h2 id="reviewable-rooms-title" className="text-lg font-bold text-slate-900">Đánh giá phòng/căn hộ đã thuê</h2>
+            <p className="mt-1 text-sm text-slate-500">Bạn có thể đánh giá khi hợp đồng đang hiệu lực, đã hết hạn hoặc đã chấm dứt. Mỗi hợp đồng được đánh giá một lần.</p>
+            {reviewableContracts.length > 0 ? (
+              <div className="mt-4 space-y-3">
+                {reviewableContracts.map(contract => (
+                  <div key={contract.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-slate-200 p-4">
+                    <div className="min-w-0 break-words">
+                      <h3 className="font-semibold text-slate-900">{contract.tenPhong || `Phòng hợp đồng #${contract.id}`}</h3>
+                      {contract.diaChiPhong && <p className="mt-1 text-sm text-slate-500">{contract.diaChiPhong}</p>}
+                      <p className="mt-1 text-xs text-slate-500">Hợp đồng HD-{String(contract.id).padStart(4, '0')} · {new Date(contract.ngayBatDau).toLocaleDateString('vi-VN')} – {new Date(contract.ngayKetThuc).toLocaleDateString('vi-VN')}</p>
+                    </div>
+                    <button type="button" onClick={() => openReview(contract.id)} aria-label={`Đánh giá ${contract.tenPhong || `hợp đồng #${contract.id}`}`}
+                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#0084ff] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0073e6]">
+                      <FiStar /> Viết đánh giá
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">{contracts.some(canReviewContract)
+                ? 'Bạn đã đánh giá tất cả hợp đồng đủ điều kiện.'
+                : 'Bạn chưa có hợp đồng đủ điều kiện để đánh giá. Hợp đồng chờ xác nhận, chờ ngày bắt đầu hoặc đã hủy chưa thể đánh giá.'}</p>
+            )}
+          </section>
+          <section aria-labelledby="my-room-reviews-title" className="space-y-4">
+            <h2 id="my-room-reviews-title" className="text-lg font-bold text-slate-900">Đánh giá của bạn ({reviews.length})</h2>
+            {reviews.length === 0 && <p className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">Bạn chưa viết đánh giá nào. Hãy chọn phòng/căn hộ đã thuê ở phía trên để chia sẻ trải nghiệm.</p>}
             {reviews.map((item) => (
               <div key={item.id} className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm">
+                <h3 className="mb-2 font-semibold text-slate-900">{contracts.find(contract => contract.id === item.hopDongId)?.tenPhong || `Phòng hợp đồng #${item.hopDongId}`}</h3>
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="flex text-amber-400">
+                  <div className="flex text-amber-400" role="img" aria-label={`${item.soSao} / 5 sao`}>
                     {[1, 2, 3, 4, 5].map((s) => (
                       <FiStar key={s} className={s <= item.soSao ? 'fill-amber-400' : 'text-slate-200'} />
                     ))}
@@ -649,11 +696,11 @@ const TenantRentalsPage: React.FC = () => {
                     {new Date(item.ngayTao).toLocaleDateString('vi-VN')}
                   </span>
                 </div>
-                <p className="text-sm text-slate-700">{item.nhanXet || 'Không có nhận xét chi tiết.'}</p>
+                <p className="break-words whitespace-pre-line text-sm text-slate-700">{item.nhanXet || 'Không có nhận xét chi tiết.'}</p>
               </div>
             ))}
-          </div>
-        )
+          </section>
+        </div>
       )}
 
       {paymentTarget && <PaymentMethodModal target={paymentTarget} cashSelection={cashFor(paymentTarget.depositId, paymentTarget.monthlyBillId)} onClose={() => setPaymentTarget(null)} onChanged={loadData} />}
@@ -706,8 +753,9 @@ const TenantRentalsPage: React.FC = () => {
 
       {/* Modal Đánh Giá Phòng */}
       {reviewModalOpen && (
-        <Modal isOpen={reviewModalOpen} onClose={() => { if (!submittingReview) setReviewModalOpen(false); }} title="Đánh giá trải nghiệm phòng trọ">
+        <Modal isOpen={reviewModalOpen} onClose={() => { if (!submittingReview) setReviewModalOpen(false); }} title="Đánh giá phòng/căn hộ đã thuê">
             <form onSubmit={handleCreateReview} className="space-y-4">
+              <p className="rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-800">{reviewContract?.tenPhong || `Hợp đồng #${reviewContractId}`}</p>
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2">Số sao đánh giá *</label>
                 <div className="flex items-center gap-2 text-2xl text-amber-400">
@@ -730,6 +778,7 @@ const TenantRentalsPage: React.FC = () => {
                 <label htmlFor="field-reviewComment" className="block text-xs font-bold text-slate-700 mb-1">Nhận xét chi tiết</label>
                 <textarea id="field-reviewComment"
                   rows={4}
+                  maxLength={2000}
                   placeholder="Chia sẻ trải nghiệm về phòng trọ, sự hỗ trợ của chủ trọ, an ninh khu vực..."
                   value={reviewComment}
                   onChange={(e) => setReviewComment(e.target.value)}

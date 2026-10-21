@@ -94,9 +94,16 @@ public class SavedPaymentMethodBLL(
         var status = Required(fields, "vnp_transaction_status", 2, 2);
         if (!Regex.IsMatch(response, "^[0-9]{2}$") || !Regex.IsMatch(status, "^[0-9]{2}$"))
             throw new BusinessRuleException("Mã kết quả liên kết thẻ không hợp lệ.");
-        var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(
-            fields.Where(p => p.Key is not ("vnp_secure_hash" or "vnp_secure_hash_type"))
-                .OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => new[] { p.Key, p.Value }).ToArray()))));
+        // Browser and IPN callbacks may differ in optional timestamps/descriptions. Deduplicate the verified decision.
+        var success = response == "00" && status == "00";
+        var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+        {
+            reference, merchant, userId, response, status,
+            token = success ? Fingerprint(merchant, fields.GetValueOrDefault("vnp_token") ?? "") : null,
+            cardType = success ? fields.GetValueOrDefault("vnp_card_type") : null,
+            bankCode = success ? fields.GetValueOrDefault("vnp_bank_code") : null,
+            lastFour = success ? Regex.Match(fields.GetValueOrDefault("vnp_card_number") ?? "", "[0-9]{4}$").Value : null
+        }))));
         await SavedPaymentMethodSchema.EnsureAsync(db);
         await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         await WorkflowLock.AcquireAsync(db);
@@ -114,10 +121,10 @@ public class SavedPaymentMethodBLL(
         }
         if (link.ExpiresAtUtc <= DateTime.UtcNow)
             throw BusinessRuleException.Conflict("Yêu cầu liên kết thẻ đã hết hạn. Vui lòng tạo yêu cầu mới.");
-        link.CallbackFingerprint = fingerprint;
-        link.CompletedAtUtc = DateTime.UtcNow;
         if (response != "00" || status != "00")
         {
+            link.CallbackFingerprint = fingerprint;
+            link.CompletedAtUtc = DateTime.UtcNow;
             link.Status = VnPayCardLinkStatus.Failed;
             await db.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -150,6 +157,8 @@ public class SavedPaymentMethodBLL(
         // Retain only the last four digits, even if the provider accidentally returns an unmasked PAN.
         method.MaskedCardNumber = "•••• " + lastFour.Value;
         method.CardType = cardType;
+        link.CallbackFingerprint = fingerprint;
+        link.CompletedAtUtc = DateTime.UtcNow;
         link.Status = VnPayCardLinkStatus.Completed;
         link.SavedPaymentMethod = method;
         await db.SaveChangesAsync();

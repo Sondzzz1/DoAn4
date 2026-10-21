@@ -46,7 +46,8 @@ public class SavedPaymentMethodSchemaSqlTests
                 DECLARE @default sysname = (SELECT d.name FROM sys.default_constraints d JOIN sys.columns c
                     ON c.object_id=d.parent_object_id AND c.column_id=d.parent_column_id
                     WHERE d.parent_object_id=OBJECT_ID(N'dbo.GiaoDichThanhToan') AND c.name=N'Provider');
-                EXEC(N'ALTER TABLE dbo.GiaoDichThanhToan DROP CONSTRAINT '+QUOTENAME(@default));
+                DECLARE @dropDefault nvarchar(max) = N'ALTER TABLE dbo.GiaoDichThanhToan DROP CONSTRAINT '+QUOTENAME(@default);
+                EXEC sys.sp_executesql @dropDefault;
                 ALTER TABLE dbo.GiaoDichThanhToan DROP COLUMN SavedPaymentMethodId,Provider;
                 DROP TABLE dbo.LienKetTheVNPay;
                 DROP TABLE dbo.PhuongThucThanhToanDaLuu;

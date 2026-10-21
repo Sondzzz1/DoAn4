@@ -6,7 +6,7 @@ import { favoriteService } from '../../services/favoriteService';
 import { Post, RoomStatus } from '../../types/post.types';
 import { ROUTES, ROLES } from '../../utils/constants';
 import { toast } from 'react-toastify';
-import { FiChevronRight, FiAlertCircle, FiRefreshCw, FiArrowLeft } from 'react-icons/fi';
+import { FiChevronRight, FiAlertCircle, FiRefreshCw, FiArrowLeft, FiStar } from 'react-icons/fi';
 
 // Modular Room Components
 import RoomImageGallery from '../../components/room/RoomImageGallery';
@@ -293,6 +293,7 @@ const RoomDetailPage: React.FC = () => {
             {/* Room information */}
             <section className="room-content-section">
               <RoomInformation post={post} />
+              <a href="#room-reviews" className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[#0084ff] hover:underline"><FiStar /> Xem đánh giá từ người thuê</a>
             </section>
 
             {/* Amenities */}

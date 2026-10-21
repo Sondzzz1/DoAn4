@@ -131,6 +131,42 @@ public class SavedPaymentMethodTests
     }
 
     [Fact]
+    public async Task Signed_browser_and_ipn_optional_metadata_differences_keep_one_link_and_do_not_restore_unlinked_cards()
+    {
+        await using var db = await Fixture();
+        var linked = await Link(db);
+        var ciphertext = db.SavedPaymentMethods.Single().TokenCiphertext;
+        var fields = linked.Callback.Where(p => p.Key != "vnp_secure_hash").ToDictionary(p => p.Key, p => p.Value.ToString());
+        fields.Remove("vnp_pay_date");
+        fields["vnp_txn_desc"] = "Browser return with optional metadata";
+        fields["vnp_bank_tran_no"] = "different-optional-reference";
+        Assert.True(await Cards(db).CompleteLinkAsync(VnPayTokenProtocolTests.Callback(fields)));
+        Assert.Single(db.SavedPaymentMethods);
+        Assert.Equal(ciphertext, db.SavedPaymentMethods.Single().TokenCiphertext);
+        await Cards(db).UnlinkAsync(10, linked.Id);
+        Assert.True(await Cards(db).CompleteLinkAsync(VnPayTokenProtocolTests.Callback(fields)));
+        Assert.False(db.SavedPaymentMethods.Single().IsActive);
+        Assert.Null(db.SavedPaymentMethods.Single().TokenCiphertext);
+    }
+
+    [Fact]
+    public async Task Shared_token_ipn_routes_verified_link_notifications_without_creating_a_payment()
+    {
+        await using var db = await Fixture();
+        var intent = await Cards(db).CreateLinkAsync(10, new() { CardType = "01" }, "127.0.0.1");
+        var controller = new RoomRental.BackEnd.Controllers.VnPayTokenPaymentController(PaymentIpnTests.Service(db),
+            VnPayTokenProtocolTests.Config(), NullLogger<RoomRental.BackEnd.Controllers.VnPayTokenPaymentController>.Instance, Cards(db))
+        {
+            ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = new DefaultHttpContext() }
+        };
+        controller.Request.Query = VnPayTokenProtocolTests.Callback(VnPayTokenProtocolTests.LinkFields(intent.Reference));
+        var result = Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(await controller.Ipn());
+        Assert.Equal("00", Assert.IsType<VnPayIpnResponseDto>(result.Value).RspCode);
+        Assert.Single(db.SavedPaymentMethods);
+        Assert.Empty(db.PaymentTransactions);
+    }
+
+    [Fact]
     public async Task A_conflicting_signed_replay_cannot_replace_the_stored_card()
     {
         await using var db = await Fixture();

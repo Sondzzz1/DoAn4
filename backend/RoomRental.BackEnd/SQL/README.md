@@ -4,6 +4,10 @@
 
 Sau các nâng cấp hiện có, chạy `11_CashPayments.sql` để thêm phiếu thu cho tiền cọc và hóa đơn. Sao lưu trước; script chỉ thêm bảng và không sửa dữ liệu nghiệp vụ. Xem quy trình, API và kiểm thử tại `docs/CASH_PAYMENTS.md` ở thư mục gốc dự án.
 
+## Thẻ VNPay đã liên kết
+
+Chạy `12_SavedPaymentMethods.sql` sau khi sao lưu để thêm lưu trữ thẻ đã liên kết và thông tin provider. Tính năng mặc định tắt, cần VNPay cấp Tokenization và xác nhận cấu hình trước khi bật. Xem `docs/SAVED_VNPAY_CARDS.md` ở thư mục gốc dự án.
+
 > **Database backend hien tai:** `RoomRentalDB`, schema tieng Viet (`TinDang`, `PhongTro`, `TaiKhoan`, ...). Huong dan hien tai nam ngay ben duoi; phan demo cu chi de tham khao.
 >
 > Noi dung ben duoi mo ta schema demo cu `RoomRentalDb_Dev` (`Posts`, `Rooms`, `Users`). Khong chay `RoomRentalDb_Schema_And_Data.sql` len `RoomRentalDB` dang duoc backend su dung.
