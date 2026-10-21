@@ -12,15 +12,19 @@ public class MonthlyBillBLL : IMonthlyBillService
     private readonly ApplicationDbContext _db;
     private readonly INotificationService _notificationService;
     private readonly ILogger<MonthlyBillBLL> _logger;
+    private readonly CashPaymentBLL _cashPayments;
 
     public MonthlyBillBLL(
         ApplicationDbContext db,
         INotificationService notificationService,
-        ILogger<MonthlyBillBLL> logger)
+        ILogger<MonthlyBillBLL> logger,
+        CashPaymentBLL? cashPayments = null)
     {
         _db = db;
         _notificationService = notificationService;
         _logger = logger;
+        _cashPayments = cashPayments ?? new CashPaymentBLL(db, notificationService,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<CashPaymentBLL>.Instance);
     }
 
     public async Task<HoaDonDto> TaoAsync(int chuTroId, TaoHoaDonDto dto)
@@ -191,43 +195,9 @@ public class MonthlyBillBLL : IMonthlyBillService
 
     public async Task<HoaDonDto> ThanhToanAsync(int taiKhoanId, int id, XacNhanThanhToanHoaDonDto? dto = null)
     {
-        await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
-        await WorkflowLock.AcquireAsync(_db);
-        var bill = await _db.MonthlyBills.Include(b => b.Contract).FirstOrDefaultAsync(b => b.Id == id)
-            ?? throw BusinessRuleException.NotFound("Không tìm thấy hóa đơn.");
-        if (bill.Contract.LandlordAccountId != taiKhoanId)
-            throw BusinessRuleException.Forbidden("Chỉ chủ trọ sở hữu hợp đồng mới được xác nhận thanh toán thủ công.");
-        if (bill.Status == MonthlyBillStatus.Paid)
-            throw BusinessRuleException.Conflict("Hóa đơn đã được thanh toán.");
-        if (bill.Status == MonthlyBillStatus.Cancelled)
-            throw BusinessRuleException.Conflict("Hóa đơn đã bị hủy.");
-        if (bill.Status == MonthlyBillStatus.PendingPayment)
-            throw BusinessRuleException.Conflict("Hóa đơn đang được thanh toán trực tuyến, không thể xác nhận thủ công.");
-
-        await ContractClosurePolicy.BillChangingAsync(_db, bill.ContractId, taiKhoanId);
-        bill.Status = MonthlyBillStatus.Paid;
-        bill.PaidAt = DateTime.Now;
-        bill.PaymentMethod = dto?.PhuongThucThanhToan?.Trim() ?? "Chủ trọ xác nhận";
-        if (!string.IsNullOrWhiteSpace(dto?.GhiChu))
-            bill.Note = string.IsNullOrWhiteSpace(bill.Note) ? dto.GhiChu.Trim() : $"{bill.Note} | {dto.GhiChu.Trim()}";
-        bill.UpdatedAt = DateTime.Now;
-        await _db.SaveChangesAsync();
-        await transaction.CommitAsync();
-
-        try
-        {
-            await _notificationService.CreateNotificationAsync(
-                bill.Contract.TenantAccountId,
-                $"Hóa đơn {bill.Month}/{bill.Year} đã được xác nhận",
-                $"Chủ trọ đã xác nhận thanh toán {bill.TotalAmount:N0} VNĐ.",
-                1,
-                "/tenant/rentals");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Không thể gửi thông báo thanh toán hóa đơn {BillId}", bill.Id);
-        }
-
+        // Manual collection must use the same audited receipt and cross-method guards as the cash API.
+        await _cashPayments.ConfirmMonthlyBillAsync(taiKhoanId, id, dto?.GhiChu, dto?.ExpectedAmount);
+        var bill = await _db.MonthlyBills.Include(b => b.Contract).FirstAsync(b => b.Id == id);
         return await MapToDtoAsync(bill, bill.Contract);
     }
 

@@ -6,6 +6,8 @@ public class PaymentTransaction
     public int? DepositId { get; set; }
     public int? MonthlyBillId { get; set; }
     public string TargetType { get; set; } = "Deposit";
+    public string Provider { get; set; } = "VNPay";
+    public int? SavedPaymentMethodId { get; set; }
     public string OrderId { get; set; } = string.Empty;
     public string? TransactionCode { get; set; }
     public decimal Amount { get; set; }
@@ -17,4 +19,5 @@ public class PaymentTransaction
 
     public virtual Deposit? Deposit { get; set; }
     public virtual MonthlyBill? MonthlyBill { get; set; }
+    public virtual SavedPaymentMethod? SavedPaymentMethod { get; set; }
 }

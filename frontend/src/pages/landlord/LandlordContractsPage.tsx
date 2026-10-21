@@ -35,6 +35,9 @@ import Modal from '../../components/landlord/LandlordModal';
 import useLandlordAction from '../../components/landlord/useLandlordAction';
 import PageState from '../../components/common/PageState';
 import PaymentSafetyPanel from '../../components/payment/PaymentSafetyPanel';
+import CashPaymentPanel from '../../components/payment/CashPaymentPanel';
+import CashBillCollectionModal from '../../components/payment/CashBillCollectionModal';
+import { cashPaymentService, type CashPaymentDto } from '../../services/cashPaymentService';
 import ContractClosurePanel from '../../components/rental/ContractClosurePanel';
 import { CONTRACT_STATUS, DEPOSIT_STATUS, MONTHLY_BILL_STATUS, RENTAL_REQUEST_STATUS } from '../../utils/constants';
 import { getApiErrorMessage } from '../../utils/apiError';
@@ -76,6 +79,8 @@ const LandlordContractsPage: React.FC = () => {
   const [contracts, setContracts] = useState<ContractDto[]>([]);
   const [requests, setRequests] = useState<RentalRequestDto[]>([]);
   const [deposits, setDeposits] = useState<DepositDto[]>([]);
+  const [cashPayments, setCashPayments] = useState<CashPaymentDto[]>([]);
+  const [collectingBill, setCollectingBill] = useState<MonthlyBillDto | null>(null);
   const [query, setQuery] = useState('');
   const matchesQuery = (...values: (string | number | undefined)[]) => values.some(value => String(value ?? '').toLowerCase().includes(query.trim().toLowerCase()));
 
@@ -143,17 +148,19 @@ const LandlordContractsPage: React.FC = () => {
     setLoading(true);
     setLoadError('');
     try {
-      const [billsRes, contractsRes, requestsRes, depositsRes] = await Promise.all([
+      const [billsRes, contractsRes, requestsRes, depositsRes, cashRes] = await Promise.all([
         monthlyBillService.getMyBills(true),
         rentalService.getMyContracts(),
         rentalService.getMyRentalRequests(true),
         rentalService.getMyDeposits(),
+        cashPaymentService.list(),
       ]);
 
       setBills(billsRes.data || []);
       setContracts(contractsRes.data || []);
       setRequests(requestsRes.data || []);
       setDeposits(depositsRes.data || []);
+      setCashPayments(cashRes.data || []);
     } catch (error) {
       setLoadError(getApiErrorMessage(error, 'Không thể tải dữ liệu.'));
     } finally {
@@ -295,20 +302,6 @@ const LandlordContractsPage: React.FC = () => {
       setFormErrors(current => ({ ...current, edit: getApiErrorMessage(error, 'Không thể cập nhật hóa đơn.') }));
     } finally {
       setSubmittingEdit(false);
-    }
-  };
-
-  // Handle Mark Bill as Paid
-  const handleConfirmBillPaid = async (billId: number) => {
-    try {
-      await monthlyBillService.payBill(billId, {
-        phuongThucThanhToan: 'Chủ trọ xác nhận đã nhận tiền',
-      });
-      toast.success('Đã ghi nhận thanh toán hóa đơn thành công!');
-      await loadData();
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Không thể cập nhật trạng thái.'));
-      return false;
     }
   };
 
@@ -477,6 +470,8 @@ const LandlordContractsPage: React.FC = () => {
           </div>
         </div>
 
+        {!loading && (activeTab === 'bills' || activeTab === 'requests') && <CashPaymentPanel role="landlord" items={cashPayments.filter(item => activeTab === 'bills' ? !!item.monthlyBillId : !!item.depositId)} onChanged={loadData} />}
+
         {/* KPI Stats Cards */}
         <div className="kpi-stats-grid">
           {isRequestTab ? <>
@@ -618,13 +613,13 @@ const LandlordContractsPage: React.FC = () => {
                   </div>
 
                   <div className="bill-card-actions">
-                    {(bill.trangThai === MONTHLY_BILL_STATUS.UNPAID || bill.trangThai === MONTHLY_BILL_STATUS.OVERDUE || bill.trangThai === MONTHLY_BILL_STATUS.PENDING_PAYMENT) && (
+                    {(bill.trangThai === MONTHLY_BILL_STATUS.UNPAID || bill.trangThai === MONTHLY_BILL_STATUS.OVERDUE) && (
                       <button
-                        onClick={() => openAction({ title: 'Xác nhận thanh toán hóa đơn', message: 'Xác nhận hóa đơn này đã được khách thuê thanh toán đầy đủ?', run: () => handleConfirmBillPaid(bill.id) })}
+                        onClick={() => setCollectingBill(bill)}
                         className="btn-icon success"
-                        title="Xác nhận đã nhận tiền"
+                        title="Xác nhận đã nhận đủ tiền mặt"
                       >
-                        <FiCheck /> Đã thu
+                        <FiCheck /> Thu tiền mặt
                       </button>
                     )}
                     {(bill.trangThai === MONTHLY_BILL_STATUS.UNPAID || bill.trangThai === MONTHLY_BILL_STATUS.OVERDUE) && <button
@@ -1319,6 +1314,7 @@ const LandlordContractsPage: React.FC = () => {
             </form>
         </Modal>
       )}
+      {collectingBill && <CashBillCollectionModal bill={collectingBill} onClose={() => setCollectingBill(null)} onChanged={loadData} />}
       {dialog}
       </div>
     </div>

@@ -40,6 +40,9 @@ public class ApplicationDbContext : DbContext
     public DbSet<PaymentTransaction> PaymentTransactions { get; set; } = null!;
     public DbSet<PaymentCallbackEvent> PaymentCallbackEvents { get; set; } = null!;
     public DbSet<DepositRefundRequest> DepositRefundRequests { get; set; } = null!;
+    public DbSet<CashPaymentReceipt> CashPaymentReceipts { get; set; } = null!;
+    public DbSet<SavedPaymentMethod> SavedPaymentMethods { get; set; } = null!;
+    public DbSet<VnPayCardLink> VnPayCardLinks { get; set; } = null!;
     public DbSet<RoommatePost> RoommatePosts { get; set; } = null!;
     public DbSet<RoommateRequest> RoommateRequests { get; set; } = null!;
     public DbSet<ContractOccupant> ContractOccupants { get; set; } = null!;

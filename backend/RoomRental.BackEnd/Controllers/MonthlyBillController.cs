@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RoomRental.BackEnd.BLL;
 using RoomRental.BackEnd.BLL.Interfaces;
 using RoomRental.BackEnd.DTO.Common;
 using RoomRental.BackEnd.DTO.Rental;
@@ -108,7 +109,7 @@ public class MonthlyBillController : ControllerBase
     }
 
     /// <summary>
-    /// Xác nhận thanh toán hóa đơn (Người thuê xác nhận hoặc Chủ trọ xác nhận nhận tiền)
+    /// Chủ trọ xác nhận đã nhận đủ tiền mặt theo số tiền hiển thị trên hóa đơn
     /// </summary>
     [HttpPut("{id:int}/thanh-toan")]
     [Authorize(Roles = "Landlord")]
@@ -116,6 +117,8 @@ public class MonthlyBillController : ControllerBase
     {
         try
         {
+            if (dto?.ExpectedAmount is null or <= 0)
+                throw new BusinessRuleException("Cần gửi số tiền hóa đơn đã kiểm tra trước khi xác nhận nhận tiền mặt.");
             var result = await _service.ThanhToanAsync(GetUserId(), id, dto);
             return Ok(ApiResponse<HoaDonDto>.SuccessResponse(result, "Xác nhận thanh toán hóa đơn thành công"));
         }

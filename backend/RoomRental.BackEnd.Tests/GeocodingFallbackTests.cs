@@ -95,52 +95,53 @@ public class GeocodingFallbackTests
         Assert.Equal(2, factory.Calls.Count);
     }
 
-    private static object Feature(string house, string street, string type = "house", string province = "Hà Nội") => new
+    // Fictional address fixtures; provider responses are mocked.
+    private static object Feature(string house, string street, string type = "house", string province = "Thành phố Mẫu") => new
     {
-        properties = new { name = street, street, housenumber = house, type, district = "Cửa Nam", city = province, country = "Việt Nam", countrycode = "VN" },
-        geometry = new { type = "Point", coordinates = new[] { 105.85, 21.025 } }
+        properties = new { name = street, street, housenumber = house, type, district = "Phường Mẫu", city = province, country = "Việt Nam", countrycode = "VN" },
+        geometry = new { type = "Point", coordinates = new[] { 105.81, 21.01 } }
     };
 
     [Fact]
     public async Task Google_formatted_address_uses_structured_house_street_ward_city_not_fuzzy_district_search()
     {
-        var json = JsonSerializer.Serialize(new { features = new[] { Feature("18", "Phố Bùi Thị Xuân"), Feature("49", "Phố Hai Bà Trưng"), Feature("", "Phố Hai Bà Trưng", "street") } });
+        var json = JsonSerializer.Serialize(new { features = new[] { Feature("9999", "Phố Đối Chiếu"), Feature("8888", "Phố Kiểm Thử"), Feature("", "Phố Kiểm Thử", "street") } });
         using var factory = new Factory("dns", json); using var service = new NominatimGeocodingService(factory);
-        var result = Assert.Single(await service.SearchAsync("18 P. Hai Bà Trưng, Cửa Nam, Hà Nội 100000, Việt Nam", default));
-        Assert.Equal("Phố Hai Bà Trưng", result.Street); Assert.Equal("", result.HouseNumber); Assert.Equal("street", result.MatchType);
+        var result = Assert.Single(await service.SearchAsync("9999 P. Kiểm Thử, Phường Mẫu, Thành phố Mẫu 100000, Việt Nam", default));
+        Assert.Equal("Phố Kiểm Thử", result.Street); Assert.Equal("", result.HouseNumber); Assert.Equal("street", result.MatchType);
         var path = factory.Calls[1].Path;
-        Assert.StartsWith("/structured?", path); Assert.Contains("housenumber=18", path);
-        Assert.Contains("street=" + Uri.EscapeDataString("Hai Bà Trưng"), path);
-        Assert.Contains("city=" + Uri.EscapeDataString("Hà Nội"), path);
-        Assert.Contains("district=" + Uri.EscapeDataString("Cửa Nam"), path); Assert.DoesNotContain("100000", path);
+        Assert.StartsWith("/structured?", path); Assert.Contains("housenumber=9999", path);
+        Assert.Contains("street=" + Uri.EscapeDataString("Kiểm Thử"), path);
+        Assert.Contains("city=" + Uri.EscapeDataString("Mẫu"), path);
+        Assert.Contains("district=" + Uri.EscapeDataString("Mẫu"), path); Assert.DoesNotContain("100000", path);
     }
 
     [Fact]
     public async Task Exact_house_is_preferred_over_street_and_different_house_results()
     {
-        var json = JsonSerializer.Serialize(new { features = new[] { Feature("", "Phố Hai Bà Trưng", "street"), Feature("49", "Phố Hai Bà Trưng"), Feature("18", "Phố Hai Bà Trưng") } });
+        var json = JsonSerializer.Serialize(new { features = new[] { Feature("", "Phố Kiểm Thử", "street"), Feature("8888", "Phố Kiểm Thử"), Feature("9999", "Phố Kiểm Thử") } });
         using var factory = new Factory("dns", json); using var service = new NominatimGeocodingService(factory);
-        var result = Assert.Single(await service.SearchAsync("18 Phố Hai Bà Trưng, Cửa Nam, Hà Nội, Việt Nam", default));
-        Assert.Equal("18", result.HouseNumber); Assert.Equal("address", result.MatchType);
+        var result = Assert.Single(await service.SearchAsync("9999 Phố Kiểm Thử, Phường Mẫu, Thành phố Mẫu, Việt Nam", default));
+        Assert.Equal("9999", result.HouseNumber); Assert.Equal("address", result.MatchType);
     }
 
     [Theory]
-    [InlineData("18", "Phố Bùi Thị Xuân", "Hà Nội")]
-    [InlineData("49", "Phố Hai Bà Trưng", "Hà Nội")]
-    [InlineData("18", "Phố Hai Bà Trưng", "Hưng Yên")]
+    [InlineData("9999", "Phố Đối Chiếu", "Thành phố Mẫu")]
+    [InlineData("8888", "Phố Kiểm Thử", "Thành phố Mẫu")]
+    [InlineData("9999", "Phố Kiểm Thử", "Hưng Yên")]
     public async Task Different_street_house_or_province_is_not_claimed_as_the_requested_house(string house, string street, string province)
     {
         var json = JsonSerializer.Serialize(new { features = new[] { Feature(house, street, province: province) } });
         using var factory = new Factory("dns", json); using var service = new NominatimGeocodingService(factory);
-        Assert.Empty(await service.SearchAsync("18 Phố Hai Bà Trưng, Cửa Nam, Hà Nội, Việt Nam", default));
+        Assert.Empty(await service.SearchAsync("9999 Phố Kiểm Thử, Phường Mẫu, Thành phố Mẫu, Việt Nam", default));
     }
 
     [Fact]
     public async Task Primary_fuzzy_results_without_the_requested_street_try_the_structured_fallback()
     {
-        var json = JsonSerializer.Serialize(new { features = new[] { Feature("", "Phố Hai Bà Trưng", "street") } });
+        var json = JsonSerializer.Serialize(new { features = new[] { Feature("", "Phố Kiểm Thử", "street") } });
         using var factory = new Factory("healthy", json); using var service = new NominatimGeocodingService(factory);
-        var result = Assert.Single(await service.SearchAsync("18 Phố Hai Bà Trưng, Cửa Nam, Hà Nội, Việt Nam", default));
+        var result = Assert.Single(await service.SearchAsync("9999 Phố Kiểm Thử, Phường Mẫu, Thành phố Mẫu, Việt Nam", default));
         Assert.Equal("street", result.MatchType); Assert.Equal(2, factory.Calls.Count);
     }
 

@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace RoomRental.BackEnd.DTO.Rental;
 
 public class TaoHoaDonDto
@@ -45,6 +47,8 @@ public class CapNhatHoaDonDto
 
 public class XacNhanThanhToanHoaDonDto
 {
+    [Range(typeof(decimal), "0.01", "9999999999999999.99")]
+    public decimal? ExpectedAmount { get; set; }
     public string? PhuongThucThanhToan { get; set; } = "Tiền mặt";
     public string? GhiChu { get; set; }
 }

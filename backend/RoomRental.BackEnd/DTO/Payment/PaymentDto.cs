@@ -25,6 +25,7 @@ public class CreatePaymentRequestDto
     public int? DepositId { get; set; }
     public int? MonthlyBillId { get; set; }
     public string? OrderInfo { get; set; }
+    public int? SavedPaymentMethodId { get; set; }
 }
 
 public class PaymentResponseDto

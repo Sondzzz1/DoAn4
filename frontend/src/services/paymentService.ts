@@ -5,6 +5,7 @@ export interface CreatePaymentRequest {
   depositId?: number;
   monthlyBillId?: number;
   orderInfo?: string;
+  savedPaymentMethodId?: number;
 }
 
 export interface PaymentResponse {

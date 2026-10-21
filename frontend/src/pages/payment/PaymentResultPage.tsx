@@ -64,7 +64,7 @@ const PaymentResultPage: React.FC = () => {
             )}
             <div className="flex justify-between">
               <span className="text-slate-400">Phương thức:</span>
-              <span className="font-semibold text-slate-800">VNPay QR / Thẻ nội địa</span>
+              <span className="font-semibold text-slate-800">{searchParams.get('method') === 'token' ? 'Thẻ VNPay đã liên kết' : 'VNPay QR / Thẻ nội địa'}</span>
             </div>
           </div>
         )}

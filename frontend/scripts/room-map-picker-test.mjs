@@ -15,10 +15,11 @@ const location = { latitude: 21.03, longitude: 105.84, address: '42 Nguyễn Lâ
   district: 'Thanh Xuân', province: 'Hà Nội', displayName: '42 Nguyễn Lân, Phương Liệt, Thanh Xuân, Hà Nội' };
 const alternative = { ...location, latitude: 21.05, address: '84 Nguyễn Lân', displayName: '84 Nguyễn Lân, Hà Nội' };
 const reverse = { ...location, address: '88 Đường mới', ward: 'Bần Yên Nhân', district: 'Mỹ Hào', province: 'Hưng Yên', displayName: '88 Đường mới, Hưng Yên' };
-const sampleAddress = '18 P. Hai Bà Trưng, Cửa Nam, Hà Nội 100000, Việt Nam';
-const sampleStreet = { latitude: 21.024901, longitude: 105.8506901, address: 'Phố Hai Bà Trưng',
-  street: 'Phố Hai Bà Trưng', houseNumber: '', ward: 'Cửa Nam', district: '', province: 'Hà Nội',
-  displayName: 'Phố Hai Bà Trưng, Cửa Nam, Hà Nội, Việt Nam', matchType: 'street' };
+// Fictional address; geocoding responses and map tiles are mocked.
+const sampleAddress = '9999 P. Kiểm Thử, Phường Mẫu, Hà Nội 100000, Việt Nam';
+const sampleStreet = { latitude: 21.01, longitude: 105.81, address: 'Phố Kiểm Thử',
+  street: 'Phố Kiểm Thử', houseNumber: '', ward: 'Phường Mẫu', district: '', province: 'Hà Nội',
+  displayName: 'Phố Kiểm Thử, Phường Mẫu, Hà Nội, Việt Nam', matchType: 'street' };
 const tile = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==', 'base64');
 
 try {
@@ -52,7 +53,7 @@ try {
         if (p.endsWith('/location/search')) {
           const query = url.searchParams.get('q'); calls.search.push(query);
           const delay = searchDelay, failure = searchFailure, empty = noResults;
-          const candidates = query.includes('Hai Bà Trưng') ? [sampleStreet]
+          const candidates = query.includes('Kiểm Thử') ? [sampleStreet]
             : [{ ...location, latitude: query.includes('Địa chỉ B') ? 21.1 : location.latitude }, ...singleResult ? [] : [alternative]];
           if (delay) await new Promise(resolve => setTimeout(resolve, delay));
           return failure ? route.fulfill({ status: 503, json: { success: false, message: 'Dịch vụ địa chỉ đang gián đoạn.' } })
@@ -95,10 +96,10 @@ try {
     await dialog.getByLabel('Giá thuê (VNĐ/tháng)', { exact: false }).fill('3500000');
     await dialog.getByLabel('Diện tích (m²)', { exact: false }).fill('27');
     await dialog.locator('textarea').fill('Thông tin vẫn được giữ khi tra địa chỉ.');
-    await page.getByRole('status').filter({ hasText: 'Chưa xác định được số nhà 18' }).waitFor();
+    await page.getByRole('status').filter({ hasText: 'Chưa xác định được số nhà 9999' }).waitFor();
     searchDelay = 0;
-    assert.equal(await address.inputValue(), '18 Phố Hai Bà Trưng');
-    assert.equal(await dialog.getByLabel('Phường / xã', { exact: true }).inputValue(), 'Cửa Nam');
+    assert.equal(await address.inputValue(), '9999 Phố Kiểm Thử');
+    assert.equal(await dialog.getByLabel('Phường / xã', { exact: true }).inputValue(), 'Phường Mẫu');
     assert.equal(await dialog.getByLabel('Tỉnh / thành phố', { exact: true }).inputValue(), 'Hà Nội');
     assert.equal(await dialog.getByLabel('Tên phòng', { exact: false }).inputValue(), 'TEST-MAP đang nhập');
     assert.equal(await dialog.getByLabel('Giá thuê (VNĐ/tháng)', { exact: false }).inputValue(), '3500000');
@@ -106,15 +107,15 @@ try {
     assert.equal(await dialog.locator('textarea').inputValue(), 'Thông tin vẫn được giữ khi tra địa chỉ.');
     assert.equal(await page.locator('.map-picker-canvas').getAttribute('data-location-confirmed'), 'false');
     assert.match(await coordinate(), /Vị trí gợi ý/); assert.equal(calls.saves.length, 0);
-    await page.getByRole('button', { name: /Phố Hai Bà Trưng.*Tuyến đường/ }).click();
-    assert.equal(await address.inputValue(), '18 Phố Hai Bà Trưng');
+    await page.getByRole('button', { name: /Phố Kiểm Thử.*Tuyến đường/ }).click();
+    assert.equal(await address.inputValue(), '9999 Phố Kiểm Thử');
     await oneMap();
     passed('Full pasted address fills street/ward/province, preserves other inputs and warns about an unverified house number');
     await dialog.getByLabel('Quận / huyện', { exact: true }).fill('Hoàn Kiếm'); await search();
-    await page.getByRole('status').filter({ hasText: 'Chưa xác định được số nhà 18' }).waitFor();
-    await page.getByRole('button', { name: /Phố Hai Bà Trưng.*Tuyến đường/ }).click();
+    await page.getByRole('status').filter({ hasText: 'Chưa xác định được số nhà 9999' }).waitFor();
+    await page.getByRole('button', { name: /Phố Kiểm Thử.*Tuyến đường/ }).click();
     assert.equal(await dialog.getByLabel('Quận / huyện', { exact: true }).inputValue(), 'Hoàn Kiếm');
-    assert.equal(await address.inputValue(), '18 Phố Hai Bà Trưng');
+    assert.equal(await address.inputValue(), '9999 Phố Kiểm Thử');
     passed('Selecting a street without district data preserves the house number and manually entered district');
     await address.fill('Nguyễn Lân, Hà Nội');
     await address.press('Enter');
@@ -250,12 +251,12 @@ try {
     passed('Edit preserves saved coordinates, then saves a newly selected address through the existing API');
     await page.getByRole('button', { name: 'Sửa', exact: true }).click(); await edit.waitFor();
     await address.fill(sampleAddress); await address.press('Enter');
-    await page.getByRole('status').filter({ hasText: 'Chưa xác định được số nhà 18' }).waitFor();
+    await page.getByRole('status').filter({ hasText: 'Chưa xác định được số nhà 9999' }).waitFor();
     assert.equal(await page.locator('.map-picker-canvas').getAttribute('data-location-confirmed'), 'false');
-    await page.getByRole('button', { name: /Phố Hai Bà Trưng.*Tuyến đường/ }).click();
+    await page.getByRole('button', { name: /Phố Kiểm Thử.*Tuyến đường/ }).click();
     await edit.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click(); await edit.waitFor({ state: 'hidden' });
-    assert.equal(calls.saves.length, 3); assert.equal(calls.saves[2].diaChi, '18 Phố Hai Bà Trưng');
-    assert.equal(calls.saves[2].phuong, 'Cửa Nam'); assert.equal(calls.saves[2].thanhPho, 'Hà Nội');
+    assert.equal(calls.saves.length, 3); assert.equal(calls.saves[2].diaChi, '9999 Phố Kiểm Thử');
+    assert.equal(calls.saves[2].phuong, 'Phường Mẫu'); assert.equal(calls.saves[2].thanhPho, 'Hà Nội');
     assert.equal(calls.saves[2].latitude, sampleStreet.latitude);
     passed('Edit payload retains the entered house number and explicitly confirmed street coordinates');
     assert.deepEqual(errors, []); passed('No browser runtime errors');

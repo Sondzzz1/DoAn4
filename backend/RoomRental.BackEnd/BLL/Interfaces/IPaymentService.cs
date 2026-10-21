@@ -8,4 +8,5 @@ public interface IPaymentService
     Task<PaymentResponseDto> CreatePaymentUrlAsync(int userId, CreatePaymentRequestDto dto, string clientIp);
     Task ReconcilePendingPaymentsAsync(CancellationToken cancellationToken = default);
     Task<PaymentResultDto> ProcessPaymentReturnAsync(IQueryCollection query, byte source = 0);
+    Task<PaymentResultDto> ProcessTokenPaymentReturnAsync(IQueryCollection query, byte source = 0);
 }

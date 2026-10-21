@@ -8,8 +8,8 @@ const { chromium } = require(path.join(process.env.UI_AUDIT_NODE_MODULES, 'playw
 const baseURL = process.env.UI_AUDIT_URL || 'http://127.0.0.1:5186';
 const apiURL = process.env.ROOM_MAP_LIVE_API || 'http://127.0.0.1:5099';
 const output = path.resolve(process.env.UI_AUDIT_OUTPUT || '../artifacts/room-map-fix-20261020/live');
-const sampleHouse = process.env.ROOM_MAP_SAMPLE_ADDRESS === '1';
-const query = sampleHouse ? '18 P. Hai Bà Trưng, Cửa Nam, Hà Nội 100000, Việt Nam' : 'Hồ Hoàn Kiếm, Hà Nội';
+// Live checks use a public landmark; house-address cases stay in mocked tests.
+const query = 'Hồ Hoàn Kiếm, Hà Nội';
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ headless: true, channel: 'msedge' });
 const results = [];
@@ -23,10 +23,6 @@ try {
     const page = await context.newPage();
     const errors = [], locations = [];
     page.on('pageerror', e => errors.push(e.message));
-    if (sampleHouse) {
-      const tile = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==', 'base64');
-      await page.route(/https:\/\/.*tile.*\/(\d+)\/(\d+)\/(\d+)\.png/, route => route.fulfill({ contentType: 'image/png', body: tile }));
-    }
     await page.route('**/hubs/**', route => route.fulfill({ status: 503, body: 'QA fixture' }));
     await page.route('**/api/**', async route => {
       const url = new URL(route.request().url());
@@ -46,31 +42,12 @@ try {
     await page.locator('.leaflet-marker-icon').waitFor({ timeout: 25000 });
     const found = locations.find(x => x.path.endsWith('/search'));
     assert.equal(found.status, 200); assert.equal(found.body.success, true); assert.ok(found.body.data.length > 0);
-    assert.equal(await address.inputValue(), sampleHouse ? '18 Phố Hai Bà Trưng' : query);
-    if (sampleHouse) {
-      assert.equal(found.body.data[0].street, 'Phố Hai Bà Trưng');
-      assert.equal(found.body.data[0].houseNumber, ''); assert.equal(found.body.data[0].matchType, 'street');
-      assert.equal(await page.locator('.map-picker-canvas').getAttribute('data-location-confirmed'), 'false');
-      await page.getByRole('status').filter({ hasText: 'Chưa xác định được số nhà 18' }).waitFor();
-      const dialog = page.getByRole('dialog', { name: 'Thêm phòng mới', exact: true });
-      assert.equal(await dialog.getByLabel('Phường / xã', { exact: true }).inputValue(), 'Cửa Nam');
-      assert.equal(await dialog.getByLabel('Tỉnh / thành phố', { exact: true }).inputValue(), 'Hà Nội');
-      await address.scrollIntoViewIfNeeded();
-      await page.screenshot({ path: path.join(output, `fields-${width}.png`) });
-      results.push({ width, check: 'Real Photon returns the correct street, not a verified house; fields retain house 18', status: 'PASS' });
-    }
+    assert.equal(await address.inputValue(), query);
     await page.locator('.map-picker-results button').first().click();
-    assert.equal(await address.inputValue(), sampleHouse ? '18 Phố Hai Bà Trưng' : found.body.data[0].address || found.body.data[0].displayName);
+    assert.equal(await address.inputValue(), found.body.data[0].address || found.body.data[0].displayName);
     assert.equal(await page.locator('.map-picker-canvas').getAttribute('data-location-confirmed'), 'true');
     results.push({ width, check: 'Real controller/provider address search and form synchronization', status: 'PASS' });
     const map = page.locator('.leaflet-map-picker .leaflet-container');
-    if (sampleHouse) {
-      await page.locator('.map-picker-results').scrollIntoViewIfNeeded();
-      await page.screenshot({ path: path.join(output, `live-${width}.png`) });
-      assert.equal(await page.locator('.leaflet-container').count(), 1);
-      assert.deepEqual(errors, []); await context.close();
-      console.log(`PASS live approved Photon address ${width}px; tiles mocked for privacy`); continue;
-    }
     const reverseResponse = page.waitForResponse(response => response.url().includes('/location/reverse') && response.status() === 200, { timeout: 25000 });
     await map.scrollIntoViewIfNeeded(); await map.click({ position: { x: 65, y: 110 } });
     await reverseResponse;
@@ -91,6 +68,6 @@ try {
 } finally {
   await browser.close();
   await writeFile(path.join(output, 'results.json'), JSON.stringify({
-    realGeocoding: true, realTiles: !sampleHouse, sampleHouse, authenticationAndRoomLists: 'fixtures', databaseWrites: false, results,
+    realGeocoding: true, realTiles: true, authenticationAndRoomLists: 'fixtures', databaseWrites: false, results,
   }, null, 2));
 }

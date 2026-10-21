@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -51,6 +52,13 @@ builder.Services.AddScoped<IPaymentService, PaymentBLL>();
 builder.Services.AddScoped<DepositRefundBLL>();
 builder.Services.AddScoped<ContractClosureBLL>();
 builder.Services.AddScoped<PaymentEventBLL>();
+builder.Services.AddScoped<CashPaymentBLL>();
+builder.Services.AddScoped<SavedPaymentMethodBLL>();
+builder.Services.AddSingleton<VnPayTokenProtocol>();
+var cardProtection = builder.Services.AddDataProtection()
+    .SetApplicationName("RoomRentalSystem.VnPayCards.v1")
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtection-Keys")));
+if (OperatingSystem.IsWindows()) cardProtection.ProtectKeysWithDpapi();
 builder.Services.AddScoped<IMonthlyBillService, MonthlyBillBLL>();
 builder.Services.AddScoped<IExportService, ExportBLL>();
 builder.Services.AddHostedService<RentalLifecycleHostedService>();

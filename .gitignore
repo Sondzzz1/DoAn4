@@ -132,6 +132,7 @@ dist-ssr/
 .env.test.local
 .env.production.local
 appsettings.Local.json
+App_Data/
 
 # Editor directories and files
 .idea

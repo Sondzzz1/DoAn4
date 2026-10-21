@@ -4,6 +4,10 @@ import { roommateService, type RoommateContract } from '../../services/roommateS
 import '../public/Roommates.css';
 import Modal from '../../components/common/Modal';
 import PaymentSafetyPanel from '../../components/payment/PaymentSafetyPanel';
+import SavedPaymentMethodsPanel from '../../components/payment/SavedPaymentMethodsPanel';
+import CashPaymentPanel from '../../components/payment/CashPaymentPanel';
+import PaymentMethodModal, { type PaymentTarget } from '../../components/payment/PaymentMethodModal';
+import { cashPaymentService, CASH_PAYMENT_STATUS, type CashPaymentDto } from '../../services/cashPaymentService';
 import ContractClosurePanel from '../../components/rental/ContractClosurePanel';
 import {
   FiFileText,
@@ -32,7 +36,6 @@ import {
   MonthlyBillDto,
 } from '../../services/monthlyBillService';
 import { exportService } from '../../services/exportService';
-import { paymentService } from '../../services/paymentService';
 import { formatPrice } from '../../utils/helpers';
 import StatusBadge, { StatusTone } from '../../components/common/StatusBadge';
 import PageState from '../../components/common/PageState';
@@ -67,6 +70,12 @@ const TenantRentalsPage: React.FC = () => {
   const [bills, setBills] = useState<MonthlyBillDto[]>([]);
   const [incidents, setIncidents] = useState<IncidentDto[]>([]);
   const [reviews, setReviews] = useState<ReviewDto[]>([]);
+  const [cashPayments, setCashPayments] = useState<CashPaymentDto[]>([]);
+  const [paymentTarget, setPaymentTarget] = useState<PaymentTarget | null>(null);
+
+  const cashFor = (depositId?: number, monthlyBillId?: number) => cashPayments.find(item =>
+    item.status !== CASH_PAYMENT_STATUS.CANCELLED &&
+    ((depositId !== undefined && item.depositId === depositId) || (monthlyBillId !== undefined && item.monthlyBillId === monthlyBillId)));
 
   // Incident Modal State
   const [incidentModalOpen, setIncidentModalOpen] = useState(false);
@@ -86,13 +95,14 @@ const TenantRentalsPage: React.FC = () => {
     setLoading(true);
     setLoadError('');
     try {
-      const [reqRes, depRes, conRes, billsRes, incRes, revRes] = await Promise.all([
+      const [reqRes, depRes, conRes, billsRes, incRes, revRes, cashRes] = await Promise.all([
         rentalService.getMyRentalRequests(),
         rentalService.getMyDeposits(),
         rentalService.getMyContracts(),
         monthlyBillService.getMyBills(false),
         rentalService.getMyIncidents(),
         rentalService.getMyReviews(),
+        cashPaymentService.list(),
       ]);
 
       setRequests(reqRes.data || []);
@@ -101,6 +111,14 @@ const TenantRentalsPage: React.FC = () => {
       setBills(billsRes.data || []);
       setIncidents(incRes.data || []);
       setReviews(revRes.data || []);
+      setCashPayments(cashRes.data || []);
+      setPaymentTarget(current => {
+        if (!current) return null;
+        const bill = billsRes.data?.find(item => item.id === current.monthlyBillId);
+        if (bill) return { ...current, amount: bill.tongTien, dueAt: bill.hanThanhToan, landlordName: bill.tenChuTro, landlordPhone: bill.sdtChuTro };
+        const deposit = depRes.data?.find(item => item.id === current.depositId);
+        return deposit ? { ...current, amount: deposit.soTien, dueAt: deposit.hanThanhToan } : current;
+      });
       await roommateService.contracts().then(setRoommateContracts).catch(() => setRoommateContracts([]));
     } catch (error) {
       setLoadError(getApiErrorMessage(error, 'Không thể tải dữ liệu thuê phòng.'));
@@ -125,16 +143,8 @@ const TenantRentalsPage: React.FC = () => {
     }
   };
 
-  const handlePayBill = async (billId: number) => {
-    try {
-      const res = await paymentService.createVnPayUrl({
-        monthlyBillId: billId,
-        orderInfo: `Thanh toan hoa don thang ID ${billId}`,
-      });
-      if (res.data?.paymentUrl) window.location.assign(res.data.paymentUrl);
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Không thể tạo liên kết thanh toán hóa đơn.'));
-    }
+  const handlePayBill = (bill: MonthlyBillDto) => {
+    setPaymentTarget({ monthlyBillId: bill.id, amount: bill.tongTien, title: `Hóa đơn tháng ${bill.thang}/${bill.nam} · ${bill.tenPhong || `#${bill.id}`}`, landlordName: bill.tenChuTro, landlordPhone: bill.sdtChuTro, dueAt: bill.hanThanhToan });
   };
 
   const handleCreateIncident = async (e: React.FormEvent) => {
@@ -188,19 +198,10 @@ const TenantRentalsPage: React.FC = () => {
     }
   };
 
-  const handlePayDepositVnPay = async (depositId: number) => {
-    try {
-      const res = await paymentService.createVnPayUrl({
-        depositId: depositId,
-        orderInfo: `Thanh toan tien coc phong dat coc ID ${depositId}`,
-      });
-      if (res.data?.paymentUrl) {
-        toast.info('Đang chuyển hướng sang cổng thanh toán VNPay Sandbox...');
-        window.location.assign(res.data.paymentUrl);
-      }
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Không thể tạo liên kết thanh toán VNPay.'));
-    }
+  const handlePayDeposit = (deposit: DepositDto) => {
+    const request = requests.find(item => item.id === deposit.yeuCauThueId);
+    const cash = cashFor(deposit.id);
+    setPaymentTarget({ depositId: deposit.id, amount: deposit.soTien, title: `Tiền cọc · ${request?.tieuDeBaiDang || `#${deposit.id}`}`, landlordName: cash?.landlordName, landlordPhone: cash?.landlordPhone, dueAt: deposit.hanThanhToan });
   };
 
   const handleCancelRequest = async (requestId: number) => {
@@ -298,6 +299,9 @@ const TenantRentalsPage: React.FC = () => {
         </button>
       </div>
 
+      {!loading && activeTab === 'bills' && <SavedPaymentMethodsPanel />}
+      {!loading && (activeTab === 'bills' || activeTab === 'requests') && <CashPaymentPanel role="tenant" items={cashPayments.filter(item => activeTab === 'bills' ? !!item.monthlyBillId : !!item.depositId)} onChanged={loadData} />}
+
       {/* Tab Content */}
       {loading ? (
         <PageState type="loading" message="Đang tải dữ liệu thuê phòng..." />
@@ -327,6 +331,7 @@ const TenantRentalsPage: React.FC = () => {
                           Hóa đơn tiền phòng tháng {bill.thang}/{bill.nam}
                         </h3>
                         <StatusBadge {...billStatus(bill.trangThai)} />
+                        {cashFor(undefined, bill.id)?.status === CASH_PAYMENT_STATUS.SELECTED && <span className="text-xs font-semibold text-amber-700">Đã chọn tiền mặt · Chưa thanh toán</span>}
                       </div>
                       <p className="text-xs text-slate-500 mt-0.5">
                         {bill.tenPhong} • Chủ trọ: {bill.tenChuTro} {bill.sdtChuTro ? `(${bill.sdtChuTro})` : ''}
@@ -342,10 +347,10 @@ const TenantRentalsPage: React.FC = () => {
 
                     {(bill.trangThai === MONTHLY_BILL_STATUS.UNPAID || bill.trangThai === MONTHLY_BILL_STATUS.OVERDUE) ? (
                       <button
-                        onClick={() => handlePayBill(bill.id)}
+                        onClick={() => handlePayBill(bill)}
                         className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md cursor-pointer transition-all border-none"
                       >
-                        <FiCreditCard /> Thanh toán VNPay
+                        <FiCreditCard /> {cashFor(undefined, bill.id)?.status === CASH_PAYMENT_STATUS.SELECTED ? 'Xem lựa chọn tiền mặt' : 'Thanh toán'}
                       </button>
                     ) : bill.trangThai === MONTHLY_BILL_STATUS.PAID ? (
                       <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">
@@ -530,20 +535,21 @@ const TenantRentalsPage: React.FC = () => {
                       <div className="text-xl font-black text-slate-900 mt-0.5">{formatPrice(dep.soTien)}</div>
                       <div className="mt-2"><StatusBadge label={depositStatus(dep.trangThai).label} tone={depositStatus(dep.trangThai).tone} /></div>
                       {dep.hanThanhToan && dep.trangThai === DEPOSIT_STATUS.PENDING && <p className="mt-2 text-xs text-amber-700">Hạn thanh toán: {new Date(dep.hanThanhToan).toLocaleString('vi-VN')}</p>}
+                      {cashFor(dep.id)?.status === CASH_PAYMENT_STATUS.SELECTED && <p className="mt-2 text-xs font-semibold text-amber-700">Đã chọn tiền mặt · Chưa thanh toán</p>}
                     </div>
 
                     {dep.trangThai === DEPOSIT_STATUS.PENDING ? (
                       <button
-                        onClick={() => handlePayDepositVnPay(dep.id)}
+                        onClick={() => handlePayDeposit(dep)}
                         className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-md cursor-pointer transition-all border-none"
                       >
-                        <FiCreditCard /> Thanh toán VNPay
+                        <FiCreditCard /> {cashFor(dep.id)?.status === CASH_PAYMENT_STATUS.SELECTED ? 'Xem lựa chọn tiền mặt' : 'Thanh toán'}
                       </button>
-                    ) : (
+                    ) : dep.trangThai === DEPOSIT_STATUS.PAID || dep.trangThai === DEPOSIT_STATUS.CONFIRMED ? (
                       <div className="text-right text-xs text-emerald-600 font-semibold flex items-center gap-1">
                         <FiCheckCircle /> {dep.trangThai === DEPOSIT_STATUS.CONFIRMED ? 'Đã xác nhận' : 'Đang chờ chủ trọ xác nhận'}
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -649,6 +655,8 @@ const TenantRentalsPage: React.FC = () => {
           </div>
         )
       )}
+
+      {paymentTarget && <PaymentMethodModal target={paymentTarget} cashSelection={cashFor(paymentTarget.depositId, paymentTarget.monthlyBillId)} onClose={() => setPaymentTarget(null)} onChanged={loadData} />}
 
       {/* Modal Báo Sự Cố */}
       {incidentModalOpen && (

@@ -22,23 +22,30 @@ public class PaymentBLL : IPaymentService
     private readonly IConfiguration _config;
     private readonly INotificationService _notificationService;
     private readonly ILogger<PaymentBLL> _logger;
+    private readonly SavedPaymentMethodBLL? _savedMethods;
+    private readonly VnPayTokenProtocol _tokenProtocol;
 
     public PaymentBLL(
         ApplicationDbContext context,
         IConfiguration config,
         INotificationService notificationService,
-        ILogger<PaymentBLL> logger)
+        ILogger<PaymentBLL> logger,
+        SavedPaymentMethodBLL? savedMethods = null,
+        VnPayTokenProtocol? tokenProtocol = null)
     {
         _context = context;
         _config = config;
         _notificationService = notificationService;
         _logger = logger;
+        _savedMethods = savedMethods;
+        _tokenProtocol = tokenProtocol ?? new VnPayTokenProtocol(config);
     }
 
     public async Task<PaymentResponseDto> CreatePaymentUrlAsync(int userId, CreatePaymentRequestDto dto, string clientIp)
     {
         await PaymentSafetySchema.EnsureAsync(_context);
-        var vnpaySettings = GetVnPaySettings();
+        if (dto.SavedPaymentMethodId is <= 0) throw new BusinessRuleException("Thẻ đã liên kết không hợp lệ.");
+        var vnpaySettings = dto.SavedPaymentMethodId.HasValue ? null : GetVnPaySettings();
         var hasDeposit = dto.DepositId is > 0;
         var hasBill = dto.MonthlyBillId is > 0;
         if (hasDeposit == hasBill)
@@ -59,6 +66,7 @@ public class PaymentBLL : IPaymentService
                 ?? throw BusinessRuleException.NotFound("Không tìm thấy khoản đặt cọc.");
             if (deposit.TenantAccountId != userId)
                 throw BusinessRuleException.Forbidden("Bạn không có quyền thanh toán khoản đặt cọc này.");
+            await CashPaymentPolicy.EnsureNoCashReceiptAsync(_context, deposit.Id, null);
             if (deposit.Status != DepositStatus.Pending)
                 throw BusinessRuleException.Conflict("Chỉ khoản cọc đang chờ thanh toán mới có thể thanh toán.");
             if (deposit.DueAt is not null && deposit.DueAt <= DateTime.Now)
@@ -81,6 +89,7 @@ public class PaymentBLL : IPaymentService
                 ?? throw BusinessRuleException.NotFound("Không tìm thấy hóa đơn tháng.");
             if (bill.Contract.TenantAccountId != userId)
                 throw BusinessRuleException.Forbidden("Bạn không có quyền thanh toán hóa đơn này.");
+            await CashPaymentPolicy.EnsureNoCashReceiptAsync(_context, null, bill.Id);
             if (bill.Status is not (MonthlyBillStatus.Unpaid or MonthlyBillStatus.Overdue))
                 throw BusinessRuleException.Conflict("Hóa đơn không ở trạng thái có thể thanh toán.");
             if (await _context.PaymentCallbackEvents.AnyAsync(e => e.PaymentTransaction!.MonthlyBillId == bill.Id && e.ProcessingState == PaymentEventState.RequiresReview))
@@ -90,19 +99,32 @@ public class PaymentBLL : IPaymentService
                 throw BusinessRuleException.Conflict("Hóa đơn đã có giao dịch đang xử lý hoặc đã thanh toán.");
 
             amount = bill.TotalAmount;
-            await ContractClosurePolicy.BillChangingAsync(_context, bill.ContractId, userId);
+            await CashPaymentPolicy.EnsureBillCollectionAllowedAsync(_context, bill.ContractId);
             targetType = MonthlyBillTarget;
             orderInfo = dto.OrderInfo ?? $"Thanh toan hoa don thang {bill.Month}/{bill.Year} ID {bill.Id}";
-            bill.Status = MonthlyBillStatus.PendingPayment;
-            bill.UpdatedAt = DateTime.Now;
         }
 
         var orderId = $"{(targetType == DepositTarget ? "D" : "B")}_{(deposit?.Id ?? bill!.Id)}_{DateTime.UtcNow.Ticks}";
+        string? tokenPaymentUrl = null;
+        if (dto.SavedPaymentMethodId.HasValue)
+        {
+            if (_savedMethods == null) throw new BusinessRuleException("Tính năng liên kết thẻ chưa sẵn sàng.", 503);
+            var saved = await _savedMethods.GetTokenAsync(userId, dto.SavedPaymentMethodId.Value);
+            tokenPaymentUrl = _tokenProtocol.CreatePaymentUrl(orderId, userId, saved.Token, amount, clientIp);
+        }
+        if (bill != null)
+        {
+            await ContractClosurePolicy.BillChangingAsync(_context, bill.ContractId, userId);
+            bill.Status = MonthlyBillStatus.PendingPayment;
+            bill.UpdatedAt = DateTime.Now;
+        }
         _context.PaymentTransactions.Add(new PaymentTransaction
         {
             DepositId = deposit?.Id,
             MonthlyBillId = bill?.Id,
             TargetType = targetType,
+            Provider = dto.SavedPaymentMethodId.HasValue ? "VNPayToken" : "VNPay",
+            SavedPaymentMethodId = dto.SavedPaymentMethodId,
             OrderId = orderId,
             Amount = amount,
             Status = PaymentTransactionStatus.Pending,
@@ -111,10 +133,13 @@ public class PaymentBLL : IPaymentService
         await _context.SaveChangesAsync();
         await transaction.CommitAsync();
 
+        if (tokenPaymentUrl != null)
+            return new PaymentResponseDto { PaymentUrl = tokenPaymentUrl, OrderId = orderId, Amount = amount };
+
         var vnpay = new VnPayHelper();
         vnpay.AddRequestData("vnp_Version", "2.1.0");
         vnpay.AddRequestData("vnp_Command", "pay");
-        vnpay.AddRequestData("vnp_TmnCode", vnpaySettings.TmnCode);
+        vnpay.AddRequestData("vnp_TmnCode", vnpaySettings!.TmnCode);
         vnpay.AddRequestData("vnp_Amount", ((long)(amount * 100)).ToString(CultureInfo.InvariantCulture));
         vnpay.AddRequestData("vnp_CreateDate", DateTime.Now.ToString("yyyyMMddHHmmss"));
         vnpay.AddRequestData("vnp_ExpireDate", DateTime.Now.AddMinutes(30).ToString("yyyyMMddHHmmss"));
@@ -132,10 +157,25 @@ public class PaymentBLL : IPaymentService
         return new PaymentResponseDto { PaymentUrl = paymentUrl, OrderId = orderId, Amount = amount };
     }
 
-    public async Task<PaymentResultDto> ProcessPaymentReturnAsync(IQueryCollection query, byte source = PaymentEventSource.Ipn)
+    public Task<PaymentResultDto> ProcessPaymentReturnAsync(IQueryCollection query, byte source = PaymentEventSource.Ipn) =>
+        ProcessCallbackAsync(query, source, false);
+
+    public Task<PaymentResultDto> ProcessTokenPaymentReturnAsync(IQueryCollection query, byte source = PaymentEventSource.Ipn) =>
+        ProcessCallbackAsync(query, source, true);
+
+    private async Task<PaymentResultDto> ProcessCallbackAsync(IQueryCollection query, byte source, bool tokenPayment)
     {
         if (query.Count == 0)
             return Failure("Thiếu dữ liệu phản hồi VNPay.", "", "", "");
+        IReadOnlyDictionary<string, string>? tokenFields = null;
+        if (tokenPayment)
+        {
+            try { tokenFields = _tokenProtocol.ValidateCallback(query); }
+            catch (BusinessRuleException) { return Failure("Không thể xác minh phản hồi thanh toán thẻ đã liên kết.", "", "", "", callbackOutcome: PaymentCallbackOutcome.InvalidSignature); }
+            if (tokenFields.GetValueOrDefault("vnp_command") != "token_pay" || tokenFields.GetValueOrDefault("vnp_curr_code") != "VND")
+                return Failure("Phản hồi thanh toán thẻ không hợp lệ.", "", "", "");
+            query = NormalizeTokenPayment(tokenFields);
+        }
         var vnpay = new VnPayHelper();
         foreach (var (key, value) in query)
             if (key.StartsWith("vnp_", StringComparison.Ordinal)) vnpay.AddResponseData(key, value.ToString());
@@ -144,14 +184,13 @@ public class PaymentBLL : IPaymentService
         var transactionCode = vnpay.GetResponseData("vnp_TransactionNo");
         var responseCode = vnpay.GetResponseData("vnp_ResponseCode");
         var transactionStatus = vnpay.GetResponseData("vnp_TransactionStatus");
-        var hashSecret = GetVnPaySettings().HashSecret;
-        if (!vnpay.ValidateSignature(query["vnp_SecureHash"].ToString(), hashSecret))
+        if (!tokenPayment && !vnpay.ValidateSignature(query["vnp_SecureHash"].ToString(), GetVnPaySettings().HashSecret))
             return Failure("Chữ ký VNPay không hợp lệ.", orderId, transactionCode, responseCode, callbackOutcome: PaymentCallbackOutcome.InvalidSignature);
 
         if (source > PaymentEventSource.Return || query.Any(p => p.Key.StartsWith("vnp_", StringComparison.Ordinal) && p.Value.Count != 1) ||
             orderId.Length is < 1 or > 100 || transactionCode.Length > 100 || !IsProviderStatus(responseCode) || !IsProviderStatus(transactionStatus))
             return Failure("Dữ liệu phản hồi VNPay không hợp lệ.", orderId, transactionCode, responseCode);
-        if (!string.Equals(vnpay.GetResponseData("vnp_TmnCode"), GetVnPaySettings().TmnCode, StringComparison.Ordinal))
+        if (!string.Equals(vnpay.GetResponseData("vnp_TmnCode"), tokenPayment ? _tokenProtocol.MerchantCode : GetVnPaySettings().TmnCode, StringComparison.Ordinal))
             return Failure("Merchant VNPay không khớp.", orderId, transactionCode, responseCode, callbackOutcome: PaymentCallbackOutcome.InvalidSignature);
         if (!long.TryParse(vnpay.GetResponseData("vnp_Amount"), NumberStyles.None, CultureInfo.InvariantCulture, out var rawAmount) || rawAmount < 0 || rawAmount > 999999999999999999)
             return Failure("Số tiền VNPay không hợp lệ.", orderId, transactionCode, responseCode, callbackOutcome: PaymentCallbackOutcome.InvalidAmount);
@@ -161,7 +200,11 @@ public class PaymentBLL : IPaymentService
         await WorkflowLock.AcquireAsync(_context);
         await ExpireAttemptsAsync();
         var payment = await PaymentQuery().FirstOrDefaultAsync(p => p.OrderId == orderId);
-        var canonical = JsonSerializer.Serialize(new { source, fields = query.Where(p => p.Key.StartsWith("vnp_", StringComparison.Ordinal) && p.Key is not ("vnp_SecureHash" or "vnp_SecureHashType"))
+        var canonical = JsonSerializer.Serialize(new { source, provider = tokenPayment ? "VNPayToken" : "VNPay",
+            appUser = tokenFields?.GetValueOrDefault("vnp_app_user_id"),
+            tokenFingerprint = tokenFields?.GetValueOrDefault("vnp_token") is string callbackToken && callbackToken.Length > 0
+                ? Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(callbackToken))) : null,
+            fields = query.Where(p => p.Key.StartsWith("vnp_", StringComparison.Ordinal) && p.Key is not ("vnp_SecureHash" or "vnp_SecureHashType"))
             .OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => new[] { p.Key, p.Value.ToString() }).ToArray() });
         var deduplicationKey = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
         var existing = await _context.PaymentCallbackEvents.FirstOrDefaultAsync(e => e.DeduplicationKey == deduplicationKey);
@@ -189,6 +232,8 @@ public class PaymentBLL : IPaymentService
             duplicate = true;
         }
         else if (payment == null) receipt.Reason = "Không tìm thấy order; cần đối soát, không cấp quyền thuê.";
+        else if (payment.Provider != (tokenPayment ? "VNPayToken" : "VNPay")) receipt.Reason = "Phản hồi thuộc loại thanh toán khác; cần đối soát.";
+        else if (tokenPayment && !await ValidateTokenPaymentBindingAsync(payment, tokenFields!)) receipt.Reason = "Phản hồi thẻ không khớp người thuê hoặc liên kết thẻ của giao dịch; cần đối soát.";
         else if (receipt.ReportedAmount != payment.Amount) receipt.Reason = "Số tiền provider báo khác số tiền kỳ vọng; không sửa số tiền gốc.";
         else if ((responseCode == "00") != (transactionStatus == "00")) receipt.Reason = "Hai mã kết quả provider không nhất quán.";
         else if (payment.Status == PaymentTransactionStatus.Succeeded)
@@ -261,6 +306,32 @@ public class PaymentBLL : IPaymentService
         .Include(p => p.Deposit)
         .Include(p => p.MonthlyBill).ThenInclude(b => b!.Contract);
 
+    private async Task<bool> ValidateTokenPaymentBindingAsync(PaymentTransaction payment, IReadOnlyDictionary<string, string> fields)
+    {
+        var tenantId = payment.Deposit?.TenantAccountId ?? payment.MonthlyBill?.Contract.TenantAccountId;
+        if (!tenantId.HasValue || !payment.SavedPaymentMethodId.HasValue ||
+            fields.GetValueOrDefault("vnp_app_user_id") != tenantId.Value.ToString(CultureInfo.InvariantCulture)) return false;
+        var merchant = fields.GetValueOrDefault("vnp_tmn_code") ?? "";
+        var token = fields.GetValueOrDefault("vnp_token");
+        if (!string.IsNullOrEmpty(token))
+            return _savedMethods != null && await _savedMethods.ValidateBindingAsync(tenantId.Value, payment.SavedPaymentMethodId.Value, merchant, token);
+        // The Token API documents the echoed token as optional. The signed merchant/user/order still bind the request.
+        return await _context.SavedPaymentMethods.AsNoTracking().AnyAsync(m => m.Id == payment.SavedPaymentMethodId.Value &&
+            m.UserId == tenantId.Value && m.MerchantCode == merchant);
+    }
+
+    private static IQueryCollection NormalizeTokenPayment(IReadOnlyDictionary<string, string> fields)
+    {
+        var names = new Dictionary<string, string>
+        {
+            ["vnp_txn_ref"] = "vnp_TxnRef", ["vnp_amount"] = "vnp_Amount", ["vnp_response_code"] = "vnp_ResponseCode",
+            ["vnp_transaction_status"] = "vnp_TransactionStatus", ["vnp_transaction_no"] = "vnp_TransactionNo",
+            ["vnp_pay_date"] = "vnp_PayDate", ["vnp_tmn_code"] = "vnp_TmnCode"
+        };
+        return new QueryCollection(names.Where(p => fields.ContainsKey(p.Key)).ToDictionary(p => p.Value,
+            p => new Microsoft.Extensions.Primitives.StringValues(fields[p.Key])));
+    }
+
     private VnPaySettings GetVnPaySettings() => new(
         GetRequiredVnPaySetting("TmnCode"),
         GetRequiredVnPaySetting("HashSecret"),
@@ -280,6 +351,7 @@ public class PaymentBLL : IPaymentService
 
     private async Task ValidateTargetForSuccessAsync(PaymentTransaction payment)
     {
+        await CashPaymentPolicy.EnsureNoCashReceiptAsync(_context, payment.DepositId, payment.MonthlyBillId);
         if (payment.TargetType == DepositTarget && payment.Deposit != null)
         {
             if (payment.Deposit.Amount != payment.Amount)

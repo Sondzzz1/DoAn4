@@ -103,7 +103,7 @@ export const monthlyBillService = {
   },
 
   // Xác nhận thanh toán hóa đơn
-  payBill: async (id: number, data?: { phuongThucThanhToan?: string; ghiChu?: string }): Promise<ApiResponse<MonthlyBillDto>> => {
+  payBill: async (id: number, data: { expectedAmount: number; phuongThucThanhToan?: string; ghiChu?: string }): Promise<ApiResponse<MonthlyBillDto>> => {
     const response = await api.put<ApiResponse<MonthlyBillDto>>(`/hoa-don/${id}/thanh-toan`, data);
     return response.data;
   },
